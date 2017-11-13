@@ -23,7 +23,7 @@ namespace EngineLayer
             //All cis sequences
             for (int i = 0; i < protein.BaseSequence.Length - minLength - 1; i++) //start pos
                 for (int j = i + 1; j <= i + maxLength; j++) //cleave pos1
-                    for (int k = j + 1; k < j + maxIntervening; k++) //cleave pos2
+                    for (int k = j + 1; k <= j + maxIntervening; k++) //cleave pos2
                         for (int m = minLength; m <= maxLength; m++)
                             if (k + m + i - j <= protein.BaseSequence.Length && m + i - j > 0)
                             {
