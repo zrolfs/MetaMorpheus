@@ -208,6 +208,16 @@ namespace EngineLayer
             } while ((oneBasedIndexToLookAt > 1 && direction == -1) || (oneBasedIndexToLookAt < yyy.Length && direction == 1));
         }
 
+
+        protected static IEnumerable<double> ComputeFollowingFragmentMasses(string yyy, double prevMass, int oneBasedIndexToLookAt, int direction)
+        {
+            do
+            {
+                prevMass += Residue.ResidueMonoisotopicMass[yyy[oneBasedIndexToLookAt]];
+                yield return Math.Round(prevMass, digitsForRoundingMasses);
+                oneBasedIndexToLookAt += direction;
+            } while (oneBasedIndexToLookAt > 0 && oneBasedIndexToLookAt < yyy.Length - 1) ;
+        }
         #endregion Protected Methods
     }
 }

@@ -38,6 +38,14 @@ namespace EngineLayer
             this.numFixedMods = numFixedMods;
         }
 
+        public PeptideWithSetModifications(int startTwo, int endTwo, Protein protein, int oneBasedStartResidueInProtein, int oneBasedEndResidueInProtein, string peptideDescription, int missedCleavages, Dictionary<int, ModificationWithMass> allModsOneIsNterminus, int numFixedMods)
+            : base(startTwo, endTwo, protein, oneBasedStartResidueInProtein, oneBasedEndResidueInProtein, peptideDescription)
+        {
+            this.missedCleavages = missedCleavages;
+            this.allModsOneIsNterminus = allModsOneIsNterminus;
+            this.numFixedMods = numFixedMods;
+        }
+
         public PeptideWithSetModifications(PeptideWithSetModifications modsFromThisOne, PeptideWithSetModifications everythingElseFromThisOne) : base(everythingElseFromThisOne.Protein, everythingElseFromThisOne.OneBasedStartResidueInProtein, everythingElseFromThisOne.OneBasedEndResidueInProtein, everythingElseFromThisOne.PeptideDescription)
         {
             this.missedCleavages = everythingElseFromThisOne.missedCleavages;

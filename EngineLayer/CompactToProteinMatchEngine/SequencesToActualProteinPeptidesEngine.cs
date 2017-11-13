@@ -55,7 +55,7 @@ namespace EngineLayer
         protected override MetaMorpheusEngineResults RunSpecific()
         {
             //At this point have Spectrum-Sequence matching, without knowing which protein, and without know if target/decoy
-            Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> compactPeptideToProteinPeptideMatching = new Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>>();
+            Dictionary<CompactPeptideBase, HashSet<string>> compactPeptideToProteinPeptideMatching = new Dictionary<CompactPeptideBase, HashSet<string>>();
 
             #region Match Sequences to PeptideWithSetModifications
 
@@ -65,9 +65,9 @@ namespace EngineLayer
             foreach (var psm in allPsms)
                 if (psm != null)
                 {
-                    foreach (var cp in psm.CompactPeptides)
+                    foreach (var cp in psm.CompactPeptidesHeck)
                         if (!compactPeptideToProteinPeptideMatching.ContainsKey(cp.Key))
-                            compactPeptideToProteinPeptideMatching.Add(cp.Key, new HashSet<PeptideWithSetModifications>());
+                            compactPeptideToProteinPeptideMatching.Add(cp.Key, new HashSet<string>());
                 }
             //myAnalysisResults.AddText("Ending compactPeptideToProteinPeptideMatching count: " + compactPeptideToProteinPeptideMatching.Count);
             int totalProteins = proteinList.Count;
@@ -77,17 +77,17 @@ namespace EngineLayer
             //Status("Adding possible sources to peptide dictionary...", new List<string> { taskId });
             Parallel.ForEach(Partitioner.Create(0, totalProteins), fff =>
             {
-                Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> local = compactPeptideToProteinPeptideMatching.ToDictionary(b => b.Key, b => new HashSet<PeptideWithSetModifications>());
+                Dictionary<CompactPeptideBase, HashSet<string>> local = compactPeptideToProteinPeptideMatching.ToDictionary(b => b.Key, b => new HashSet<string>());
                 for (int i = fff.Item1; i < fff.Item2; i++)
                     foreach (var digestionParam in collectionOfDigestionParams)
-                        foreach (var peptideWithSetModifications in proteinList[i].Digest(digestionParam, fixedModifications, variableModifications).ToList())
-                            if (local.TryGetValue(new CompactPeptide(peptideWithSetModifications, terminusType), out HashSet<PeptideWithSetModifications> v))
+                        foreach (var peptideWithSetModifications in proteinList[i].DigestHeck().ToList())
+                            if (local.TryGetValue(new CompactPeptide(peptideWithSetModifications, terminusType), out HashSet<string> v))
                                 v.Add(peptideWithSetModifications);
                 lock (obj)
                 {
                     foreach (var ye in local)
                     {
-                        if (compactPeptideToProteinPeptideMatching.TryGetValue(ye.Key, out HashSet<PeptideWithSetModifications> v))
+                        if (compactPeptideToProteinPeptideMatching.TryGetValue(ye.Key, out HashSet<string> v))
                             foreach (var huh in ye.Value)
                                 v.Add(huh);
                     }
@@ -103,8 +103,8 @@ namespace EngineLayer
 
             #endregion Match Sequences to PeptideWithSetModifications
 
-            if (!reportAllAmbiguity)
-                ResolveAmbiguities(compactPeptideToProteinPeptideMatching);
+           // if (!reportAllAmbiguity)
+          //      ResolveAmbiguities(compactPeptideToProteinPeptideMatching);
 
             return new SequencesToActualProteinPeptidesEngineResults(this, compactPeptideToProteinPeptideMatching);
         }

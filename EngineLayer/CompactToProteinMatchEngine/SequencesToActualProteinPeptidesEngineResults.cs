@@ -11,12 +11,16 @@ namespace EngineLayer
         {
             this.CompactPeptideToProteinPeptideMatching = compactPeptideToProteinPeptideMatching;
         }
-
+        public SequencesToActualProteinPeptidesEngineResults(MetaMorpheusEngine s, Dictionary<CompactPeptideBase, HashSet<string>> compactPeptideToProteinPeptideMatching) : base(s)
+        {
+            this.CompactPeptideToProteinPeptideMatchingString = compactPeptideToProteinPeptideMatching;
+        }
         #endregion Public Constructors
 
         #region Public Properties
 
         public Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> CompactPeptideToProteinPeptideMatching { get; }
+        public Dictionary<CompactPeptideBase, HashSet<string>> CompactPeptideToProteinPeptideMatchingString { get; }
 
         #endregion Public Properties
 
@@ -26,7 +30,7 @@ namespace EngineLayer
         {
             var sb = new StringBuilder();
             sb.AppendLine(base.ToString());
-            sb.Append("CompactPeptideToProteinPeptideMatching.Count: " + CompactPeptideToProteinPeptideMatching.Count);
+            sb.Append("CompactPeptideToProteinPeptideMatching.Count: " + CompactPeptideToProteinPeptideMatchingString.Count);
             return sb.ToString();
         }
 

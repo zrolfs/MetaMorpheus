@@ -78,11 +78,11 @@ namespace EngineLayer.ClassicSearch
                 var psms = new Psm[arrayOfSortedMS2Scans.Length];
                 for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
                 {
-                    var protein = proteinList[i];
-                    var digestedList = protein.Digest(commonParameters.DigestionParams, fixedModifications, variableModifications).ToList();
+                    Protein protein = proteinList[i];
+                    List<string> digestedList = protein.DigestHeck().ToList();
                     foreach (var yyy in digestedList)
                     {
-                        var correspondingCompactPeptide = yyy.CompactPeptide(terminusType);
+                        var correspondingCompactPeptide = new CompactPeptide(yyy,terminusType);
                         if (!commonParameters.ConserveMemory)
                         {
                             var peptideWasObserved = observedPeptides.Contains(correspondingCompactPeptide);

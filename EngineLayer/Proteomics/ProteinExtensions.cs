@@ -9,6 +9,31 @@ namespace EngineLayer
     {
         #region Public Methods
 
+        public static IEnumerable<string> DigestHeck(this Protein protein)
+        {
+            int minLength = 9;
+            int maxLength = 12;
+            int maxIntervening = 25;
+
+            //Normal sequences
+            for (int length = minLength; length <= maxLength; length++)
+                for (int index = 0; index + length <= protein.BaseSequence.Length; index++)
+                    yield return protein.BaseSequence.Substring(index, length);
+
+            //All cis sequences
+            for (int i = 0; i < protein.BaseSequence.Length - minLength - 1; i++) //start pos
+                for (int j = i + 1; j <= i + maxLength; j++) //cleave pos1
+                    for (int k = j + 1; k < j + maxIntervening; k++) //cleave pos2
+                        for (int m = minLength; m <= maxLength; m++)
+                            if (k + m + i - j <= protein.BaseSequence.Length && m + i - j > 0)
+                            {
+                                string tester = protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
+                                yield return protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
+                            }
+                            else
+                                break;
+        }
+
         public static IEnumerable<PeptideWithSetModifications> Digest(this Protein protein, DigestionParams digestionParams, IEnumerable<ModificationWithMass> allKnownFixedModifications, List<ModificationWithMass> variableModifications)
         {
             var protease = digestionParams.Protease;
@@ -80,6 +105,32 @@ namespace EngineLayer
             {
                 switch (protease.CleavageSpecificity)
                 {
+                    case CleavageSpecificity.Heck:
+                        int minLength = 9;
+                        int maxLength = 12;
+                        int maxIntervening = 25;
+
+                        //Normal sequences
+                        for (int length = minLength; length <= maxLength; length++)
+                            for (int index = 0; index + length < protein.BaseSequence.Length; index++)
+                                foreach (PeptideWithSetModifications p in GetThePeptides(index, length, protein, length - 1, "full", allKnownFixedModifications, digestionParams, variableModifications))
+                                    yield return p;
+
+                        //All cis sequences
+                        for (int i = 0; i < protein.BaseSequence.Length - minLength - 1; i++) //start pos
+                            for (int j = i + 1; j <= i + maxLength; j++) //cleave pos1
+                                for (int k = j + 1; k < j + maxIntervening; k++) //cleave pos2
+                                    for (int m = minLength; m <= maxLength; m++)
+                                    {
+                                        if (k + m + i - j < protein.BaseSequence.Length && m + i - j > 0)
+                                            foreach (PeptideWithSetModifications p in GetTheHecktides(i, j, k, k + m - (j - i), protein, m - 1, "full", allKnownFixedModifications, digestionParams, variableModifications))
+                                            {
+                                                yield return p;
+                                                string sequence = protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
+                                            }
+                                        else
+                                            break; }                
+                        break;
                     case CleavageSpecificity.Full:
                         // these are the 1-based residue indices the protease cleaves AFTER
                         oneBasedIndicesToCleaveAfter = protease.GetDigestionSiteIndices(protein.BaseSequence);
@@ -356,6 +407,219 @@ namespace EngineLayer
         #endregion Public Methods
 
         #region Private Methods
+
+
+        private static IEnumerable<PeptideWithSetModifications> GetTheHecktides(int startOne, int endOne, int startTwo, int endTwo, Protein protein, int missedCleavages, string peptideString, IEnumerable<ModificationWithMass> allKnownFixedModifications, DigestionParams digestionParams, List<ModificationWithMass> variableModifications)
+        {
+            int halfOneLength = endOne - startOne + 1;
+            int halfTwoLength = endTwo - startTwo + 1;
+            int peptideLength = halfOneLength+halfTwoLength;
+            int maximumVariableModificationIsoforms = digestionParams.MaxModificationIsoforms;
+            int maxModsForPeptide = digestionParams.MaxModsForPeptide;
+            var two_based_possible_variable_and_localizeable_modifications = new Dictionary<int, List<ModificationWithMass>>(peptideLength + 4);
+
+            var pep_n_term_variable_mods = new List<ModificationWithMass>();
+            two_based_possible_variable_and_localizeable_modifications.Add(1, pep_n_term_variable_mods);
+
+            var pep_c_term_variable_mods = new List<ModificationWithMass>();
+            two_based_possible_variable_and_localizeable_modifications.Add(peptideLength + 2, pep_c_term_variable_mods);
+
+            foreach (ModificationWithMass variable_modification in variableModifications)
+            {
+                // Check if can be a n-term mod
+                if (Gptmd.GptmdEngine.ModFits(variable_modification, protein, 1, halfOneLength, startOne)
+                    && (variable_modification.terminusLocalization == TerminusLocalization.NProt || variable_modification.terminusLocalization == TerminusLocalization.NPep))
+                    pep_n_term_variable_mods.Add(variable_modification);
+
+                for (int r = 0; r < halfOneLength; r++)
+                {
+                    if (Gptmd.GptmdEngine.ModFits(variable_modification, protein, r + 1, halfOneLength, startOne + r)
+                        && variable_modification.terminusLocalization == TerminusLocalization.Any)
+                    {
+                        if (!two_based_possible_variable_and_localizeable_modifications.TryGetValue(r + 2, out List<ModificationWithMass> residue_variable_mods))
+                        {
+                            residue_variable_mods = new List<ModificationWithMass>
+                            {
+                                variable_modification
+                            };
+                            two_based_possible_variable_and_localizeable_modifications.Add(r + 2, residue_variable_mods);
+                        }
+                        else
+                            residue_variable_mods.Add(variable_modification);
+                    }
+                }
+                for (int r = 0; r < halfTwoLength; r++)
+                {
+                    if (Gptmd.GptmdEngine.ModFits(variable_modification, protein, r + 1, halfTwoLength, startTwo + r)
+                        && variable_modification.terminusLocalization == TerminusLocalization.Any)
+                    {
+                        if (!two_based_possible_variable_and_localizeable_modifications.TryGetValue(r + 2, out List<ModificationWithMass> residue_variable_mods))
+                        {
+                            residue_variable_mods = new List<ModificationWithMass>
+                            {
+                                variable_modification
+                            };
+                            two_based_possible_variable_and_localizeable_modifications.Add(r + 2, residue_variable_mods);
+                        }
+                        else
+                            residue_variable_mods.Add(variable_modification);
+                    }
+                }
+                // Check if can be a c-term mod
+                if (Gptmd.GptmdEngine.ModFits(variable_modification, protein, halfTwoLength, halfTwoLength, startTwo + halfTwoLength - 1)
+                    && (variable_modification.terminusLocalization == TerminusLocalization.ProtC || variable_modification.terminusLocalization == TerminusLocalization.PepC))
+                    pep_c_term_variable_mods.Add(variable_modification);
+            }
+
+            // LOCALIZED MODS
+            foreach (var kvp in protein.OneBasedPossibleLocalizedModifications)
+            {
+                if (kvp.Key >= startOne && kvp.Key <= endOne)
+                {
+                    int locInPeptide = kvp.Key - startOne + 1;
+                    foreach (Modification modMaybeWithMass in kvp.Value)
+                    {
+                        if (modMaybeWithMass is ModificationWithMass variable_modification)
+                        {
+                            // Check if can be a n-term mod
+                            if (locInPeptide == 1
+                                && Gptmd.GptmdEngine.ModFits(variable_modification, protein, 1, halfOneLength, startOne)
+                                && (variable_modification.terminusLocalization == TerminusLocalization.NProt || variable_modification.terminusLocalization == TerminusLocalization.NPep)
+                                && !protein.IsDecoy)
+                                pep_n_term_variable_mods.Add(variable_modification);
+
+                            for (int r = 0; r < halfOneLength; r++)
+                            {
+                                if (locInPeptide == r + 1
+                                    && (protein.IsDecoy || (Gptmd.GptmdEngine.ModFits(variable_modification, protein, r + 1, halfOneLength, startOne + r)
+                                    && variable_modification.terminusLocalization == TerminusLocalization.Any)))
+                                {
+                                    if (!two_based_possible_variable_and_localizeable_modifications.TryGetValue(r + 2, out List<ModificationWithMass> residue_variable_mods))
+                                    {
+                                        residue_variable_mods = new List<ModificationWithMass>
+                                        {
+                                            variable_modification
+                                        };
+                                        two_based_possible_variable_and_localizeable_modifications.Add(r + 2, residue_variable_mods);
+                                    }
+                                    else
+                                        residue_variable_mods.Add(variable_modification);
+                                }
+                            }
+                            // Check if can be a c-term mod
+                            if (locInPeptide == halfOneLength
+                                && Gptmd.GptmdEngine.ModFits(variable_modification, protein, halfOneLength, halfOneLength, startOne + halfOneLength - 1)
+                                && (variable_modification.terminusLocalization == TerminusLocalization.ProtC || variable_modification.terminusLocalization == TerminusLocalization.PepC)
+                                && !protein.IsDecoy)
+                                pep_c_term_variable_mods.Add(variable_modification);
+                        }
+                    }
+                }
+                else if (kvp.Key >= startTwo && kvp.Key <= endTwo)
+                {
+                    int locInPeptide = kvp.Key - startTwo + 1;
+                    foreach (Modification modMaybeWithMass in kvp.Value)
+                    {
+                        if (modMaybeWithMass is ModificationWithMass variable_modification)
+                        {
+                            // Check if can be a n-term mod
+                            if (locInPeptide == 1
+                                && Gptmd.GptmdEngine.ModFits(variable_modification, protein, 1, halfTwoLength, startTwo)
+                                && (variable_modification.terminusLocalization == TerminusLocalization.NProt || variable_modification.terminusLocalization == TerminusLocalization.NPep)
+                                && !protein.IsDecoy)
+                                pep_n_term_variable_mods.Add(variable_modification);
+
+                            for (int r = 0; r < halfTwoLength; r++)
+                            {
+                                if (locInPeptide == r + 1
+                                    && (protein.IsDecoy || (Gptmd.GptmdEngine.ModFits(variable_modification, protein, r + 1, halfTwoLength, startTwo + r)
+                                    && variable_modification.terminusLocalization == TerminusLocalization.Any)))
+                                {
+                                    if (!two_based_possible_variable_and_localizeable_modifications.TryGetValue(r + 2, out List<ModificationWithMass> residue_variable_mods))
+                                    {
+                                        residue_variable_mods = new List<ModificationWithMass>
+                                        {
+                                            variable_modification
+                                        };
+                                        two_based_possible_variable_and_localizeable_modifications.Add(r + 2, residue_variable_mods);
+                                    }
+                                    else
+                                        residue_variable_mods.Add(variable_modification);
+                                }
+                            }
+                            // Check if can be a c-term mod
+                            if (locInPeptide == halfTwoLength
+                                && Gptmd.GptmdEngine.ModFits(variable_modification, protein, halfTwoLength, halfTwoLength, startTwo + halfTwoLength - 1)
+                                && (variable_modification.terminusLocalization == TerminusLocalization.ProtC || variable_modification.terminusLocalization == TerminusLocalization.PepC)
+                                && !protein.IsDecoy)
+                                pep_c_term_variable_mods.Add(variable_modification);
+                        }
+                    }
+                }
+            }
+
+            int variable_modification_isoforms = 0;
+
+            var fixedModsOneIsNterminus = new Dictionary<int, ModificationWithMass>(peptideLength + 3);
+            foreach (ModificationWithMass mod in allKnownFixedModifications)
+            {
+                switch (mod.terminusLocalization)
+                {
+                    case TerminusLocalization.NProt:
+                    case TerminusLocalization.NPep:
+                        if (Gptmd.GptmdEngine.ModFits(mod, protein, 1, halfOneLength, startOne))
+                            fixedModsOneIsNterminus[1] = mod;
+                        break;
+
+                    case TerminusLocalization.Any:
+                        for (int i = 2; i <= halfOneLength + 1; i++)
+                            if (Gptmd.GptmdEngine.ModFits(mod, protein, i - 1, halfOneLength, startOne + i - 2))
+                                fixedModsOneIsNterminus[i] = mod;
+                        break;
+
+                    case TerminusLocalization.PepC:
+                    case TerminusLocalization.ProtC:
+                        break;
+                }
+            }
+            foreach (ModificationWithMass mod in allKnownFixedModifications)
+            {
+                switch (mod.terminusLocalization)
+                {
+                    case TerminusLocalization.NProt:
+                    case TerminusLocalization.NPep:
+                        break;
+
+                    case TerminusLocalization.Any:
+                        for (int i = 2; i <= halfTwoLength + 1; i++)
+                            if (Gptmd.GptmdEngine.ModFits(mod, protein, i - 1, halfTwoLength, startTwo + i - 2))
+                                fixedModsOneIsNterminus[halfOneLength+i] = mod;
+                        break;
+
+                    case TerminusLocalization.PepC:
+                    case TerminusLocalization.ProtC:
+                        if (Gptmd.GptmdEngine.ModFits(mod, protein, halfTwoLength, halfTwoLength, startTwo + halfTwoLength - 1))
+                            fixedModsOneIsNterminus[peptideLength + 2] = mod;
+                        break;
+                }
+            }
+
+            foreach (Dictionary<int, ModificationWithMass> kvp in GetVariableModificationPatterns(two_based_possible_variable_and_localizeable_modifications, maxModsForPeptide, peptideLength))
+            {
+                int numFixedMods = 0;
+                foreach (var ok in fixedModsOneIsNterminus)
+                    if (!kvp.ContainsKey(ok.Key))
+                    {
+                        numFixedMods++;
+                        kvp.Add(ok.Key, ok.Value);
+                    }
+                yield return new PeptideWithSetModifications(startTwo, endTwo, protein, startOne, endOne, peptideString, missedCleavages, kvp, numFixedMods);
+                variable_modification_isoforms++;
+                if (variable_modification_isoforms == maximumVariableModificationIsoforms)
+                    yield break;
+            }
+        }
+
 
         private static IEnumerable<PeptideWithSetModifications> GetThePeptides(int OneBasedStartResidueInProtein, int OneBasedEndResidueInProtein, Protein protein, int missedCleavages, string peptideString, IEnumerable<ModificationWithMass> allKnownFixedModifications, DigestionParams digestionParams, List<ModificationWithMass> variableModifications)
         {

@@ -19,7 +19,20 @@ namespace EngineLayer
             OneBasedEndResidueInProtein = oneBasedEndResidueInProtein;
             Length = OneBasedEndResidueInProtein - OneBasedStartResidueInProtein + 1;
             PeptideDescription = peptideDescription;
+            cis = false;
         }
+        protected Peptide(int startTwo, int endTwo,Protein protein, int oneBasedStartResidueInProtein, int oneBasedEndResidueInProtein, string peptideDescription = null)
+        {
+            Protein = protein;
+            OneBasedStartResidueInProtein = oneBasedStartResidueInProtein;
+            OneBasedEndResidueInProtein = oneBasedEndResidueInProtein;
+            Length = OneBasedEndResidueInProtein - OneBasedStartResidueInProtein + 1;
+            PeptideDescription = peptideDescription;
+            this.startTwo = startTwo;
+            this.endTwo = endTwo;
+            cis = true;
+        }
+
 
         #endregion Protected Constructors
 
@@ -28,8 +41,10 @@ namespace EngineLayer
         public Protein Protein { get; }
         public int OneBasedStartResidueInProtein { get; }
         public int OneBasedEndResidueInProtein { get; }
-
+        public bool cis { get; }
         public string PeptideDescription { get; }
+        public int startTwo { get; }
+        public int endTwo { get; }
 
         public int Length { get; }
 
@@ -45,7 +60,7 @@ namespace EngineLayer
         {
             get
             {
-                return OneBasedEndResidueInProtein < Protein.Length ? Protein[OneBasedEndResidueInProtein] : '-';
+                return endTwo < Protein.Length ? Protein[endTwo] : '-';
             }
         }
 
@@ -67,7 +82,10 @@ namespace EngineLayer
         {
             get
             {
-                return Protein.BaseSequence[zeroBasedIndex + OneBasedStartResidueInProtein - 1];
+                if (cis && zeroBasedIndex + OneBasedStartResidueInProtein - 1 > OneBasedEndResidueInProtein)
+                    return Protein.BaseSequence[zeroBasedIndex + OneBasedStartResidueInProtein - OneBasedEndResidueInProtein + startTwo - 1];
+                else
+                    return Protein.BaseSequence[zeroBasedIndex + OneBasedStartResidueInProtein - 1];
             }
         }
 
