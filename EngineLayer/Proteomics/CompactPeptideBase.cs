@@ -175,8 +175,10 @@ namespace EngineLayer
             do
             {
                 if (oneBasedIndexToLookAt != 0 && oneBasedIndexToLookAt != yyy.Length + 1)
-                    prevMass += Residue.ResidueMonoisotopicMass[yyy[oneBasedIndexToLookAt - 1]];
-
+                {
+                    char c= yyy[oneBasedIndexToLookAt - 1];
+                    prevMass += c=='C'? Residue.ResidueMonoisotopicMass[c]+ 57.021464 : Residue.ResidueMonoisotopicMass[c];
+                }
                 // If modification exists
                 if (yyy.allModsOneIsNterminus.TryGetValue(oneBasedIndexToLookAt + 1, out currentModification))
                 {
@@ -213,7 +215,8 @@ namespace EngineLayer
         {
             do
             {
-                prevMass += Residue.ResidueMonoisotopicMass[yyy[oneBasedIndexToLookAt]];
+                char c = yyy[oneBasedIndexToLookAt];
+                prevMass += c == 'C' ? Residue.ResidueMonoisotopicMass[c] + 57.021464 : Residue.ResidueMonoisotopicMass[c];
                 yield return Math.Round(prevMass, digitsForRoundingMasses);
                 oneBasedIndexToLookAt += direction;
             } while (oneBasedIndexToLookAt > 0 && oneBasedIndexToLookAt < yyy.Length - 1) ;

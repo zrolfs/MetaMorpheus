@@ -299,7 +299,8 @@ namespace EngineLayer.NonSpecificEnzymeSearch
             ModificationWithMass residue_variable_mod = null;
             do
             {
-                prevMass[0] += Residue.ResidueMonoisotopicMass[yyy[oneBasedIndexToLookAt - 1]];
+                char c = yyy[oneBasedIndexToLookAt - 1];
+                prevMass[0] += c == 'C' ? Residue.ResidueMonoisotopicMass[c] + 57.021464 : Residue.ResidueMonoisotopicMass[c];
 
                 yyy.allModsOneIsNterminus.TryGetValue(oneBasedIndexToLookAt + 1, out residue_variable_mod);
                 if (residue_variable_mod == null)

@@ -153,17 +153,19 @@ namespace EngineLayer.Analysis
             {
                 if (Residue.TryGetResidue(c, out Residue residue))
                 {
-                    if (Math.Abs(residue.MonoisotopicMass - MassShift) <= v)
+                    double residueMass = c == 'C' ? residue.MonoisotopicMass + 57.021464 : residue.MonoisotopicMass;
+                    if (Math.Abs(residueMass - MassShift) <= v)
                         ok.Add("Add " + residue.Name);
-                    if (Math.Abs(residue.MonoisotopicMass + MassShift) <= v)
+                    if (Math.Abs(residueMass + MassShift) <= v)
                         ok.Add("Remove " + residue.Name);
                     for (char cc = 'A'; cc <= 'Z'; cc++)
                     {
                         if (Residue.TryGetResidue(cc, out Residue residueCC))
                         {
-                            if (Math.Abs(residueCC.MonoisotopicMass + residue.MonoisotopicMass - MassShift) <= v)
+                            double residueMasscc = cc == 'C' ? residueCC.MonoisotopicMass + 57.021464 : residueCC.MonoisotopicMass;
+                            if (Math.Abs(residueMasscc + residueMass - MassShift) <= v)
                                 ok.Add("Add (" + residue.Name + "+" + residueCC.Name + ")");
-                            if (Math.Abs(residueCC.MonoisotopicMass + residue.MonoisotopicMass + MassShift) <= v)
+                            if (Math.Abs(residueMasscc + residueMass + MassShift) <= v)
                                 ok.Add("Remove (" + residue.Name + "+" + residueCC.Name + ")");
                         }
                     }

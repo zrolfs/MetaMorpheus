@@ -78,7 +78,7 @@ namespace EngineLayer
                     monoisotopicMass = waterMonoisotopicMass;
                     foreach (var mod in allModsOneIsNterminus.Values)
                         monoisotopicMass += mod.monoisotopicMass;
-                    monoisotopicMass += BaseSequence.Select(b => Residue.ResidueMonoisotopicMass[b]).Sum();
+                    monoisotopicMass += BaseSequence.Select(b => b == 'C' ? Residue.ResidueMonoisotopicMass[b] + 57.021464 : Residue.ResidueMonoisotopicMass[b]).Sum();
                 }
                 return monoisotopicMass.Value;
             }

@@ -27,9 +27,9 @@ namespace EngineLayer
             if (terminusType == TerminusType.None || terminusType == TerminusType.N)
                 NTerminalMasses = ComputeFollowingFragmentMasses(peptideSequence, 0, 0, 1).ToArray();
             if (terminusType == TerminusType.None || terminusType == TerminusType.C)
-                CTerminalMasses = ComputeFollowingFragmentMasses(peptideSequence, 0, peptideSequence.Length -1, -1).ToArray();
+                CTerminalMasses = ComputeFollowingFragmentMasses(peptideSequence, 0, peptideSequence.Length - 1, -1).ToArray();
             double monoisotopicMass = waterMonoisotopicMass;
-            monoisotopicMass += peptideSequence.Select(b => Residue.ResidueMonoisotopicMass[b]).Sum();
+            monoisotopicMass += peptideSequence.Select(b => b == 'C' ? Residue.ResidueMonoisotopicMass[b] + 57.021464 : Residue.ResidueMonoisotopicMass[b]).Sum();
 
             MonoisotopicMassIncludingFixedMods = monoisotopicMass;
         }
