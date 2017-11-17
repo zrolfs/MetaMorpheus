@@ -381,7 +381,7 @@ namespace EngineLayer
 
         internal void AddOrReplace(Psm psmParent, bool reportAllAmbiguity)
         {
-            foreach (var kvp in psmParent.compactPeptides)
+            foreach (var kvp in psmParent.compactPeptidesHeck)
                 AddOrReplace(kvp.Key, psmParent.Score, kvp.Value.Item1, reportAllAmbiguity);
         }
 

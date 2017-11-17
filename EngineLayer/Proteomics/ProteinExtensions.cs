@@ -25,13 +25,11 @@ namespace EngineLayer
                 for (int j = i + 1; j <= i + maxLength; j++) //cleave pos1
                     for (int k = j + 1; k <= j + maxIntervening; k++) //cleave pos2
                         for (int m = minLength; m <= maxLength; m++)
-                            if (k + m + i - j <= protein.BaseSequence.Length && m + i - j > 0)
+                            if (k + m - (j - i) <= protein.BaseSequence.Length && m - (j - i) > 0)
                             {
-                                string tester = protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
                                 yield return protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
+                                yield return protein.BaseSequence.Substring(k, m - (j - i)) + protein.BaseSequence.Substring(i, j - i);
                             }
-                            else
-                                break;
         }
 
         public static IEnumerable<PeptideWithSetModifications> Digest(this Protein protein, DigestionParams digestionParams, IEnumerable<ModificationWithMass> allKnownFixedModifications, List<ModificationWithMass> variableModifications)
