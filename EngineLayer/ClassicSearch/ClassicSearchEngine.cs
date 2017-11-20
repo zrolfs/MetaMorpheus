@@ -68,6 +68,7 @@ namespace EngineLayer.ClassicSearch
 
             Status("Getting ms2 scans...");
 
+            HashSet<string> seenSequences = new HashSet<string>();
             var lockObject = new object();
             int proteinsSeen = 0;
             int old_progress = 0;
@@ -82,7 +83,10 @@ namespace EngineLayer.ClassicSearch
                     List<string> digestedList = protein.DigestHeck().ToList();
                     foreach (var yyy in digestedList)
                     {
-                        var correspondingCompactPeptide = new CompactPeptide(yyy,terminusType);
+                        if (seenSequences.AsParallel().Contains(yyy))
+                            continue;
+                        seenSequences.Add(yyy);
+                        var correspondingCompactPeptide = new CompactPeptide(yyy, terminusType);
                         if (!commonParameters.ConserveMemory)
                         {
                             var peptideWasObserved = observedPeptides.Contains(correspondingCompactPeptide);
@@ -106,15 +110,21 @@ namespace EngineLayer.ClassicSearch
                             double thePrecursorMass = scanWithIndexAndNotchInfo.theScan.PrecursorMass;
                             var score = CalculatePeptideScore(scanWithIndexAndNotchInfo.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, thePrecursorMass, dissociationTypes, addCompIons);
 
-                            if (score > commonParameters.ScoreCutoff)
+                            Psm currentPsm=psms[scanWithIndexAndNotchInfo.scanIndex];
+                            if (currentPsm == null)
                             {
-                                if (psms[scanWithIndexAndNotchInfo.scanIndex] == null)
-                                    psms[scanWithIndexAndNotchInfo.scanIndex] = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
-                                else
-                                    psms[scanWithIndexAndNotchInfo.scanIndex].AddOrReplace(correspondingCompactPeptide, score, scanWithIndexAndNotchInfo.notch, commonParameters.ReportAllAmbiguity);
+                                currentPsm = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
+                            }
+                            else
+                            {
+                                currentPsm.AddOrReplace(correspondingCompactPeptide, score, scanWithIndexAndNotchInfo.notch, commonParameters.ReportAllAmbiguity);
+                                int scoreInt = (int)score;
+                                while (currentPsm.allScores.Count < scoreInt)
+                                    currentPsm.allScores.Add(0);
+                                currentPsm.allScores[scoreInt]++;
                             }
                         }
-                    }
+                    }                    
                 }
                 lock (lockObject)
                 {

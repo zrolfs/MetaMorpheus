@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using MathNet.Numerics;
 
 namespace EngineLayer
 {
@@ -82,6 +83,10 @@ namespace EngineLayer
         public Dictionary<string, int> ModsIdentified { get; private set; }
         public Dictionary<ProductType, double[]> ProductMassErrorDa { get; internal set; }
         public Dictionary<ProductType, double[]> ProductMassErrorPpm { get; internal set; }
+        public Decimal eValue { get; set; }
+        public double meanPoisson { get; set; }
+        public int totalScores { get; set; }
+        public List<int> allScores { get; set; }
 
         #endregion Public Properties
 
@@ -107,6 +112,7 @@ namespace EngineLayer
             sb.Append('\t' + "Precursor Intensity");
             sb.Append('\t' + "Precursor Mass");
             sb.Append('\t' + "Score");
+            sb.Append('\t' + "eValue");
             sb.Append('\t' + "Notch");
             sb.Append('\t' + "Different Peak Matches");
 
@@ -270,6 +276,7 @@ namespace EngineLayer
             sb.Append('\t' + ScanPrecursorMonoisotopicPeak.Intensity.ToString("F5", CultureInfo.InvariantCulture));
             sb.Append('\t' + ScanPrecursorMass.ToString("F5", CultureInfo.InvariantCulture));
             sb.Append('\t' + Score.ToString("F3", CultureInfo.InvariantCulture));
+            sb.Append('\t' + eValue.ToString("F3", CultureInfo.InvariantCulture));
             sb.Append("\t" + Resolve(compactPeptides.Select(b => b.Value.Item1)).Item1); // Notch
             sb.Append('\t' + NumDifferentCompactPeptides.ToString("F5", CultureInfo.InvariantCulture));
 
@@ -518,6 +525,50 @@ namespace EngineLayer
                 var possibleReturn = string.Join(" or ", list);
                 return (ExcelCompatible && possibleReturn.Length > 32000) ? new Tuple<string, string>("(too many)", null) : new Tuple<string, string>(possibleReturn, null);
             }
+        }
+
+        private void CalculateMeanPoisson()
+        {
+            totalScores = 0;
+            meanPoisson = 0;
+            for(int i=0; i<allScores.Count; i++)
+            {
+                int currentBin = allScores[i];
+                totalScores += currentBin;
+                meanPoisson += currentBin * i;
+            }
+            meanPoisson = meanPoisson / totalScores;
+        }
+
+        private decimal EValue()
+        {
+            double preValue; // this is the cumulative distribution for the poisson at each score up to but not including the score of the winner. This is the probability that the winner has of getting that score at random by matching against a SINGLE spectrum
+            CalculateMeanPoisson();
+            try
+            {
+                preValue = SpecialFunctions.GammaLowerRegularized(meanPoisson, ((int)this.Score - 1));
+            }
+            catch
+            {
+                preValue = 0;
+            }
+
+            // Now the probability of getting the winner's score goes up for each spectrum match. We multiply the preValue by the number of theoretical spectrum within the tolerance to get this new probability.
+
+            double four = 1;
+
+            if (totalScores > 1)
+            {
+                four = (1 - Math.Pow(preValue, (totalScores - 1)));
+                eValue = Convert.ToDecimal((totalScores - 1) * four);
+            }
+            else
+            {
+                eValue = 0;
+            }
+
+            return eValue;
+
         }
 
         #endregion Private Methods
