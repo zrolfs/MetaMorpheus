@@ -83,9 +83,12 @@ namespace EngineLayer.ClassicSearch
                     List<string> digestedList = protein.DigestHeck().ToList();
                     foreach (var yyy in digestedList)
                     {
-                        if (seenSequences.AsParallel().Contains(yyy))
-                            continue;
-                        seenSequences.Add(yyy);
+                        lock (seenSequences)
+                        {
+                            if (seenSequences.Contains(yyy))
+                                continue;
+                            seenSequences.Add(yyy);
+                        }
                         var correspondingCompactPeptide = new CompactPeptide(yyy, terminusType);
                         if (!commonParameters.ConserveMemory)
                         {
@@ -113,7 +116,7 @@ namespace EngineLayer.ClassicSearch
                             Psm currentPsm=psms[scanWithIndexAndNotchInfo.scanIndex];
                             if (currentPsm == null)
                             {
-                                currentPsm = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
+                                psms[scanWithIndexAndNotchInfo.scanIndex] = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
                             }
                             else
                             {
@@ -131,11 +134,20 @@ namespace EngineLayer.ClassicSearch
                     for (int i = 0; i < globalPsms.Length; i++)
                         if (psms[i] != null)
                         {
-                            if (globalPsms[i] == null)
+                            Psm oldPsm = globalPsms[i];
+                            if (oldPsm == null)
                                 globalPsms[i] = psms[i];
                             else
                             {
-                                globalPsms[i].AddOrReplace(psms[i], commonParameters.ReportAllAmbiguity);
+                                Psm newPsm = psms[i];
+                                List<int> sumList = new List<int>();
+                                foreach (int bin in oldPsm.allScores)
+                                    sumList.Add(bin);
+                                while (sumList.Count < newPsm.allScores.Count)
+                                    sumList.Add(0);
+                                for (int j = 0; j < newPsm.allScores.Count; j++)
+                                    sumList[j] += newPsm.allScores[j];
+                                oldPsm.AddOrReplace(newPsm, commonParameters.ReportAllAmbiguity);
                             }
                         }
                     proteinsSeen += partitionRange.Item2 - partitionRange.Item1;
