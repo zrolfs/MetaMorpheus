@@ -74,15 +74,31 @@ namespace EngineLayer
             int proteinsSeen = 0;
             int old_progress = 0;
             var obj = new object();
+            Dictionary<string, bool> globalIsDecoyDict = new Dictionary<string, bool>();
             //Status("Adding possible sources to peptide dictionary...", new List<string> { taskId });
             Parallel.ForEach(Partitioner.Create(0, totalProteins), fff =>
             {
                 Dictionary<CompactPeptideBase, HashSet<string>> local = compactPeptideToProteinPeptideMatching.ToDictionary(b => b.Key, b => new HashSet<string>());
+                Dictionary<string, bool> localIsDecoyDict = new Dictionary<string, bool>();
                 for (int i = fff.Item1; i < fff.Item2; i++)
                     foreach (var digestionParam in collectionOfDigestionParams)
-                        foreach (var peptideWithSetModifications in proteinList[i].DigestHeck().ToList())
+                    {
+                        Protein currentProtein = proteinList[i];
+                        foreach (var peptideWithSetModifications in currentProtein.DigestHeck().ToList())
                             if (local.TryGetValue(new CompactPeptide(peptideWithSetModifications, terminusType), out HashSet<string> v))
+                            {
                                 v.Add(peptideWithSetModifications);
+                                if (localIsDecoyDict.ContainsKey(peptideWithSetModifications))
+                                {
+                                    if (!currentProtein.IsDecoy)
+                                        localIsDecoyDict[peptideWithSetModifications] = false;
+                                }
+                                else
+                                {
+                                    localIsDecoyDict.Add(peptideWithSetModifications, currentProtein.IsDecoy);
+                                }
+                            }
+                    }
                 lock (obj)
                 {
                     foreach (var ye in local)
@@ -90,6 +106,18 @@ namespace EngineLayer
                         if (compactPeptideToProteinPeptideMatching.TryGetValue(ye.Key, out HashSet<string> v))
                             foreach (var huh in ye.Value)
                                 v.Add(huh);
+                    }
+                    foreach (var ye in localIsDecoyDict)
+                    {
+                        if (globalIsDecoyDict.ContainsKey(ye.Key))
+                        {
+                            if (!ye.Value)
+                                globalIsDecoyDict[ye.Key] = false;
+                        }
+                        else
+                        {
+                            globalIsDecoyDict.Add(ye.Key, ye.Value);
+                        }
                     }
                     proteinsSeen += fff.Item2 - fff.Item1;
                     var new_progress = (int)((double)proteinsSeen / (totalProteins) * 100);
@@ -103,10 +131,10 @@ namespace EngineLayer
 
             #endregion Match Sequences to PeptideWithSetModifications
 
-           // if (!reportAllAmbiguity)
-          //      ResolveAmbiguities(compactPeptideToProteinPeptideMatching);
+            // if (!reportAllAmbiguity)
+            //      ResolveAmbiguities(compactPeptideToProteinPeptideMatching);
 
-            return new SequencesToActualProteinPeptidesEngineResults(this, compactPeptideToProteinPeptideMatching);
+            return new SequencesToActualProteinPeptidesEngineResults(this, compactPeptideToProteinPeptideMatching, globalIsDecoyDict);
         }
 
         #endregion Protected Methods

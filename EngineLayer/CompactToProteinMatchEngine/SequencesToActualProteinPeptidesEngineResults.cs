@@ -7,13 +7,14 @@ namespace EngineLayer
     {
         #region Public Constructors
 
-        public SequencesToActualProteinPeptidesEngineResults(MetaMorpheusEngine s, Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> compactPeptideToProteinPeptideMatching) : base(s)
+        public SequencesToActualProteinPeptidesEngineResults(MetaMorpheusEngine s, Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> compactPeptideToProteinPeptideMatching, Dictionary<string, bool> globalIsDecoy) : base(s)
         {
             this.CompactPeptideToProteinPeptideMatching = compactPeptideToProteinPeptideMatching;
         }
-        public SequencesToActualProteinPeptidesEngineResults(MetaMorpheusEngine s, Dictionary<CompactPeptideBase, HashSet<string>> compactPeptideToProteinPeptideMatching) : base(s)
+        public SequencesToActualProteinPeptidesEngineResults(MetaMorpheusEngine s, Dictionary<CompactPeptideBase, HashSet<string>> compactPeptideToProteinPeptideMatching, Dictionary<string, bool> globalIsDecoy) : base(s)
         {
             this.CompactPeptideToProteinPeptideMatchingString = compactPeptideToProteinPeptideMatching;
+            this.globalIsDecoy = globalIsDecoy;
         }
         #endregion Public Constructors
 
@@ -21,6 +22,7 @@ namespace EngineLayer
 
         public Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> CompactPeptideToProteinPeptideMatching { get; }
         public Dictionary<CompactPeptideBase, HashSet<string>> CompactPeptideToProteinPeptideMatchingString { get; }
+        public Dictionary<string, bool> globalIsDecoy { get; }
 
         #endregion Public Properties
 

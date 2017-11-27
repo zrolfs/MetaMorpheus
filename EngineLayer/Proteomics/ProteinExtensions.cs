@@ -21,15 +21,15 @@ namespace EngineLayer
                     yield return protein.BaseSequence.Substring(index, length);
 
             //All cis sequences
-            //for (int i = 0; i < protein.BaseSequence.Length - minLength - 1; i++) //start pos
-            //    for (int j = i + 1; j <= i + maxLength; j++) //cleave pos1
-            //        for (int k = j + 1; k <= j + maxIntervening; k++) //cleave pos2
-            //            for (int m = minLength; m <= maxLength; m++)
-            //                if (k + m - (j - i) <= protein.BaseSequence.Length && m - (j - i) > 0)
-            //                {
-            //                    yield return protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
-            //                    yield return protein.BaseSequence.Substring(k, m - (j - i)) + protein.BaseSequence.Substring(i, j - i);
-            //                }
+            for (int i = 0; i < protein.BaseSequence.Length - minLength - 1; i++) //start pos
+                for (int j = i + 1; j <= i + maxLength; j++) //cleave pos1
+                    for (int k = j + 1; k <= j + maxIntervening; k++) //cleave pos2
+                        for (int m = minLength; m <= maxLength; m++)
+                            if (k + m - (j - i) <= protein.BaseSequence.Length && m - (j - i) > 0)
+                            {
+                                yield return protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
+                                yield return protein.BaseSequence.Substring(k, m - (j - i)) + protein.BaseSequence.Substring(i, j - i);
+                            }
         }
 
         public static IEnumerable<PeptideWithSetModifications> Digest(this Protein protein, DigestionParams digestionParams, IEnumerable<ModificationWithMass> allKnownFixedModifications, List<ModificationWithMass> variableModifications)

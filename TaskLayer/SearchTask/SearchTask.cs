@@ -887,7 +887,8 @@ namespace TaskLayer
             Status("Matching peptides to proteins...", taskId);
             Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> compactPeptideToProteinPeptideMatching = new Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>>();
             Dictionary<CompactPeptideBase, HashSet<string>> compactPeptideToProteinPeptideMatchingHeck = new Dictionary<CompactPeptideBase, HashSet<string>>();
-            if (SearchParameters.SearchType == SearchType.NonSpecific)
+            Dictionary<string, bool> globalIsDecoy = new Dictionary<string, bool>();
+                if (SearchParameters.SearchType == SearchType.NonSpecific)
             {
                 List<List<ProductType>> terminusSeparatedIons = ProductTypeMethod.SeparateIonsByTerminus(ionTypes);
                 foreach (List<ProductType> terminusSpecificIons in terminusSeparatedIons)
@@ -898,6 +899,7 @@ namespace TaskLayer
                 SequencesToActualProteinPeptidesEngine sequencesToActualProteinPeptidesEngine = new SequencesToActualProteinPeptidesEngine(allPsms, proteinList, fixedModifications, variableModifications, ionTypes, ListOfDigestionParams, CommonParameters.ReportAllAmbiguity, new List<string> { taskId });
                 var res= (SequencesToActualProteinPeptidesEngineResults)sequencesToActualProteinPeptidesEngine.Run();
                 compactPeptideToProteinPeptideMatchingHeck = res.CompactPeptideToProteinPeptideMatchingString;
+                globalIsDecoy = res.globalIsDecoy;
             }
 
             ProteinParsimonyResults proteinAnalysisResults = null;
@@ -905,9 +907,31 @@ namespace TaskLayer
                 proteinAnalysisResults = (ProteinParsimonyResults)(new ProteinParsimonyEngine(compactPeptideToProteinPeptideMatching, SearchParameters.ModPeptidesAreUnique, new List<string> { taskId }).Run());
 
             Status("Resolving most probable peptide...", new List<string> { taskId });
+            List<int> globalScores = new List<int>();
+            double totalPsms = 0;
             foreach (var huh in allPsms)
                 if (huh != null && huh.MostProbableProteinInfo == null)
-                    huh.MatchToProteinLinkedPeptides(compactPeptideToProteinPeptideMatchingHeck);
+                {
+                    huh.allScores[huh.allScores.Count - 1]--;
+                    totalPsms++;
+                    while (globalScores.Count < huh.allScores.Count)
+                        globalScores.Add(0);
+                    for (int i = 0; i < huh.allScores.Count; i++)
+                        globalScores[i] += huh.allScores[i];
+                }
+            int sumScore = 0;
+            int countScore = 0;
+            for(int i=0; i<globalScores.Count; i++)
+            {
+                int currentCount = globalScores[i];
+                countScore += currentCount;
+                sumScore += currentCount*i;
+            }
+            double meanAllScoresCount = countScore / totalPsms;
+            double meanGlobalAllScores = sumScore / totalPsms;
+            foreach (var huh in allPsms)
+                if (huh != null && huh.MostProbableProteinInfo == null)
+                    huh.MatchToProteinLinkedPeptides(compactPeptideToProteinPeptideMatchingHeck, globalIsDecoy, meanAllScoresCount, meanGlobalAllScores);
 
             Status("Ordering and grouping psms...", taskId);
 

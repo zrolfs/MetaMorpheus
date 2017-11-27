@@ -39,11 +39,13 @@ namespace EngineLayer
             this.ScanPrecursorMass = scan.PrecursorMass;
             AddOrReplace(peptide, score, notch, true);
             this.ExcelCompatible = true;
+            this.IsDecoy = true;
         }
 
         public Psm(CompactPeptideBase peptide, int notch, double score, int scanIndex, IScan scan, bool excelCompatible) : this(peptide, notch, score, scanIndex, scan)
         {
             this.ExcelCompatible = excelCompatible;
+            this.IsDecoy = true;
         }
 
         #endregion Public Constructors
@@ -84,6 +86,7 @@ namespace EngineLayer
         public Dictionary<ProductType, double[]> ProductMassErrorDa { get; internal set; }
         public Dictionary<ProductType, double[]> ProductMassErrorPpm { get; internal set; }
         public Decimal eValue { get; set; }
+        public double four { get; set; }
         public double meanPoisson { get; set; }
         public int totalScores { get; set; }
         public List<int> allScores { get; set; }
@@ -113,6 +116,7 @@ namespace EngineLayer
             sb.Append('\t' + "Precursor Mass");
             sb.Append('\t' + "Score");
             sb.Append('\t' + "eValue");
+            sb.Append('\t' + "four");
             sb.Append('\t' + "Notch");
             sb.Append('\t' + "Different Peak Matches");
 
@@ -221,16 +225,24 @@ namespace EngineLayer
             Notch = Resolve(compactPeptides.Select(b => b.Value.Item1)).Item2;
         }
 
-        public void MatchToProteinLinkedPeptides(Dictionary<CompactPeptideBase, HashSet<string>> matching)
+        public void MatchToProteinLinkedPeptides(Dictionary<CompactPeptideBase, HashSet<string>> matching, Dictionary<string, bool> globalIsDecoy, double meanAllScoresCount, double meanGlobalAllScores)
         {
             foreach (var cpKey in compactPeptidesHeck.Keys.ToList())
             {
-                compactPeptidesHeck[cpKey] = new Tuple<int, HashSet<string>>(compactPeptidesHeck[cpKey].Item1, matching[cpKey]);
-                var candidatePli = new ProteinLinkedInfo(matching[cpKey]);
+                HashSet<string> value = matching[cpKey];
+                foreach(string s in value)
+                {
+                    if (!IsDecoy)
+                        break;
+                    if (!globalIsDecoy[s])
+                        IsDecoy = false;
+                }
+                compactPeptidesHeck[cpKey] = new Tuple<int, HashSet<string>>(compactPeptidesHeck[cpKey].Item1, value);
+                var candidatePli = new ProteinLinkedInfo(value);
                 if (MostProbableProteinInfo == null || FirstIsPreferable(candidatePli, MostProbableProteinInfo))
                     MostProbableProteinInfo = candidatePli;
             }
-
+            EValue(meanAllScoresCount,meanGlobalAllScores);
             //IsDecoy = compactPeptides.Any(b => b.Value.Item2.Any(c => c.Protein.IsDecoy));
 
             FullSequence = Resolve(compactPeptidesHeck.SelectMany(b => b.Value.Item2)).Item2;
@@ -277,6 +289,7 @@ namespace EngineLayer
             sb.Append('\t' + ScanPrecursorMass.ToString("F5", CultureInfo.InvariantCulture));
             sb.Append('\t' + Score.ToString("F3", CultureInfo.InvariantCulture));
             sb.Append('\t' + eValue.ToString("F3", CultureInfo.InvariantCulture));
+            sb.Append('\t' + four.ToString("F3", CultureInfo.InvariantCulture));
             sb.Append("\t" + Resolve(compactPeptides.Select(b => b.Value.Item1)).Item1); // Notch
             sb.Append('\t' + NumDifferentCompactPeptides.ToString("F5", CultureInfo.InvariantCulture));
 
@@ -527,48 +540,68 @@ namespace EngineLayer
             }
         }
 
-        private void CalculateMeanPoisson()
-        {
-            totalScores = 0;
-            meanPoisson = 0;
-            for(int i=0; i<allScores.Count; i++)
-            {
-                int currentBin = allScores[i];
-                totalScores += currentBin;
-                meanPoisson += currentBin * i;
-            }
-            meanPoisson = meanPoisson / totalScores;
-        }
+        //private void CalculateMeanPoisson()
+        //{
+        //    totalScores = 0;
+        //    meanPoisson = 0;
+        //    for(int i=0; i<allScores.Count; i++)
+        //    {
+        //        int currentBin = allScores[i];
+        //        totalScores += currentBin;
+        //        meanPoisson += currentBin * i;
+        //    }
+        //    if (totalScores == 0)
+        //    {
+        //        totalScores = 1;
+        //        meanPoisson = 1;
+        //    }
+        //    meanPoisson = meanPoisson / totalScores;
+        //}
 
-        private decimal EValue()
+        private void EValue(double meanAllScoresCounts, double meanGlobalAllScores)
         {
             double preValue; // this is the cumulative distribution for the poisson at each score up to but not including the score of the winner. This is the probability that the winner has of getting that score at random by matching against a SINGLE spectrum
-            CalculateMeanPoisson();
-            try
+
+            double count = 0;
+            double product = 0;
+
+            if ((int)Score == 0)
+                preValue = 1;
+            else
             {
-                preValue = SpecialFunctions.GammaLowerRegularized(meanPoisson, ((int)this.Score - 1));
-            }
-            catch
-            {
-                preValue = 0;
+                double maximumLikelihood = 0;
+                if (!(allScores.Count <= 1))
+                {
+                    for (int i = 0; i < allScores.Count; i++)
+                    {
+                        int currentCount = allScores[i];
+                        product += currentCount * i;
+                        count += currentCount;
+                    }
+                    maximumLikelihood= (1.0d / count * product);
+                }
+                if (maximumLikelihood == 0)
+                    preValue = SpecialFunctions.GammaLowerRegularized(meanGlobalAllScores, ((int)Score - 1));
+                else
+                    preValue = SpecialFunctions.GammaLowerRegularized(maximumLikelihood, ((int)Score - 1));
             }
 
             // Now the probability of getting the winner's score goes up for each spectrum match. We multiply the preValue by the number of theoretical spectrum within the tolerance to get this new probability.
 
-            double four = 1;
-
-            if (totalScores > 1)
+            if(Double.IsNaN(preValue))
             {
-                four = (1 - Math.Pow(preValue, (totalScores - 1)));
-                eValue = Convert.ToDecimal((totalScores - 1) * four);
+                eValue = 2;
+            }
+            else if (allScores.Count > 0)
+            {
+                four = (1 - Math.Pow(preValue, (count)));
+                eValue= (Convert.ToDecimal((count) * four));
             }
             else
             {
-                eValue = 0;
+                four = (1 - Math.Pow(preValue, (meanAllScoresCounts)));
+                eValue= (Convert.ToDecimal((count) * four));
             }
-
-            return eValue;
-
         }
 
         #endregion Private Methods

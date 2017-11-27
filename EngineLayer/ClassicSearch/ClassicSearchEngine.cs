@@ -67,9 +67,11 @@ namespace EngineLayer.ClassicSearch
             var observedPeptides = new HashSet<CompactPeptide>();
 
             Status("Getting ms2 scans...");
-
-            HashSet<string> seenSequences = new HashSet<string>();
+            Dictionary<char, HashSet<string>> seenSequences = new Dictionary<char, HashSet<string>>();
+            for (char c = 'A'; c <= 'Z'; c++)
+                seenSequences.Add(c, new HashSet<string>());
             var lockObject = new object();
+            var lockObjectTwo = new object();
             int proteinsSeen = 0;
             int old_progress = 0;
             TerminusType terminusType = ProductTypeMethod.IdentifyTerminusType(lp);
@@ -83,11 +85,12 @@ namespace EngineLayer.ClassicSearch
                     List<string> digestedList = protein.DigestHeck().ToList();
                     foreach (var yyy in digestedList)
                     {
-                        lock (seenSequences)
-                        {
-                            if (seenSequences.Contains(yyy))
+                        string substring = yyy.Substring(1, yyy.Length - 1);
+                        lock (lockObjectTwo)
+                        {                            
+                            if (seenSequences[yyy[0]].Contains(substring))
                                 continue;
-                            seenSequences.Add(yyy);
+                            seenSequences[yyy[0]].Add(substring);
                         }
                         var correspondingCompactPeptide = new CompactPeptide(yyy, terminusType);
                         if (!commonParameters.ConserveMemory)
@@ -113,16 +116,27 @@ namespace EngineLayer.ClassicSearch
                             double thePrecursorMass = scanWithIndexAndNotchInfo.theScan.PrecursorMass;
                             var score = CalculatePeptideScore(scanWithIndexAndNotchInfo.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, thePrecursorMass, dissociationTypes, addCompIons);
 
-                            Psm currentPsm=psms[scanWithIndexAndNotchInfo.scanIndex];
+                            Psm currentPsm = psms[scanWithIndexAndNotchInfo.scanIndex];
+                            int scoreInt = (int)score;
                             if (currentPsm == null)
                             {
-                                psms[scanWithIndexAndNotchInfo.scanIndex] = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
+                                currentPsm = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
+                                lock (lockObject)
+                                {
+                                    if (currentPsm.allScores == null)
+                                        currentPsm.allScores = new List<int>();
+                                    while (currentPsm.allScores.Count <= scoreInt)
+                                        currentPsm.allScores.Add(0);
+                                    currentPsm.allScores[scoreInt]++;
+                                    psms[scanWithIndexAndNotchInfo.scanIndex] = currentPsm;
+                                }
                             }
                             else
                             {
                                 currentPsm.AddOrReplace(correspondingCompactPeptide, score, scanWithIndexAndNotchInfo.notch, commonParameters.ReportAllAmbiguity);
-                                int scoreInt = (int)score;
-                                while (currentPsm.allScores.Count < scoreInt)
+                                if (currentPsm.allScores == null)
+                                    currentPsm.allScores = new List<int>();
+                                while (currentPsm.allScores.Count <= scoreInt)
                                     currentPsm.allScores.Add(0);
                                 currentPsm.allScores[scoreInt]++;
                             }
@@ -148,6 +162,7 @@ namespace EngineLayer.ClassicSearch
                                 for (int j = 0; j < newPsm.allScores.Count; j++)
                                     sumList[j] += newPsm.allScores[j];
                                 oldPsm.AddOrReplace(newPsm, commonParameters.ReportAllAmbiguity);
+                                oldPsm.allScores = sumList;
                             }
                         }
                     proteinsSeen += partitionRange.Item2 - partitionRange.Item1;
@@ -159,6 +174,8 @@ namespace EngineLayer.ClassicSearch
                     }
                 }
             });
+            List<Psm> interest = globalPsms.Where(x => x!=null && x.Score>17).ToList();
+            seenSequences.Clear();
             return new MetaMorpheusEngineResults(this);
         }
 
