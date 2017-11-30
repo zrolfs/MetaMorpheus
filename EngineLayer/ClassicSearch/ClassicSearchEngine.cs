@@ -64,14 +64,9 @@ namespace EngineLayer.ClassicSearch
 
             int totalProteins = proteinList.Count;
 
-            var observedPeptides = new HashSet<CompactPeptide>();
-
             Status("Getting ms2 scans...");
-            Dictionary<char, HashSet<string>> seenSequences = new Dictionary<char, HashSet<string>>();
-            for (char c = 'A'; c <= 'Z'; c++)
-                seenSequences.Add(c, new HashSet<string>());
+
             var lockObject = new object();
-            var lockObjectTwo = new object();
             int proteinsSeen = 0;
             int old_progress = 0;
             TerminusType terminusType = ProductTypeMethod.IdentifyTerminusType(lp);
@@ -81,64 +76,56 @@ namespace EngineLayer.ClassicSearch
                 var psms = new Psm[arrayOfSortedMS2Scans.Length];
                 for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
                 {
-                    Protein protein = proteinList[i];
-                    List<string> digestedList = protein.DigestHeck().ToList();
-                    foreach (var yyy in digestedList)
+                    Protein protein = proteinList[i];                  
+                    foreach (string yyy in protein.DigestHeck())
                     {
-                        string substring = yyy.Substring(1, yyy.Length - 1);
-                        lock (lockObjectTwo)
-                        {                            
-                            if (seenSequences[yyy[0]].Contains(substring))
-                                continue;
-                            seenSequences[yyy[0]].Add(substring);
-                        }
+                      
                         var correspondingCompactPeptide = new CompactPeptide(yyy, terminusType);
-                        if (!commonParameters.ConserveMemory)
-                        {
-                            var peptideWasObserved = observedPeptides.Contains(correspondingCompactPeptide);
-                            if (peptideWasObserved)
-                                continue;
-                            lock (observedPeptides)
-                            {
-                                peptideWasObserved = observedPeptides.Contains(correspondingCompactPeptide);
-                                if (peptideWasObserved)
-                                    continue;
-                                observedPeptides.Add(correspondingCompactPeptide);
-                            }
-                        }
+                        //if (!commonParameters.ConserveMemory)
+                        //{
+                        //    var peptideWasObserved = observedPeptides.Contains(correspondingCompactPeptide);
+                        //    if (peptideWasObserved)
+                        //        continue;
+                        //    lock (observedPeptides)
+                        //    {
+                        //        peptideWasObserved = observedPeptides.Contains(correspondingCompactPeptide);
+                        //        if (peptideWasObserved)
+                        //            continue;
+                        //        observedPeptides.Add(correspondingCompactPeptide);
+                        //    }
+                        //}
 
                         var productMasses = correspondingCompactPeptide.ProductMassesMightHaveDuplicatesAndNaNs(lp);
                         Array.Sort(productMasses);
 
-                        var searchMode = searchModes;
-                        foreach (ScanWithIndexAndNotchInfo scanWithIndexAndNotchInfo in GetAcceptableScans(correspondingCompactPeptide.MonoisotopicMassIncludingFixedMods, searchMode).ToList())
+                        foreach (ScanWithIndexAndNotchInfo scanWithIndexAndNotchInfo in GetAcceptableScans(correspondingCompactPeptide.MonoisotopicMassIncludingFixedMods, searchModes))
                         {
-                            double thePrecursorMass = scanWithIndexAndNotchInfo.theScan.PrecursorMass;
-                            var score = CalculatePeptideScore(scanWithIndexAndNotchInfo.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, thePrecursorMass, dissociationTypes, addCompIons);
-
-                            Psm currentPsm = psms[scanWithIndexAndNotchInfo.scanIndex];
-                            int scoreInt = (int)score;
-                            if (currentPsm == null)
+                        //    if (scanWithIndexAndNotchInfo.theScan.OneBasedScanNumber != 16017)
+                          //      continue;
+                            var score = CalculatePeptideScore(scanWithIndexAndNotchInfo.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, scanWithIndexAndNotchInfo.theScan.PrecursorMass, dissociationTypes, addCompIons);
+                            if (score < 5)
+                                continue;
+                            if (psms[scanWithIndexAndNotchInfo.scanIndex] == null)
                             {
-                                currentPsm = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
-                                lock (lockObject)
-                                {
-                                    if (currentPsm.allScores == null)
-                                        currentPsm.allScores = new List<int>();
-                                    while (currentPsm.allScores.Count <= scoreInt)
-                                        currentPsm.allScores.Add(0);
-                                    currentPsm.allScores[scoreInt]++;
-                                    psms[scanWithIndexAndNotchInfo.scanIndex] = currentPsm;
-                                }
+                                psms[scanWithIndexAndNotchInfo.scanIndex] = new Psm(correspondingCompactPeptide, scanWithIndexAndNotchInfo.notch, score, scanWithIndexAndNotchInfo.scanIndex, scanWithIndexAndNotchInfo.theScan, commonParameters.ExcelCompatible);
+                                //lock (lockObject)
+                                //{
+                                //    if (currentPsm.allScores == null)
+                                //    currentPsm.allScores = new List<int>();
+                                //while (currentPsm.allScores.Count <= scoreInt)
+                                //    currentPsm.allScores.Add(0);
+                                //    currentPsm.allScores[scoreInt]++;
+                                //    psms[scanWithIndexAndNotchInfo.scanIndex] = currentPsm;
+                                //}
                             }
                             else
                             {
-                                currentPsm.AddOrReplace(correspondingCompactPeptide, score, scanWithIndexAndNotchInfo.notch, commonParameters.ReportAllAmbiguity);
-                                if (currentPsm.allScores == null)
-                                    currentPsm.allScores = new List<int>();
-                                while (currentPsm.allScores.Count <= scoreInt)
-                                    currentPsm.allScores.Add(0);
-                                currentPsm.allScores[scoreInt]++;
+                                psms[scanWithIndexAndNotchInfo.scanIndex].AddOrReplace(correspondingCompactPeptide, score, scanWithIndexAndNotchInfo.notch, commonParameters.ReportAllAmbiguity);
+                                //if (currentPsm.allScores == null)
+                                //    currentPsm.allScores = new List<int>();
+                                //while (currentPsm.allScores.Count <= scoreInt)
+                                //    currentPsm.allScores.Add(0);
+                                //currentPsm.allScores[scoreInt]++;
                             }
                         }
                     }                    
@@ -148,21 +135,19 @@ namespace EngineLayer.ClassicSearch
                     for (int i = 0; i < globalPsms.Length; i++)
                         if (psms[i] != null)
                         {
-                            Psm oldPsm = globalPsms[i];
-                            if (oldPsm == null)
+                            if (globalPsms[i] == null)
                                 globalPsms[i] = psms[i];
                             else
                             {
-                                Psm newPsm = psms[i];
-                                List<int> sumList = new List<int>();
-                                foreach (int bin in oldPsm.allScores)
-                                    sumList.Add(bin);
-                                while (sumList.Count < newPsm.allScores.Count)
-                                    sumList.Add(0);
-                                for (int j = 0; j < newPsm.allScores.Count; j++)
-                                    sumList[j] += newPsm.allScores[j];
-                                oldPsm.AddOrReplace(newPsm, commonParameters.ReportAllAmbiguity);
-                                oldPsm.allScores = sumList;
+                                //List<int> sumList = new List<int>();
+                                //foreach (int bin in oldPsm.allScores)
+                                //    sumList.Add(bin);
+                                //while (sumList.Count < newPsm.allScores.Count)
+                                //    sumList.Add(0);
+                                //for (int j = 0; j < newPsm.allScores.Count; j++)
+                                //    sumList[j] += newPsm.allScores[j];
+                                globalPsms[i].AddOrReplace(psms[i], commonParameters.ReportAllAmbiguity);
+                                //oldPsm.allScores = sumList;
                             }
                         }
                     proteinsSeen += partitionRange.Item2 - partitionRange.Item1;
@@ -174,8 +159,8 @@ namespace EngineLayer.ClassicSearch
                     }
                 }
             });
-            List<Psm> interest = globalPsms.Where(x => x!=null && x.Score>17).ToList();
-            seenSequences.Clear();
+            // List<Psm> interest = globalPsms.Where(x => x!=null && x.Score>17).ToList();
+  
             return new MetaMorpheusEngineResults(this);
         }
 

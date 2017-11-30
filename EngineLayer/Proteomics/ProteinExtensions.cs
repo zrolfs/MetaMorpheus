@@ -16,9 +16,9 @@ namespace EngineLayer
             int maxIntervening = 25;
 
             //Normal sequences
-            for (int length = minLength; length <= maxLength; length++)
-                for (int index = 0; index + length <= protein.BaseSequence.Length; index++)
-                    yield return protein.BaseSequence.Substring(index, length);
+            //for (int length = minLength; length <= maxLength; length++)
+            //    for (int index = 0; index + length <= protein.BaseSequence.Length; index++)
+            //        yield return protein.BaseSequence.Substring(index, length);
 
             //All cis sequences
             for (int i = 0; i < protein.BaseSequence.Length - minLength - 1; i++) //start pos
@@ -28,7 +28,7 @@ namespace EngineLayer
                             if (k + m - (j - i) <= protein.BaseSequence.Length && m - (j - i) > 0)
                             {
                                 yield return protein.BaseSequence.Substring(i, j - i) + protein.BaseSequence.Substring(k, m - (j - i));
-                                yield return protein.BaseSequence.Substring(k, m - (j - i)) + protein.BaseSequence.Substring(i, j - i);
+                                //  yield return protein.BaseSequence.Substring(k, m - (j - i)) + protein.BaseSequence.Substring(i, j - i);
                             }
         }
 

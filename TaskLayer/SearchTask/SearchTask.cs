@@ -907,31 +907,31 @@ namespace TaskLayer
                 proteinAnalysisResults = (ProteinParsimonyResults)(new ProteinParsimonyEngine(compactPeptideToProteinPeptideMatching, SearchParameters.ModPeptidesAreUnique, new List<string> { taskId }).Run());
 
             Status("Resolving most probable peptide...", new List<string> { taskId });
-            List<int> globalScores = new List<int>();
-            double totalPsms = 0;
+            //List<int> globalScores = new List<int>();
+            //double totalPsms = 0;
+            //foreach (var huh in allPsms)
+            //    if (huh != null && huh.MostProbableProteinInfo == null)
+            //    {
+            //        huh.allScores[huh.allScores.Count - 1]--;
+            //        totalPsms++;
+            //        while (globalScores.Count < huh.allScores.Count)
+            //            globalScores.Add(0);
+            //        for (int i = 0; i < huh.allScores.Count; i++)
+            //            globalScores[i] += huh.allScores[i];
+            //    }
+            //int sumScore = 0;
+            //int countScore = 0;
+            //for(int i=0; i<globalScores.Count; i++)
+            //{
+            //    int currentCount = globalScores[i];
+            //    countScore += currentCount;
+            //    sumScore += currentCount*i;
+            //}
+            //double meanAllScoresCount = countScore / totalPsms;
+            //double meanGlobalAllScores = sumScore / totalPsms;
             foreach (var huh in allPsms)
                 if (huh != null && huh.MostProbableProteinInfo == null)
-                {
-                    huh.allScores[huh.allScores.Count - 1]--;
-                    totalPsms++;
-                    while (globalScores.Count < huh.allScores.Count)
-                        globalScores.Add(0);
-                    for (int i = 0; i < huh.allScores.Count; i++)
-                        globalScores[i] += huh.allScores[i];
-                }
-            int sumScore = 0;
-            int countScore = 0;
-            for(int i=0; i<globalScores.Count; i++)
-            {
-                int currentCount = globalScores[i];
-                countScore += currentCount;
-                sumScore += currentCount*i;
-            }
-            double meanAllScoresCount = countScore / totalPsms;
-            double meanGlobalAllScores = sumScore / totalPsms;
-            foreach (var huh in allPsms)
-                if (huh != null && huh.MostProbableProteinInfo == null)
-                    huh.MatchToProteinLinkedPeptides(compactPeptideToProteinPeptideMatchingHeck, globalIsDecoy, meanAllScoresCount, meanGlobalAllScores);
+                    huh.MatchToProteinLinkedPeptides(compactPeptideToProteinPeptideMatchingHeck, globalIsDecoy);//, meanAllScoresCount, meanGlobalAllScores);
 
             Status("Ordering and grouping psms...", taskId);
 

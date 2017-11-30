@@ -115,8 +115,8 @@ namespace EngineLayer
             sb.Append('\t' + "Precursor Intensity");
             sb.Append('\t' + "Precursor Mass");
             sb.Append('\t' + "Score");
-            sb.Append('\t' + "eValue");
-            sb.Append('\t' + "four");
+            //sb.Append('\t' + "eValue");
+            //sb.Append('\t' + "four");
             sb.Append('\t' + "Notch");
             sb.Append('\t' + "Different Peak Matches");
 
@@ -225,7 +225,7 @@ namespace EngineLayer
             Notch = Resolve(compactPeptides.Select(b => b.Value.Item1)).Item2;
         }
 
-        public void MatchToProteinLinkedPeptides(Dictionary<CompactPeptideBase, HashSet<string>> matching, Dictionary<string, bool> globalIsDecoy, double meanAllScoresCount, double meanGlobalAllScores)
+        public void MatchToProteinLinkedPeptides(Dictionary<CompactPeptideBase, HashSet<string>> matching, Dictionary<string, bool> globalIsDecoy)//, double meanAllScoresCount, double meanGlobalAllScores)
         {
             foreach (var cpKey in compactPeptidesHeck.Keys.ToList())
             {
@@ -242,7 +242,7 @@ namespace EngineLayer
                 if (MostProbableProteinInfo == null || FirstIsPreferable(candidatePli, MostProbableProteinInfo))
                     MostProbableProteinInfo = candidatePli;
             }
-            EValue(meanAllScoresCount,meanGlobalAllScores);
+           // EValue(meanAllScoresCount,meanGlobalAllScores);
             //IsDecoy = compactPeptides.Any(b => b.Value.Item2.Any(c => c.Protein.IsDecoy));
 
             FullSequence = Resolve(compactPeptidesHeck.SelectMany(b => b.Value.Item2)).Item2;
@@ -288,8 +288,8 @@ namespace EngineLayer
             sb.Append('\t' + ScanPrecursorMonoisotopicPeak.Intensity.ToString("F5", CultureInfo.InvariantCulture));
             sb.Append('\t' + ScanPrecursorMass.ToString("F5", CultureInfo.InvariantCulture));
             sb.Append('\t' + Score.ToString("F3", CultureInfo.InvariantCulture));
-            sb.Append('\t' + eValue.ToString("F3", CultureInfo.InvariantCulture));
-            sb.Append('\t' + four.ToString("F3", CultureInfo.InvariantCulture));
+            //sb.Append('\t' + eValue.ToString("F3", CultureInfo.InvariantCulture));
+            //sb.Append('\t' + four.ToString("F3", CultureInfo.InvariantCulture));
             sb.Append("\t" + Resolve(compactPeptides.Select(b => b.Value.Item1)).Item1); // Notch
             sb.Append('\t' + NumDifferentCompactPeptides.ToString("F5", CultureInfo.InvariantCulture));
 
@@ -560,48 +560,50 @@ namespace EngineLayer
 
         private void EValue(double meanAllScoresCounts, double meanGlobalAllScores)
         {
-            double preValue; // this is the cumulative distribution for the poisson at each score up to but not including the score of the winner. This is the probability that the winner has of getting that score at random by matching against a SINGLE spectrum
+            //double preValue; // this is the cumulative distribution for the poisson at each score up to but not including the score of the winner. This is the probability that the winner has of getting that score at random by matching against a SINGLE spectrum
 
-            double count = 0;
-            double product = 0;
+            //double count = 0;
+            //double product = 0;
 
-            if ((int)Score == 0)
-                preValue = 1;
-            else
-            {
-                double maximumLikelihood = 0;
-                if (!(allScores.Count <= 1))
-                {
-                    for (int i = 0; i < allScores.Count; i++)
-                    {
-                        int currentCount = allScores[i];
-                        product += currentCount * i;
-                        count += currentCount;
-                    }
-                    maximumLikelihood= (1.0d / count * product);
-                }
-                if (maximumLikelihood == 0)
-                    preValue = SpecialFunctions.GammaLowerRegularized(meanGlobalAllScores, ((int)Score - 1));
-                else
-                    preValue = SpecialFunctions.GammaLowerRegularized(maximumLikelihood, ((int)Score - 1));
-            }
+            //if ((int)Score == 0)
+            //    preValue = 1;
+            //else
+            //{
+            //    double maximumLikelihood = 0;
+            //    if (!(allScores.Count <= 1))
+            //    {
+            //        for (int i = 0; i < allScores.Count; i++)
+            //        {
+            //            int currentCount = allScores[i];
+            //            product += currentCount * i;
+            //            count += currentCount;
+            //        }
+            //        maximumLikelihood= (1.0d / count * product);
+            //    }
+            //    if (maximumLikelihood == 0)
+            //        preValue = SpecialFunctions.GammaLowerRegularized(meanGlobalAllScores, ((int)Score - 1));
+            //    else
+            //        preValue = SpecialFunctions.GammaLowerRegularized(maximumLikelihood, ((int)Score - 1));
+            four = 0;
+            eValue = 0;
+            //}
 
             // Now the probability of getting the winner's score goes up for each spectrum match. We multiply the preValue by the number of theoretical spectrum within the tolerance to get this new probability.
 
-            if(Double.IsNaN(preValue))
-            {
-                eValue = 2;
-            }
-            else if (allScores.Count > 0)
-            {
-                four = (1 - Math.Pow(preValue, (count)));
-                eValue= (Convert.ToDecimal((count) * four));
-            }
-            else
-            {
-                four = (1 - Math.Pow(preValue, (meanAllScoresCounts)));
-                eValue= (Convert.ToDecimal((count) * four));
-            }
+            //if(Double.IsNaN(preValue))
+            //{
+            //    eValue = 2;
+            //}
+            //else if (allScores.Count > 0)
+            //{
+            //    four = (1 - Math.Pow(preValue, (count)));
+            //    eValue= (Convert.ToDecimal((count) * four));
+            //}
+            //else
+            //{
+            //    four = (1 - Math.Pow(preValue, (meanAllScoresCounts)));
+            //    eValue= (Convert.ToDecimal((count) * four));
+            //}
         }
 
         #endregion Private Methods
