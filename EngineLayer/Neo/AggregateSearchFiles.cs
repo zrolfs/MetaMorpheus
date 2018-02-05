@@ -11,12 +11,13 @@ namespace EngineLayer.Neo
 
         public static void Combine(string primaryFilePath, string secondaryFilePath, string outputFilePath)
         {
-            string header = "";
             string[] primaryLines = (System.IO.File.ReadAllLines(@primaryFilePath));
             string[] secondaryLines = (System.IO.File.ReadAllLines(@secondaryFilePath));
+            string header = primaryLines[0];
             List<PsmTsvLine> aggregatedLines = AggregateDifferentDatabaseSearches(primaryLines, secondaryLines);
             CalculateFDR(aggregatedLines);
 
+            aggregatedLines = aggregatedLines.OrderByDescending(x => x.score).ToList();
             using (StreamWriter file = new StreamWriter(@outputFilePath + "_TargetsAndDecoys.psmtsv"))
             {
                 file.WriteLine(header);

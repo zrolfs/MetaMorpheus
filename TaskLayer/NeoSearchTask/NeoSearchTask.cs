@@ -209,13 +209,13 @@ namespace TaskLayer
 
                     //Switch databases
                     string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixNC.fasta";
-                    dbFilenameList = new List<DbForTask>() { new DbForTask(outputFolder, false) };
+                    myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
                 });
             }
             else //if SearchTransDb
             {
                 string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixTS.fasta";
-                dbFilenameList = new List<DbForTask>() { new DbForTask(outputFolder, false) };
+                myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
             }
 
             return myTaskResults;

@@ -1069,6 +1069,75 @@ namespace TaskLayer
                     ))
                     throw new MetaMorpheusException("Quantification error - Could not pass parameters to quantification engine");
 
+                //SILAC population
+                string modString = "[Mod:Lys8]";
+                foreach (Psm psm in allPsms)
+                {
+                    psm.NumHeavy = (psm.FullSequence.Length - psm.FullSequence.Replace(modString, "").Length)/modString.Length;
+                    psm.NumLys = psm.BaseSequence.Length - psm.BaseSequence.Replace("K", "").Length;
+                }
+                int originalAllPsmCount = allPsms.Count;
+                HashSet<string> baseSequencesObserved = new HashSet<string>();
+                for(int i=0; i<originalAllPsmCount; i++)
+                {
+                    Psm psm = allPsms[i];
+                    if (!baseSequencesObserved.Contains(psm.BaseSequence))
+                    {
+                        baseSequencesObserved.Add(psm.BaseSequence);
+                        for(int j=0;j<=psm.NumLys; j++)
+                        {
+                            bool identified = false;
+                            for(int k=i; k<originalAllPsmCount; k++)
+                            {
+                                Psm tempPsm = allPsms[k];
+                                if (tempPsm.BaseSequence.Equals(psm.BaseSequence) && tempPsm.NumHeavy == psm.NumHeavy)
+                                {
+                                    identified = true;
+                                    break;
+                                }
+                            }
+                            if (!identified)
+                            {
+                                Psm variablePsm = psm.Clone();
+                                while(variablePsm.NumHeavy>j)
+                                {
+                                    string lighterFullSequence = "";
+                                    for (int aa = 0; aa < variablePsm.FullSequence.Length; aa++)
+                                    {
+                                        lighterFullSequence += variablePsm.FullSequence[aa];
+                                        if (variablePsm.FullSequence[aa] == 'K' && variablePsm.FullSequence[aa + 1] == '[')
+                                        {
+                                            for (int aa1 = aa + 1 +modString.Length; aa1 < variablePsm.FullSequence.Length; aa1++)
+                                                lighterFullSequence += variablePsm.FullSequence[aa1];
+                                            variablePsm.FullSequence = lighterFullSequence;
+                                            variablePsm.NumHeavy--;
+                                            break;
+                                        }
+                                    }
+                                }
+                                while(variablePsm.NumHeavy<j)
+                                {
+                                    string heavierFullSequence = "";
+                                    for (int aa = 0; aa < variablePsm.FullSequence.Length; aa++)
+                                    {
+                                        heavierFullSequence += variablePsm.FullSequence[aa];
+                                        if (variablePsm.FullSequence[aa] == 'K' && (aa + 1 == variablePsm.FullSequence.Length || variablePsm.FullSequence[aa + 1] != '['))
+                                        {
+                                            heavierFullSequence += modString;
+                                            for (int aa1 = aa + 1; aa1 < variablePsm.FullSequence.Length; aa1++)
+                                                heavierFullSequence += variablePsm.FullSequence[aa1];
+                                            variablePsm.FullSequence = heavierFullSequence;
+                                            variablePsm.NumHeavy++;
+                                            break;
+                                        }
+                                    }
+                                }
+                                allPsms.Add(variablePsm);
+                            }
+                        }
+                    }                    
+                }
+
                 // get PSMs to pass to FlashLFQ
                 var unambiguousPsmsBelowOnePercentFdr = allPsms.Where(p => p.FdrInfo.QValue < 0.01 && !p.IsDecoy && p.FullSequence != null);
 

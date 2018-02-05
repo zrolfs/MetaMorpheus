@@ -60,7 +60,7 @@ namespace EngineLayer
         public FdrInfo FdrInfo { get; private set; }
         public double Score { get; private set; }
         public bool IsDecoy { get; private set; }
-        public string FullSequence { get; private set; }
+        public string FullSequence { get; set; }
         public int? Notch { get; private set; }
         public string BaseSequence { get; private set; }
         public int? PeptideLength { get; private set; }
@@ -74,6 +74,8 @@ namespace EngineLayer
         public Dictionary<string, int> ModsIdentified { get; private set; }
         public Dictionary<ProductType, double[]> ProductMassErrorDa { get; internal set; }
         public Dictionary<ProductType, double[]> ProductMassErrorPpm { get; internal set; }
+        public int NumLys { get; set; }
+        public int NumHeavy { get; set; }
 
         public List<int> AllScores { get; set; }
 
@@ -210,6 +212,11 @@ namespace EngineLayer
             ModsChemicalFormula = Resolve(compactPeptides.SelectMany(b => b.Value.Item2).Select(b => b.allModsOneIsNterminus.Select(c => (c.Value as ModificationWithMassAndCf)))).Item2;
 
             Notch = Resolve(compactPeptides.Select(b => b.Value.Item1)).Item2;
+        }
+
+        public Psm Clone()
+        {
+            return (Psm)this.MemberwiseClone();
         }
 
         public bool CompactPeptidesContainsKey(CompactPeptideBase key)
