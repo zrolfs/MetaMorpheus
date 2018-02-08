@@ -102,15 +102,18 @@ namespace TaskLayer
             else if (NeoType.Equals(NeoTaskType.AggregateNormalSplicedFiles))
             {
                 //reset database
-                dbFilenameList = StoredDatabases;
+                myTaskResults.newDatabases = StoredDatabases;
 
-                string normalPath = "";
                 string cisPath = new DirectoryInfo(OutputFolder).Name;
                 string taskString = cisPath.Split('-')[0];
                 int taskNum = Convert.ToInt32(taskString.Substring(4, taskString.Length - 4));
+                string outputFolderSubstring = OutputFolder.Substring(0, OutputFolder.Length - cisPath.Length);
+                taskNum -= 1;
+                string transPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                 taskNum -= 2;
-                string transPath = OutputFolder.Substring(0, OutputFolder.Length - cisPath.Length) + "Task" + (taskNum + 1) + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
-                cisPath = OutputFolder.Substring(0, OutputFolder.Length - cisPath.Length) + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
+                cisPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
+                taskNum -= 2;
+                string normalPath = outputFolderSubstring + "Task" + taskNum + "-NeoSearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_Targets.psmtsv";
                 AggregateSearchFiles.RecursiveNeoAggregation(normalPath, cisPath, OutputFolder, "CisResults.psmtsv");
                 AggregateSearchFiles.RecursiveNeoAggregation(normalPath, transPath, OutputFolder, "TransResults.psmtsv");
             }
@@ -209,13 +212,13 @@ namespace TaskLayer
 
                     //Switch databases
                     string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixNC.fasta";
-                    dbFilenameList = new List<DbForTask>() { new DbForTask(outputFolder, false) };
+                    myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
                 });
             }
             else //if SearchTransDb
             {
                 string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixTS.fasta";
-                dbFilenameList = new List<DbForTask>() { new DbForTask(outputFolder, false) };
+                myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
             }
 
             return myTaskResults;

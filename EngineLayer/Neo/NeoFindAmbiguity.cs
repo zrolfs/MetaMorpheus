@@ -59,6 +59,12 @@ namespace EngineLayer.Neo
             for (int i = 0; i < candidates.Count(); i++) //must be mutable while iterating
             {
                 NeoPsm psm = candidates[i];
+                if(psm.scanNumber!=12578)
+                {
+                    candidates.RemoveAt(i);
+                    i--;
+                    continue;
+                }
                 Ms2ScanWithSpecificMass spectrum = indexedSpectra[psm.scanNumber];
                 psm.fusionType = FusionCandidate.FusionType.TS; //for some maddening reason, this is not arriving here as trans, but instead translated
                 if (IsTooMessy(psm, spectrum)) //having explosion of combinations when greater than 3 consequtive peaks producing tens of thousands of sequences ids, causes hanging
