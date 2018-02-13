@@ -5,6 +5,12 @@ PP   Anywhere.
 MT   Mod
 CF   H-1 N-1 O1
 //
+ID   Lys8
+TG   K
+PP   Anywhere.
+MT   Mod
+CF   C-6 C{13}6 N-2 N{15}2
+//
 ID   Amidation
 TG   X
 PP   C-terminal.

@@ -1069,28 +1069,34 @@ namespace TaskLayer
                     ))
                     throw new MetaMorpheusException("Quantification error - Could not pass parameters to quantification engine");
 
+                // get PSMs to pass to FlashLFQ
+                var unambiguousPsmsBelowOnePercentFdr = allPsms.Where(p => p.FdrInfo.QValue < 0.01 && !p.IsDecoy && p.FullSequence != null).ToList();
+
                 //SILAC population
                 string modString = "[Mod:Lys8]";
-                foreach (Psm psm in allPsms)
+                double massDif = 8.0142;
+                foreach(Modification mod in variableModifications)
+
+                foreach (Psm psm in unambiguousPsmsBelowOnePercentFdr)
                 {
-                    psm.NumHeavy = (psm.FullSequence.Length - psm.FullSequence.Replace(modString, "").Length)/modString.Length;
+                    psm.NumHeavy = (psm.FullSequence.Length - psm.FullSequence.Replace(modString, "").Length) / modString.Length;
                     psm.NumLys = psm.BaseSequence.Length - psm.BaseSequence.Replace("K", "").Length;
                 }
-                int originalAllPsmCount = allPsms.Count;
+                int originalAllPsmCount = unambiguousPsmsBelowOnePercentFdr.Count;
                 HashSet<string> baseSequencesObserved = new HashSet<string>();
-                for(int i=0; i<originalAllPsmCount; i++)
+                for (int i = 0; i < originalAllPsmCount; i++)
                 {
-                    Psm psm = allPsms[i];
+                    Psm psm = unambiguousPsmsBelowOnePercentFdr[i];
                     if (!baseSequencesObserved.Contains(psm.BaseSequence))
                     {
                         baseSequencesObserved.Add(psm.BaseSequence);
-                        for(int j=0;j<=psm.NumLys; j++)
+                        for (int j = 0; j <= psm.NumLys; j++)
                         {
                             bool identified = false;
-                            for(int k=i; k<originalAllPsmCount; k++)
+                            for (int k = i; k < originalAllPsmCount; k++)
                             {
-                                Psm tempPsm = allPsms[k];
-                                if (tempPsm.BaseSequence.Equals(psm.BaseSequence) && tempPsm.NumHeavy == psm.NumHeavy)
+                                Psm tempPsm = unambiguousPsmsBelowOnePercentFdr[k];
+                                if (tempPsm.BaseSequence.Equals(psm.BaseSequence) && tempPsm.NumHeavy == j)
                                 {
                                     identified = true;
                                     break;
@@ -1099,7 +1105,32 @@ namespace TaskLayer
                             if (!identified)
                             {
                                 Psm variablePsm = psm.Clone();
-                                while(variablePsm.NumHeavy>j)
+                                //remove K[Uniprot]
+                                string updatedFullSeq = "";
+                                for(int aa=0; aa<variablePsm.FullSequence.Length; aa++)
+                                {
+                                    char aaToAdd = variablePsm.FullSequence[aa];
+                                    if (aaToAdd == 'K')
+                                    {
+                                        if (variablePsm.FullSequence.Length > aa + modString.Length && variablePsm.FullSequence.Substring(aa + 1, modString.Length).Equals(modString))
+                                        {
+                                            while (aa < variablePsm.FullSequence.Length && variablePsm.FullSequence[aa] != ']')
+                                            {
+                                                aa++;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            updatedFullSeq += aaToAdd;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        updatedFullSeq += aaToAdd;
+                                    }
+                                }
+                                variablePsm.FullSequence = updatedFullSeq;
+                                while (variablePsm.NumHeavy > j)
                                 {
                                     string lighterFullSequence = "";
                                     for (int aa = 0; aa < variablePsm.FullSequence.Length; aa++)
@@ -1107,7 +1138,7 @@ namespace TaskLayer
                                         lighterFullSequence += variablePsm.FullSequence[aa];
                                         if (variablePsm.FullSequence[aa] == 'K' && variablePsm.FullSequence[aa + 1] == '[')
                                         {
-                                            for (int aa1 = aa + 1 +modString.Length; aa1 < variablePsm.FullSequence.Length; aa1++)
+                                            for (int aa1 = aa + 1 + modString.Length; aa1 < variablePsm.FullSequence.Length; aa1++)
                                                 lighterFullSequence += variablePsm.FullSequence[aa1];
                                             variablePsm.FullSequence = lighterFullSequence;
                                             variablePsm.NumHeavy--;
@@ -1115,7 +1146,7 @@ namespace TaskLayer
                                         }
                                     }
                                 }
-                                while(variablePsm.NumHeavy<j)
+                                while (variablePsm.NumHeavy < j)
                                 {
                                     string heavierFullSequence = "";
                                     for (int aa = 0; aa < variablePsm.FullSequence.Length; aa++)
@@ -1132,14 +1163,17 @@ namespace TaskLayer
                                         }
                                     }
                                 }
-                                allPsms.Add(variablePsm);
+                                variablePsm.PeptideMonisotopicMass = variablePsm.PeptideMonisotopicMass.Value - (massDif * psm.NumHeavy);
+                                variablePsm.PeptideMonisotopicMass = variablePsm.PeptideMonisotopicMass.Value + (massDif * variablePsm.NumHeavy);
+                                unambiguousPsmsBelowOnePercentFdr.Add(variablePsm);
+                                foreach (var proteinGroup in proteinGroups)
+                                    if (proteinGroup.AllPsmsBelowOnePercentFDR.Any(x => x.BaseSequence!=null && x.BaseSequence.Equals(variablePsm.BaseSequence)))
+                                        proteinGroup.AllPsmsBelowOnePercentFDR.Add(variablePsm);
                             }
                         }
-                    }                    
+                    }
                 }
 
-                // get PSMs to pass to FlashLFQ
-                var unambiguousPsmsBelowOnePercentFdr = allPsms.Where(p => p.FdrInfo.QValue < 0.01 && !p.IsDecoy && p.FullSequence != null);
 
                 // pass protein group info for each PSM
                 Dictionary<Psm, List<string>> psmToProteinGroupNames = new Dictionary<Psm, List<string>>();

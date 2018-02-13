@@ -66,7 +66,7 @@ namespace EngineLayer
         public int? PeptideLength { get; private set; }
         public int? OneBasedStartResidueInProtein { get; private set; }
         public int? OneBasedEndResidueInProtein { get; private set; }
-        public double? PeptideMonisotopicMass { get; private set; }
+        public double? PeptideMonisotopicMass { get; set; }
         public int? ProteinLength { get; private set; }
         public List<double> LocalizedScores { get; internal set; }
         public Dictionary<ProductType, double[]> MatchedIonDictOnlyMatches { get; internal set; }
