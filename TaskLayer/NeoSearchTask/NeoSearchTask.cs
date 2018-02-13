@@ -119,101 +119,101 @@ namespace TaskLayer
             }
             else if (NeoType.Equals(NeoTaskType.GenerateSplicedPeptides))
             {
-                NeoMassCalculator.ImportMasses();
+                //NeoMassCalculator.ImportMasses();
 
-                ParallelOptions parallelOptions = new ParallelOptions();
-                if (CommonParameters.MaxParallelFilesToAnalyze.HasValue)
-                    parallelOptions.MaxDegreeOfParallelism = CommonParameters.MaxParallelFilesToAnalyze.Value;
-                MyFileManager myFileManager = new MyFileManager(true);
+                //ParallelOptions parallelOptions = new ParallelOptions();
+                //if (CommonParameters.MaxParallelFilesToAnalyze.HasValue)
+                //    parallelOptions.MaxDegreeOfParallelism = CommonParameters.MaxParallelFilesToAnalyze.Value;
+                //MyFileManager myFileManager = new MyFileManager(true);
 
-                //Import Spectra
-                Parallel.For(0, currentRawFileList.Count, parallelOptions, spectraFileIndex =>
-                {
-                    var origDataFile = currentRawFileList[spectraFileIndex];
-                    ICommonParameters combinedParams = SetAllFileSpecificCommonParams(CommonParameters, fileSettingsList[spectraFileIndex]);
+                ////Import Spectra
+                //Parallel.For(0, currentRawFileList.Count, parallelOptions, spectraFileIndex =>
+                //{
+                //    var origDataFile = currentRawFileList[spectraFileIndex];
+                //    ICommonParameters combinedParams = SetAllFileSpecificCommonParams(CommonParameters, fileSettingsList[spectraFileIndex]);
 
-                    var thisId = new List<string> { taskId, "Individual Spectra Files", origDataFile };
-                    NewCollection(Path.GetFileName(origDataFile), thisId);
-                    Status("Loading spectra file...", thisId);
-                    IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
-                    Status("Getting ms2 scans...", thisId);
-                    Ms2ScanWithSpecificMass[] arrayOfMs2ScansSortedByMass = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).OrderBy(b => b.PrecursorMass).ToArray();
+                //    var thisId = new List<string> { taskId, "Individual Spectra Files", origDataFile };
+                //    NewCollection(Path.GetFileName(origDataFile), thisId);
+                //    Status("Loading spectra file...", thisId);
+                //    IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
+                //    Status("Getting ms2 scans...", thisId);
+                //    Ms2ScanWithSpecificMass[] arrayOfMs2ScansSortedByMass = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).OrderBy(b => b.PrecursorMass).ToArray();
 
-                    //Import Database
-                    Status("Loading modifications...", taskId);
+                //    //Import Database
+                //    Status("Loading modifications...", taskId);
 
-                    #region Load modifications
+                //    #region Load modifications
 
-                    List<ModificationWithMass> variableModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsVariable.Contains((b.modificationType, b.id))).ToList();
-                    List<ModificationWithMass> fixedModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsFixed.Contains((b.modificationType, b.id))).ToList();
-                    List<string> localizeableModificationTypes = CommonParameters.ListOfModTypesLocalize == null ? new List<string>() : CommonParameters.ListOfModTypesLocalize.ToList();
-                    if (CommonParameters.LocalizeAll)
-                        localizeableModificationTypes = GlobalVariables.AllModTypesKnown.ToList();
-                    else
-                        localizeableModificationTypes = GlobalVariables.AllModTypesKnown.Where(b => localizeableModificationTypes.Contains(b)).ToList();
+                //    List<ModificationWithMass> variableModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsVariable.Contains((b.modificationType, b.id))).ToList();
+                //    List<ModificationWithMass> fixedModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsFixed.Contains((b.modificationType, b.id))).ToList();
+                //    List<string> localizeableModificationTypes = CommonParameters.ListOfModTypesLocalize == null ? new List<string>() : CommonParameters.ListOfModTypesLocalize.ToList();
+                //    if (CommonParameters.LocalizeAll)
+                //        localizeableModificationTypes = GlobalVariables.AllModTypesKnown.ToList();
+                //    else
+                //        localizeableModificationTypes = GlobalVariables.AllModTypesKnown.Where(b => localizeableModificationTypes.Contains(b)).ToList();
 
-                    #endregion Load modifications
+                //    #endregion Load modifications
 
 
 
-                    var proteinList = dbFilenameList.SelectMany(b => LoadProteinDb(b.FilePath, true, DecoyType.None, localizeableModificationTypes, b.IsContaminant, out Dictionary<string, Modification> unknownModifications)).ToList();
+                //    var proteinList = dbFilenameList.SelectMany(b => LoadProteinDb(b.FilePath, true, DecoyType.None, localizeableModificationTypes, b.IsContaminant, out Dictionary<string, Modification> unknownModifications)).ToList();
 
-                    //Read N and C files
-                    string nPath = NeoParameters.NFilePath;
-                    string cPath = NeoParameters.CFilePath;
-                    //if termini input
+                //    //Read N and C files
+                //    string nPath = NeoParameters.NFilePath;
+                //    string cPath = NeoParameters.CFilePath;
+                //    //if termini input
 
-                    if (nPath == null || cPath == null)
-                    {
-                        //if no termini input
-                        string taskHeader = "Task";
-                        string[] pathArray = OutputFolder.Split('\\');
-                        string basePath = "";
-                        for (int i = 0; i < pathArray.Length - 1; i++)
-                            basePath += pathArray[i] + '\\';
-                        string currentTaskNumber = pathArray[pathArray.Length - 1].Split('-')[0];
-                        currentTaskNumber = currentTaskNumber.Substring(taskHeader.Length, currentTaskNumber.Length - taskHeader.Length);
-                        string NHeader = "";
-                        string CHeader = "";
-                        if (cPath == null)
-                        {
-                            CHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 1);
-                            if (nPath == null)
-                                NHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 2);
-                        }
-                        else
-                            NHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 1);
-                        foreach (string s in Directory.GetDirectories(basePath))
-                        {
-                            if (s.Contains(NHeader))
-                                nPath = s;
-                            else if (s.Contains(CHeader))
-                                cPath = s;
-                        }
-                        string fileName = Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
-                        nPath += "\\" + fileName;
-                        cPath += "\\" + fileName;
-                    }
+                //    if (nPath == null || cPath == null)
+                //    {
+                //        //if no termini input
+                //        string taskHeader = "Task";
+                //        string[] pathArray = OutputFolder.Split('\\');
+                //        string basePath = "";
+                //        for (int i = 0; i < pathArray.Length - 1; i++)
+                //            basePath += pathArray[i] + '\\';
+                //        string currentTaskNumber = pathArray[pathArray.Length - 1].Split('-')[0];
+                //        currentTaskNumber = currentTaskNumber.Substring(taskHeader.Length, currentTaskNumber.Length - taskHeader.Length);
+                //        string NHeader = "";
+                //        string CHeader = "";
+                //        if (cPath == null)
+                //        {
+                //            CHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 1);
+                //            if (nPath == null)
+                //                NHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 2);
+                //        }
+                //        else
+                //            NHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 1);
+                //        foreach (string s in Directory.GetDirectories(basePath))
+                //        {
+                //            if (s.Contains(NHeader))
+                //                nPath = s;
+                //            else if (s.Contains(CHeader))
+                //                cPath = s;
+                //        }
+                //        string fileName = Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
+                //        nPath += "\\" + fileName;
+                //        cPath += "\\" + fileName;
+                //    }
 
-                    Status("Importing Search Results...", taskId);
-                    List<NeoPsm> psms = ImportPsmtsv.ImportNeoPsms(nPath, cPath);
+                //    Status("Importing Search Results...", taskId);
+                //    List<NeoPsm> psms = ImportPsmtsv.ImportNeoPsms(nPath, cPath);
 
-                    //Splice
-                    Status("Splicing Fragments...", taskId);
-                    List<NeoPsm> candidates = NeoSplicePeptides.SplicePeptides(psms);
+                //    //Splice
+                //    Status("Splicing Fragments...", taskId);
+                //    List<NeoPsm> candidates = NeoSplicePeptides.SplicePeptides(psms);
 
-                    //Find Ambiguity
-                    Status("Identifying Ambiguity...", taskId);
-                    NeoFindAmbiguity.FindAmbiguity(candidates, proteinList, arrayOfMs2ScansSortedByMass, dbFilenameList[0].FilePath);
+                //    //Find Ambiguity
+                //    Status("Identifying Ambiguity...", taskId);
+                //    NeoFindAmbiguity.FindAmbiguity(candidates, proteinList, arrayOfMs2ScansSortedByMass, dbFilenameList[0].FilePath);
 
-                    //Export Results
-                    Status("Exporting Results...", taskId);
-                    NeoExport.ExportAll(candidates, arrayOfMs2ScansSortedByMass, OutputFolder);
+                //    //Export Results
+                //    Status("Exporting Results...", taskId);
+                //    NeoExport.ExportAll(candidates, arrayOfMs2ScansSortedByMass, OutputFolder);
 
-                    //Switch databases
-                    string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixNC.fasta";
-                    myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
-                });
+                //    //Switch databases
+                //    string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixNC.fasta";
+                    myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask("", false) };
+                //});
             }
             else //if SearchTransDb
             {
