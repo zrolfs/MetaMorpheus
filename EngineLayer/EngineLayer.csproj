@@ -91,6 +91,9 @@
     <None Update="Neo\TomlFiles\SearchTaskTargetconfig.toml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Neo\TomlFiles\SearchTaskTranslatedconfig.toml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Neo\TomlFiles\SearchTaskTransconfig.toml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -32,13 +32,41 @@ namespace EngineLayer.Neo
             }
         }
 
+        public static void Combine(string primaryFilePath, string secondaryFilePath, string outputFilePath, string translatedFilePath)
+        {
+            string[] primaryLines = (System.IO.File.ReadAllLines(@primaryFilePath));
+            string[] secondaryLines = (System.IO.File.ReadAllLines(@secondaryFilePath));
+            string[] translatedLines = (System.IO.File.ReadAllLines(@translatedFilePath));
+            List<PsmTsvLine> targetLines = AggregateDifferentDatabaseSearches(primaryLines, translatedLines);
+            List<string> targetList = targetLines.Select(x => x.ToString()).ToList();
+            targetList.Insert(0, primaryLines[0]); //header
+            primaryLines = targetList.ToArray();
+            List<PsmTsvLine> aggregatedLines = AggregateDifferentDatabaseSearches(primaryLines, secondaryLines);
+            aggregatedLines = CalculateFDR(aggregatedLines);
+
+            using (StreamWriter file = new StreamWriter(@outputFilePath + "_TargetsAndDecoys.psmtsv"))
+            {
+                file.WriteLine(primaryLines[0]);
+                foreach (PsmTsvLine psm in aggregatedLines)
+                    file.WriteLine(psm.ToString());
+            }
+
+            List<PsmTsvLine> targets = AssignFDRToTarget(primaryLines, secondaryLines);
+            using (StreamWriter file = new StreamWriter(@outputFilePath + "_Targets.psmtsv"))
+            {
+                file.WriteLine(primaryLines[0]);
+                foreach (PsmTsvLine psm in targets)
+                    file.WriteLine(psm.ToString());
+            }
+        }
+
         public static void RecursiveNeoAggregation(string standardFilePath, string neoResultFilePath, string outputFolder, string identifier)
         {
             //This method determines the optimum cutoff for gold standard identification and the minimum score difference required for a splice to outscore a normal
             double qThreshold = 0;
             double oldQThreshold = 0;
-            double scoreDifferenceThreshold = 0;
-            double oldScoreDifferenceThreshold = 0;
+            double scoreDifferenceThreshold = 1;
+            double oldScoreDifferenceThreshold = 1;
             int numSplicedHighScoreQ = -1; //highest number of splice assignments at a 1% local FDR
             int numSplicedHighScoreThreshold = -1; //highest number of splice assignments at a 1% local FDR
             int numSplicedScore = 0; //current number of splic assignments at a 1% local FDR
@@ -68,7 +96,7 @@ namespace EngineLayer.Neo
                 {
                     oldQThreshold = qThreshold; //updateQ
 
-                    if (numSplicedScore < numSplicedHighScoreQ || (numSplicedScore == numSplicedHighScoreQ && increaseQ && UpdateQThreshold(primaryPsms, qThreshold, increaseQ) > 0.1)) //check second time around if move qValue the other way
+                    if (numSplicedScore < numSplicedHighScoreQ || (numSplicedScore == numSplicedHighScoreQ && increaseQ && UpdateQThreshold(primaryPsms, qThreshold, increaseQ) > 0.05)) //check second time around if move qValue the other way
                     {
                         if (numSplicedHighScoreThreshold == numSplicedScore && qStart==0)
                             break;
@@ -83,11 +111,9 @@ namespace EngineLayer.Neo
                     aggregatedLines = Percolate(primaryPsms, secondaryPsms, qThreshold, scoreDifferenceThreshold);
                     numSplicedScore = CalculateNumberOfConfidentSpliced(aggregatedLines);
                 } while ((numSplicedScore >= numSplicedHighScoreQ || increaseQ) 
-                    && (numSplicedScore > numSplicedHighScoreQ || qThreshold < 0.1 || !increaseQ) && qThreshold > 0); //do again the otherway if done increasing
+                    && (numSplicedScore > numSplicedHighScoreQ || qThreshold < 0.05 || !increaseQ) && qThreshold > 0); //do again the otherway if done increasing
                 if (qThreshold == 0 && numSplicedScore>=numSplicedHighScoreQ)
                     oldQThreshold = qThreshold;
-                if(scoreDifferenceThreshold>1)
-                { }
                 List<PsmTsvLine> oldAggregatedLines = Percolate(primaryPsms, secondaryPsms, oldQThreshold, scoreDifferenceThreshold);
                 numSplicedScore = CalculateNumberOfConfidentSpliced(oldAggregatedLines);
                 increaseQ = true;
@@ -206,11 +232,7 @@ namespace EngineLayer.Neo
             return numConfidentSpliced;
         }
 
-        #endregion Public Methods
-
-        #region Private Methods
-
-        private static List<PsmTsvLine> AggregateDifferentDatabaseSearches(string[] primaryLines, string[] secondaryLines)
+        public static List<PsmTsvLine> AggregateDifferentDatabaseSearches(string[] primaryLines, string[] secondaryLines)
         {
             List<PsmTsvLine> primaryPsms = ImportPsmtsv.ImportLinesToAggregate(primaryLines);
             List<PsmTsvLine> secondaryPsms = ImportPsmtsv.ImportLinesToAggregate(secondaryLines);
@@ -251,6 +273,10 @@ namespace EngineLayer.Neo
 
             return aggregatedLines;
         }
+
+        #endregion Public Methods
+
+        #region Private Methods
 
         private static List<PsmTsvLine> CalculateFDR(List<PsmTsvLine> aggregatedLines)
         {

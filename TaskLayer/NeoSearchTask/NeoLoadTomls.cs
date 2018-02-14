@@ -102,8 +102,18 @@ namespace TaskLayer
             novelCollection.Add(yeotrans);
 
             var yeo5_4 = ye5.Clone();
-            yeo5_4.NeoType = NeoSearchTask.NeoTaskType.AggregateNormalSplicedFiles;
+            yeo5_4.NeoType = NeoSearchTask.NeoTaskType.SearchTranslatedDb;
             novelCollection.Add(yeo5_4);
+
+            string translatedFileName = "SearchTaskTranslatedconfig.toml";
+            translatedFileName = Path.Combine(defaultFolderPath, translatedFileName);
+            UpdateTomls(tomlFileName, translatedFileName, ye5.CommonParameters, TerminusType.None, true);
+            var yeotranslated = Toml.ReadFile<SearchTask>(translatedFileName, MetaMorpheusTask.tomlConfig);
+            novelCollection.Add(yeotranslated);
+
+            var yeo5_5 = ye5.Clone();
+            yeo5_5.NeoType = NeoSearchTask.NeoTaskType.AggregateNormalSplicedFiles;
+            novelCollection.Add(yeo5_5);
 
             #region DeleteTomlFile
 

@@ -87,16 +87,10 @@ namespace EngineLayer.Neo
             }
             if (neoType != null)
             {
-                if (neoType == NeoType.Normal) //for some reason, this produces an extra tab at the end
-                    sb.Remove(sb.Length - 1, 1);
+                //if (neoType == NeoType.Normal) //for some reason, this produces an extra tab at the end
+                //    sb.Remove(sb.Length - 1, 1);
                 sb.Append(neoType.ToString());
             }
-            string test = sb.ToString();
-            if(neoType==null)
-            { }
-            else if (neoType==NeoType.Normal)
-            { }
-            else { }
             return sb.ToString();
         }
 

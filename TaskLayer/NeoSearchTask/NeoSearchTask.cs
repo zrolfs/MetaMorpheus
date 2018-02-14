@@ -45,7 +45,7 @@ namespace TaskLayer
 
         #region Public Enums
 
-        public enum NeoTaskType { AggregateTargetDecoyFiles, GenerateSplicedPeptides, AggregateNormalSplicedFiles, SearchTransDb };
+        public enum NeoTaskType { AggregateTargetDecoyFiles, GenerateSplicedPeptides, AggregateNormalSplicedFiles, SearchTransDb, SearchTranslatedDb };
 
         #endregion Public Enums
 
@@ -101,19 +101,28 @@ namespace TaskLayer
             }
             else if (NeoType.Equals(NeoTaskType.AggregateNormalSplicedFiles))
             {
-                //reset database
-                myTaskResults.newDatabases = StoredDatabases;
-
+                //get folder info
                 string cisPath = new DirectoryInfo(OutputFolder).Name;
                 string taskString = cisPath.Split('-')[0];
                 int taskNum = Convert.ToInt32(taskString.Substring(4, taskString.Length - 4));
                 string outputFolderSubstring = OutputFolder.Substring(0, OutputFolder.Length - cisPath.Length);
                 taskNum -= 1;
+                string translatedPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
+
+                //combine TL and traditional search
+                //getfolders
+                AggregateSearchFiles.Combine(NeoParameters.TargetFilePath, NeoParameters.DecoyFilePath, OutputFolder + "\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]), translatedPath);
+
+                //reset database
+                myTaskResults.newDatabases = StoredDatabases;
+
+                //assign all file paths using folder info
+                taskNum -= 2;
                 string transPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                 taskNum -= 2;
                 cisPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                 taskNum -= 2;
-                string normalPath = outputFolderSubstring + "Task" + taskNum + "-NeoSearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_Targets.psmtsv";
+                string normalPath = OutputFolder + "\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_Targets.psmtsv";
                 AggregateSearchFiles.RecursiveNeoAggregation(normalPath, cisPath, OutputFolder, "CisResults.psmtsv");
                 AggregateSearchFiles.RecursiveNeoAggregation(normalPath, transPath, OutputFolder, "TransResults.psmtsv");
             }
@@ -215,9 +224,14 @@ namespace TaskLayer
                     myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask("", false) };
                 //});
             }
-            else //if SearchTransDb
+            else if (NeoType.Equals(NeoTaskType.SearchTransDb))
             {
                 string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixTS.fasta";
+                myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
+            }
+            else //if SearchTranslatedDb
+            {
+                string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixTL.fasta";
                 myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
             }
 
