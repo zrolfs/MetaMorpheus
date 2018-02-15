@@ -313,7 +313,7 @@ namespace EngineLayer.Neo
             while (p < primaryPsms.Count)
             {
                 PsmTsvLine targetLine = primaryPsms[p];
-                if (targetLine.score > decoyLine.score || s == secondaryPsms.Count)
+                if (targetLine.score > decoyLine.score || s == secondaryPsms.Count - 1)
                 {
                     target++;
                     targetLine.target = target.ToString();
