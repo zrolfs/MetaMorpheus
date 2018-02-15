@@ -121,7 +121,6 @@ namespace TaskLayer
                 string transPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                 taskNum -= 2;
                 cisPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
-                taskNum -= 2;
                 string normalPath = OutputFolder + "\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_Targets.psmtsv";
                 AggregateSearchFiles.RecursiveNeoAggregation(normalPath, cisPath, OutputFolder, "CisResults.psmtsv");
                 AggregateSearchFiles.RecursiveNeoAggregation(normalPath, transPath, OutputFolder, "TransResults.psmtsv");
@@ -221,8 +220,9 @@ namespace TaskLayer
 
                     //Switch databases
                     string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixNC.fasta";
-                    myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask("", false) };
+                    myTaskResults.newDatabases = new List<DbForTask>() { new DbForTask(outputFolder, false) };
                 });
+                StoredDatabases = dbFilenameList;
             }
             else if (NeoType.Equals(NeoTaskType.SearchTransDb))
             {
