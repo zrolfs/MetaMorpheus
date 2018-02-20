@@ -90,7 +90,20 @@ namespace EngineLayer.Neo
                 string[] lineArray = lines[i].Split('\t');
                 results.Add(new PsmTsvLine(lineArray, Convert.ToInt32(lineArray[scanNumberIndex]), Convert.ToDouble(lineArray[scoreIndex]), lineArray[baseIndex], lineArray[fullIndex], lineArray[accessionIndex], lineArray[proteinIndex], lineArray[geneIndex], lineArray[DCTIndex], lineArray[targetIndex], lineArray[decoyIndex], lineArray[qIndex]));
             }
-            return results.OrderBy(x => x.scanNumber).ToList();
+            results = results.OrderBy(x => x.scanNumber).ToList();
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (i + 1 < results.Count && results[i].scanNumber == results[i + 1].scanNumber)
+                {
+                    if (results[i].score < results[i + 1].score)
+                        results.RemoveAt(i);
+                    else
+                        results.RemoveAt(i + 1);
+                    i--;
+                }
+            }
+            return results;
         }
 
         public static List<NeoPsm> ImportNeoPsms(string nFileName, string cFileName)
