@@ -184,10 +184,13 @@ namespace EngineLayer.Neo
                     aggregatedLines.Add(psmP);
                     p++;
                 }
-                else if (psmP.scanNumber > psmS.scanNumber && psmS.score-scoreDifferenceThreshold > minScoreAllowed)
+                else if (psmP.scanNumber > psmS.scanNumber)
                 {
-                    psmS.neoType = PsmTsvLine.NeoType.Spliced;
-                    aggregatedLines.Add(psmS);
+                    if (psmS.score - scoreDifferenceThreshold > minScoreAllowed)
+                    {
+                        psmS.neoType = PsmTsvLine.NeoType.Spliced;
+                        aggregatedLines.Add(psmS);
+                    }
                     s++;
                 }
                 else
