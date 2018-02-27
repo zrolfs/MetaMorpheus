@@ -34,7 +34,7 @@ namespace EngineLayer.Neo
         public static Dictionary<string, List<string>> cTermDictionary = new Dictionary<string, List<string>>();
         public static Dictionary<string, List<Protein>> protDictionary = new Dictionary<string, List<Protein>>();
         public static char[] AANames = new char[20] { 'G', 'A', 'S', 'P', 'V', 'T', 'L', 'I', 'N', 'D', 'Q', 'K', 'E', 'M', 'H', 'F', 'R', 'C', 'Y', 'W' };
-
+        public static int numInterveningResidues = 25;
         #endregion Public Fields
 
         #region Private Fields
@@ -514,8 +514,19 @@ namespace EngineLayer.Neo
                     nTermDictionary.TryGetValue(fc.Substring(0, 4), out List<string> nFrag);
                     if (nFrag != null && nFrag.AsParallel().Any(seq => seq.Length >= fc.Length && seq.Substring(0, fc.Length).Equals(fc)))
                     {
+                        Protein matches = theoreticalProteins.AsParallel().Where(x => x.BaseSequence.Contains(fc)).ToArray()[0];
+                        int startIndex = matches.BaseSequence.IndexOf(fc);
+                        int endIndex = startIndex + fc.Length;
                         psm.fusionType = FusionCandidate.FusionType.TL;
-                        psm.candidates.Add(new FusionCandidate(fc) { fusionType = FusionCandidate.FusionType.TL });
+                        psm.candidates.Add(new FusionCandidate(fc)
+                        {
+                            fusionType = FusionCandidate.FusionType.TL,
+                            accession = matches.Accession,
+                            nStart = startIndex,
+                            nStop = endIndex,
+                            cStart = startIndex,
+                            cStop = endIndex
+                        });
                     }
                     else
                     {
@@ -538,7 +549,7 @@ namespace EngineLayer.Neo
                                     List<int> indexes = new List<int>();
                                     List<int> otherIndexes = new List<int>();
                                     int index = seq.IndexOf(substring);
-                                    int maxStartingIndex = Math.Max(0, index - 25 - fc.Length);
+                                    int maxStartingIndex = Math.Max(0, index - numInterveningResidues - fc.Length);
                                     int otherIndex = seq.IndexOf(otherSubstring, maxStartingIndex);
 
                                     while (index != -1)
@@ -557,9 +568,9 @@ namespace EngineLayer.Neo
                                     while (n < indexes.Count && c < otherIndexes.Count)
                                     {
                                         int difference = otherIndexes[c] - (indexes[n] + i);
-                                        if (difference > 25)
+                                        if (difference > numInterveningResidues)
                                             n++;
-                                        else if (difference < -25 - fc.Length)
+                                        else if (difference < (-1 * numInterveningResidues) - fc.Length)
                                             c++;
                                         else if (difference <= 0 && difference > -fc.Length)
                                         {
@@ -568,7 +579,7 @@ namespace EngineLayer.Neo
                                             while (n < indexes.Count && c < otherIndexes.Count)
                                             {
                                                 difference = otherIndexes[c] - (indexes[n] + i);
-                                                if (difference > 25)
+                                                if (difference > numInterveningResidues)
                                                 {
                                                     c = originalC;
                                                     n++;
@@ -582,7 +593,15 @@ namespace EngineLayer.Neo
                                         else
                                         {
                                             //it's cis!
-                                            psm.candidates.Add(new FusionCandidate(fc) { fusionType = FusionCandidate.FusionType.NC });
+                                            psm.candidates.Add(new FusionCandidate(fc)
+                                            {
+                                                fusionType = FusionCandidate.FusionType.NC,
+                                                accession = prot.Accession,
+                                                nStart = indexes[n],
+                                                nStop = indexes[n] + substring.Length,
+                                                cStart = otherIndexes[c],
+                                                cStop = otherIndexes[c] + otherSubstring.Length
+                                            });
                                             cis = true;
                                             if (psm.fusionType == FusionCandidate.FusionType.TS)
                                                 psm.fusionType = FusionCandidate.FusionType.NC;
@@ -661,7 +680,15 @@ namespace EngineLayer.Neo
                                             else
                                             {
                                                 //it's cis!
-                                                psm.candidates.Add(new FusionCandidate(fc) { fusionType = FusionCandidate.FusionType.NC });
+                                                psm.candidates.Add(new FusionCandidate(fc)
+                                                {
+                                                    fusionType = FusionCandidate.FusionType.NC,
+                                                    accession = prot.Accession,
+                                                    nStart = indexes[n],
+                                                    nStop = indexes[n] + substring.Length,
+                                                    cStart = otherIndexes[c],
+                                                    cStop = otherIndexes[c] + otherSubstring.Length
+                                                });
                                                 cis = true;
                                                 if (psm.fusionType == FusionCandidate.FusionType.TS)
                                                     psm.fusionType = FusionCandidate.FusionType.NC;
