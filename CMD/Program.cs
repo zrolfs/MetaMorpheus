@@ -132,9 +132,8 @@ namespace MetaMorpheusCommandLine
                             case "Neo":
                                 var ye5 = Toml.ReadFile<NeoSearchTask>(filePath, MetaMorpheusTask.tomlConfig);
                                 foreach (MetaMorpheusTask task in NeoLoadTomls.LoadTomls(ye5))
-                                    taskList.Add(("Task" + (taskList.Count + 1) + ye5.TaskType, ye5));
+                                    taskList.Add(("Task" + (taskList.Count + 1) + "-" + task.CommonParameters.TaskDescriptor, task));
                                 break;
-
                             default:
                                 Console.WriteLine(uhum.Get<string>("TaskType") + " is not a known task type! Skipping.");
                                 break;

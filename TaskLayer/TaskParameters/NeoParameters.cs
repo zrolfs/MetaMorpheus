@@ -12,8 +12,8 @@
             DecoySearch = true;
             SearchNTerminus = true;
             SearchCTerminus = true;
-            MaxMissedConsecutiveCleavages = 2;
-            MaxMissedCleavages = 5;
+            MaxMissedConsecutiveFragments = 2;
+            MaxMissedTotalFragments = 5;
             MaxCandidatesPerSpectrum = 2000;
             MinDistanceAllowed = 1;
             MaxDistanceAllowed = 25;
@@ -39,8 +39,8 @@
         public bool SearchCTerminus { get; set; }
         public string CFilePath { get; set; }
 
-        public int MaxMissedConsecutiveCleavages { get; set; }
-        public int MaxMissedCleavages { get; set; }
+        public int MaxMissedConsecutiveFragments { get; set; }
+        public int MaxMissedTotalFragments { get; set; }
         public int MaxCandidatesPerSpectrum { get; set; }
 
         public int MinDistanceAllowed { get; set; }

@@ -84,6 +84,8 @@ namespace EngineLayer.ClassicSearch
                     var digestedList = protein.Digest(commonParameters.DigestionParams, fixedModifications, variableModifications).ToList();
                     foreach (var yyy in digestedList)
                     {
+                        if(yyy.BaseSequence.Equals("QNKGIEELFLDLCKR"))
+                        { }
                         var correspondingCompactPeptide = yyy.CompactPeptide(terminusType);
                         if (!commonParameters.ConserveMemory)
                         {
@@ -105,6 +107,8 @@ namespace EngineLayer.ClassicSearch
                         var searchMode = this.searchMode;
                         foreach (ScanWithIndexAndNotchInfo scanWithIndexAndNotchInfo in GetAcceptableScans(correspondingCompactPeptide.MonoisotopicMassIncludingFixedMods, searchMode).ToList())
                         {
+                            if(scanWithIndexAndNotchInfo.theScan.OneBasedScanNumber==10718 && (yyy.BaseSequence.Equals("QNKGIEELFLDLCKR")))
+                            { }
                             double thePrecursorMass = scanWithIndexAndNotchInfo.theScan.PrecursorMass;
                             var score = CalculatePeptideScore(scanWithIndexAndNotchInfo.theScan.TheScan, productMassTolerance, productMasses, thePrecursorMass, dissociationTypes, addCompIons, 0);
 
@@ -143,6 +147,7 @@ namespace EngineLayer.ClassicSearch
                     }
                 }
             });
+            Psm psm = globalPsms[6561];
             if (commonParameters.CalculateEValue)
                 Parallel.ForEach(Partitioner.Create(0, globalPsms.Length), partitionRange =>
                  {
@@ -159,8 +164,12 @@ namespace EngineLayer.ClassicSearch
 
         private IEnumerable<ScanWithIndexAndNotchInfo> GetAcceptableScans(double peptideMonoisotopicMass, MassDiffAcceptor searchMode)
         {
+            if (peptideMonoisotopicMass > 1861.972 && peptideMonoisotopicMass < 1861.973)
+            { }
             foreach (AllowedIntervalWithNotch allowedIntervalWithNotch in searchMode.GetAllowedPrecursorMassIntervals(peptideMonoisotopicMass).ToList())
             {
+                if (peptideMonoisotopicMass > 1861.972 && peptideMonoisotopicMass < 1861.973)
+                { }
                 DoubleRange allowedInterval = allowedIntervalWithNotch.allowedInterval;
                 int scanIndex = GetFirstScanWithMassOverOrEqual(allowedInterval.Minimum);
                 if (scanIndex < arrayOfSortedMS2Scans.Length)
@@ -176,6 +185,8 @@ namespace EngineLayer.ClassicSearch
                         scanMass = myScanPrecursorMasses[scanIndex];
                     }
                 }
+                if (peptideMonoisotopicMass > 1861.972 && peptideMonoisotopicMass < 1861.973)
+                { }
             }
         }
 

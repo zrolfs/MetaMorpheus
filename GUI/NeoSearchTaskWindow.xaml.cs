@@ -145,8 +145,8 @@ namespace MetaMorpheusGUI
             NPath.Text = task.NeoParameters.NFilePath != null ? task.NeoParameters.NFilePath : "";
             searchC.IsChecked = task.NeoParameters.SearchCTerminus;
             CPath.Text = task.NeoParameters.CFilePath != null ? task.NeoParameters.CFilePath : "";
-            maxMissedConsecutiveTextBox.Text = task.NeoParameters.MaxMissedConsecutiveCleavages.ToString();
-            maxMissedTextBox.Text = task.NeoParameters.MaxMissedCleavages.ToString();
+            maxMissedConsecutiveTextBox.Text = task.NeoParameters.MaxMissedConsecutiveFragments.ToString();
+            maxMissedTextBox.Text = task.NeoParameters.MaxMissedTotalFragments.ToString();
             maxCandidatesPerSpectrumTextBox.Text = task.NeoParameters.MaxCandidatesPerSpectrum.ToString();
             minCisLengthTextBox.Text = task.NeoParameters.MinDistanceAllowed.ToString();
             maxCisLengthTextBox.Text = task.NeoParameters.MaxDistanceAllowed.ToString();
@@ -297,8 +297,8 @@ namespace MetaMorpheusGUI
             neoParameters.DecoySearch = searchDecoy.IsChecked.Value;
             neoParameters.SearchNTerminus = searchN.IsChecked.Value;
             neoParameters.SearchCTerminus = searchC.IsChecked.Value;
-            neoParameters.MaxMissedConsecutiveCleavages = int.Parse(maxMissedConsecutiveTextBox.Text);
-            neoParameters.MaxMissedCleavages = int.Parse(maxMissedConsecutiveTextBox.Text);
+            neoParameters.MaxMissedConsecutiveFragments = int.Parse(maxMissedConsecutiveTextBox.Text);
+            neoParameters.MaxMissedTotalFragments = int.Parse(maxMissedConsecutiveTextBox.Text);
             neoParameters.MaxCandidatesPerSpectrum = int.Parse(maxMissedConsecutiveTextBox.Text);
             neoParameters.MinDistanceAllowed = int.Parse(minCisLengthTextBox.Text);
             neoParameters.MaxDistanceAllowed = int.Parse(maxCisLengthTextBox.Text);

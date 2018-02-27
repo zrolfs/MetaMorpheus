@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CMD": {
+      "commandName": "Project",
+      "commandLineArgs": "-m NeoSearchTaskconfig.toml -s 170301_IsletFrac1.raw -d 161130_Mus_Bos_cRap_canonicalGPTMD.xml"
+    }
+  }
+}
