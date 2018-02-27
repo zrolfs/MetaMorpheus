@@ -126,7 +126,7 @@ namespace EngineLayer.Neo
             finalAggregatedLines = finalAggregatedLines.OrderByDescending(x => x.score).ToList();
             using (StreamWriter file = new StreamWriter(Path.Combine(outputFolder, identifier)))
             {
-                file.WriteLine(primaryLines[0]+" \t FusionType"); //header
+                file.WriteLine(primaryLines[0] + " \t FusionType" + " \t IsFusion" + " \t IsDecoy"); //header
                 foreach (PsmTsvLine line in finalAggregatedLines)
                     file.WriteLine(line.ToString());
             }

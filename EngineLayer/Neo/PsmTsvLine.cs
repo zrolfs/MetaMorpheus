@@ -87,9 +87,25 @@ namespace EngineLayer.Neo
             }
             if (neoType != null)
             {
-                //if (neoType == NeoType.Normal) //for some reason, this produces an extra tab at the end
-                //    sb.Remove(sb.Length - 1, 1);
+                if (neoType == NeoType.Normal) //for some reason, these lines contain two extra tabs at the end
+                {
+                    sb.Remove(sb.Length - 1, 1);
+                    sb.Remove(sb.Length - 1, 1);
+                }
                 sb.Append(neoType.ToString());
+                if (neoType == NeoType.Normal)
+                {
+                    sb.Append('\t' + "0");
+                    sb.Append('\t' + "0");
+                }
+                else
+                {
+                    sb.Append('\t' + "1");
+                    if(neoType == NeoType.DecoySpliced)
+                        sb.Append('\t' + "1");
+                    else
+                        sb.Append('\t' + "0");
+                }
             }
             return sb.ToString();
         }
