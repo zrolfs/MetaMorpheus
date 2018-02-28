@@ -52,6 +52,7 @@ namespace EngineLayer.Neo
 
         public static void FindAmbiguity(List<NeoPsm> candidates, List<Protein> theoreticalProteins, Ms2ScanWithSpecificMass[] spectra, string databaseFileName)
         {
+            NeoFindAmbiguity.theoreticalProteins = theoreticalProteins;
             PopulateSequenceLookUpDictionaries(databaseFileName, theoreticalProteins);
             Ms2ScanWithSpecificMass[] indexedSpectra = new Ms2ScanWithSpecificMass[spectra.Max(x => x.OneBasedScanNumber)+1];
             foreach (Ms2ScanWithSpecificMass scan in spectra)
