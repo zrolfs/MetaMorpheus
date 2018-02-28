@@ -18,6 +18,7 @@ namespace EngineLayer.Neo
             cisParents = new List<CisParent>();
             transParents = new List<TransParent>();
             accession = "";
+            organism = "";
             nStart = 0;
             nStop = 0;
             cStart = 0;
@@ -47,6 +48,7 @@ namespace EngineLayer.Neo
         public List<TransParent> transParents { get; set; }
         public FusionType fusionType { get; set; }
         public string accession { get; set; }
+        public string organism { get; set; }
         public int nStart { get; set; }
         public int nStop { get; set; }
         public int cStart { get; set; }

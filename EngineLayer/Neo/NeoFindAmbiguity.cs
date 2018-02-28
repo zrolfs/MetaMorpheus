@@ -515,14 +515,15 @@ namespace EngineLayer.Neo
                     nTermDictionary.TryGetValue(fc.Substring(0, 4), out List<string> nFrag);
                     if (nFrag != null && nFrag.AsParallel().Any(seq => seq.Length >= fc.Length && seq.Substring(0, fc.Length).Equals(fc)))
                     {
-                        Protein matches = theoreticalProteins.AsParallel().Where(x => x.BaseSequence.Contains(fc)).ToArray()[0];
-                        int startIndex = matches.BaseSequence.IndexOf(fc);
+                        Protein match = theoreticalProteins.AsParallel().Where(x => x.BaseSequence.Contains(fc)).ToArray()[0];
+                        int startIndex = match.BaseSequence.IndexOf(fc);
                         int endIndex = startIndex + fc.Length;
                         psm.fusionType = FusionCandidate.FusionType.TL;
                         psm.candidates.Add(new FusionCandidate(fc)
                         {
                             fusionType = FusionCandidate.FusionType.TL,
-                            accession = matches.Accession,
+                            accession = match.Accession,
+                            organism = match.Organism,
                             nStart = startIndex,
                             nStop = endIndex,
                             cStart = startIndex,
@@ -598,6 +599,7 @@ namespace EngineLayer.Neo
                                             {
                                                 fusionType = FusionCandidate.FusionType.NC,
                                                 accession = prot.Accession,
+                                                organism = prot.Organism,
                                                 nStart = indexes[n],
                                                 nStop = indexes[n] + substring.Length,
                                                 cStart = otherIndexes[c],
@@ -685,6 +687,7 @@ namespace EngineLayer.Neo
                                                 {
                                                     fusionType = FusionCandidate.FusionType.NC,
                                                     accession = prot.Accession,
+                                                    organism = prot.Organism,
                                                     nStart = indexes[n],
                                                     nStop = indexes[n] + substring.Length,
                                                     cStart = otherIndexes[c],

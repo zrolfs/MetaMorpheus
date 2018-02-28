@@ -599,7 +599,7 @@ namespace EngineLayer.Neo
                     string scan = psm.scanNumber.ToString();
                     foreach (FusionCandidate fusionCandidate in psm.candidates)
                     {
-                        file.WriteLine(">sp|" + scan + fusionCandidate.fusionType.ToString() + fusNum + "|" + scan + "_" + fusNum +" From " + fusionCandidate.accession + "_" + fusionCandidate.nStart + "-" + fusionCandidate.nStop + "_" + fusionCandidate.cStart + "-" + fusionCandidate.cStop + " Proposed " + fusionCandidate.fusionType.ToString() + " fusion peptide GN=FUS PE=1 SV=1");
+                        file.WriteLine(">sp|" + scan + fusionCandidate.fusionType.ToString() + fusNum + "|" + scan + "_" + fusNum + " From " + fusionCandidate.accession + "_" + fusionCandidate.nStart + "-" + fusionCandidate.nStop + "_" + fusionCandidate.cStart + "-" + fusionCandidate.cStop + " Proposed " + fusionCandidate.fusionType.ToString() + " fusion peptide OS=" + fusionCandidate.organism + " GN=FUS PE=1 SV=1");
                         string seq = fusionCandidate.seq;
                         for (int i = 0; i < seq.Count(); i += 60) //60 used as number of AAs per line in a FASTA file. It is unliekly to observe something this large currently, but is here as a precaution.
                         {
