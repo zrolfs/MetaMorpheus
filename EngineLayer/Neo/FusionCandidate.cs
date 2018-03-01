@@ -18,7 +18,7 @@ namespace EngineLayer.Neo
             cisParents = new List<CisParent>();
             transParents = new List<TransParent>();
             accession = "";
-            organism = "";
+            organism = "Unknown";
             nStart = 0;
             nStop = 0;
             cStart = 0;
