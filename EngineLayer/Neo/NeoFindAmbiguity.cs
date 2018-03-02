@@ -524,9 +524,9 @@ namespace EngineLayer.Neo
                             fusionType = FusionCandidate.FusionType.TL,
                             accession = match.Accession,
                             organism = match.Organism,
-                            nStart = startIndex,
+                            nStart = startIndex+1,
                             nStop = endIndex,
-                            cStart = startIndex,
+                            cStart = startIndex + 1,
                             cStop = endIndex
                         });
                     }
@@ -600,9 +600,9 @@ namespace EngineLayer.Neo
                                                 fusionType = FusionCandidate.FusionType.NC,
                                                 accession = prot.Accession,
                                                 organism = prot.Organism,
-                                                nStart = indexes[n],
+                                                nStart = indexes[n]+1,
                                                 nStop = indexes[n] + substring.Length,
-                                                cStart = otherIndexes[c],
+                                                cStart = otherIndexes[c]+1,
                                                 cStop = otherIndexes[c] + otherSubstring.Length
                                             });
                                             cis = true;
@@ -688,9 +688,9 @@ namespace EngineLayer.Neo
                                                     fusionType = FusionCandidate.FusionType.NC,
                                                     accession = prot.Accession,
                                                     organism = prot.Organism,
-                                                    nStart = indexes[n],
+                                                    nStart = indexes[n] + 1,
                                                     nStop = indexes[n] + substring.Length,
-                                                    cStart = otherIndexes[c],
+                                                    cStart = otherIndexes[c] + 1,
                                                     cStop = otherIndexes[c] + otherSubstring.Length
                                                 });
                                                 cis = true;
