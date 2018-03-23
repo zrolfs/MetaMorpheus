@@ -1075,8 +1075,6 @@ namespace TaskLayer
                 //SILAC population
                 string modString = "[Mod:Lys8]";
                 double massDif = 8.0142;
-                foreach(Modification mod in variableModifications)
-
                 foreach (Psm psm in unambiguousPsmsBelowOnePercentFdr)
                 {
                     psm.NumHeavy = (psm.FullSequence.Length - psm.FullSequence.Replace(modString, "").Length) / modString.Length;
@@ -1110,23 +1108,23 @@ namespace TaskLayer
                                 for(int aa=0; aa<variablePsm.FullSequence.Length; aa++)
                                 {
                                     char aaToAdd = variablePsm.FullSequence[aa];
+                                    updatedFullSeq += aaToAdd;
                                     if (aaToAdd == 'K')
                                     {
-                                        if (variablePsm.FullSequence.Length > aa + modString.Length && variablePsm.FullSequence.Substring(aa + 1, modString.Length).Equals(modString))
+                                        if (variablePsm.FullSequence.Length > aa+1 && variablePsm.FullSequence[aa+1]=='[' 
+                                            && (variablePsm.FullSequence.Length < aa +1+ modString.Length 
+                                            || !variablePsm.FullSequence.Substring(aa + 1, modString.Length).Equals(modString)))
                                         {
-                                            while (aa < variablePsm.FullSequence.Length && variablePsm.FullSequence[aa] != ']')
+                                            int counter = 0;
+                                            do
                                             {
                                                 aa++;
-                                            }
+                                                if (variablePsm.FullSequence[aa] == ']')
+                                                    counter--;
+                                                else if (variablePsm.FullSequence[aa] == '[')
+                                                    counter++;
+                                            } while (aa < variablePsm.FullSequence.Length - 1 && counter != 0);
                                         }
-                                        else
-                                        {
-                                            updatedFullSeq += aaToAdd;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        updatedFullSeq += aaToAdd;
                                     }
                                 }
                                 variablePsm.FullSequence = updatedFullSeq;
