@@ -21,7 +21,7 @@ namespace EngineLayer
         public ProteinGroup(HashSet<Protein> proteins, HashSet<PeptideWithSetModifications> peptides, HashSet<PeptideWithSetModifications> uniquePeptides)
         {
             Proteins = proteins;
-            ProteinGroupName = string.Join("|", new HashSet<string>(Proteins.Select(p => p.Accession)));
+            ProteinGroupName = string.Join("|", (Proteins.Select(p => p.Accession)).OrderBy(x=>x));
             AllPeptides = peptides;
             UniquePeptides = uniquePeptides;
             AllPsmsBelowOnePercentFDR = new HashSet<Psm>();
