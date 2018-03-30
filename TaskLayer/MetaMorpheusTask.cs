@@ -107,14 +107,7 @@ namespace TaskLayer
 
         #region Public Methods
 
-        public static IEnumerable<Ms2ScanWithSpecificMass> GetMs2Scans(
-         IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> myMSDataFile,
-         string fullFilePath,
-         bool doPrecursorDeconvolution,
-         bool useProvidedPrecursorInfo,
-         double deconvolutionIntensityRatio,
-         int deconvolutionMaxAssumedChargeState,
-         Tolerance deconvolutionMassTolerance)
+        public static IEnumerable<Ms2ScanWithSpecificMass> GetMs2Scans(IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> myMSDataFile, string fullFilePath, bool doPrecursorDeconvolution, bool useProvidedPrecursorInfo, double deconvolutionIntensityRatio, int deconvolutionMaxAssumedChargeState, Tolerance deconvolutionMassTolerance)
         {
             foreach (var ms2scan in myMSDataFile.OfType<IMsDataScanWithPrecursor<IMzSpectrum<IMzPeak>>>())
             {

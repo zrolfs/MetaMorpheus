@@ -302,6 +302,7 @@ namespace TaskLayer
                     Toml.WriteFile(f, tomlFileName, tomlConfig);
                     SucessfullyFinishedWritingFile(tomlFileName, new List<string> { taskId, "Individual Spectra Files", originalUncalibratedFilePath });
                 }
+                (thisRoundCount, datapointAcquisitionResult, thisRoundPrecursorTol, thisRoundProductTol) = GetDataAcquisitionResultsAndAppropriateTolerances(myMsDataFile, originalUncalibratedFilePath, variableModifications, fixedModifications, proteinList, taskId, combinedParams, thisRoundPrecursorTol, thisRoundProductTol);
 
                 myTaskResults.newSpectra.Add(calibratedFilePath);
                 ReportProgress(new ProgressEventArgs(100, "Done!", new List<string> { taskId, "Individual Spectra Files", originalUncalibratedFilePath }));
@@ -371,9 +372,9 @@ namespace TaskLayer
 
             Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> compactPeptideToProteinPeptideMatching = ((SequencesToActualProteinPeptidesEngineResults)new SequencesToActualProteinPeptidesEngine(allPsms, proteinList, fixedModifications, variableModifications, lp, new List<IDigestionParams> { combinedParameters.DigestionParams }, combinedParameters.ReportAllAmbiguity, new List<string> { taskId, "Individual Spectra Files", currentDataFile }).Run()).CompactPeptideToProteinPeptideMatching;
 
-            foreach (var huh in allPsms)
-                if (huh != null)
-                    huh.MatchToProteinLinkedPeptides(compactPeptideToProteinPeptideMatching);
+            foreach (var psm in allPsms)
+                if (psm != null)
+                    psm.MatchToProteinLinkedPeptides(compactPeptideToProteinPeptideMatching);
 
             allPsms = allPsms.Where(b => b != null).OrderByDescending(b => b.Score).ThenBy(b => b.PeptideMonisotopicMass.HasValue ? Math.Abs(b.ScanPrecursorMass - b.PeptideMonisotopicMass.Value) : double.MaxValue).GroupBy(b => (b.FullFilePath, b.ScanNumber, b.PeptideMonisotopicMass)).Select(b => b.First()).ToList();
 
@@ -397,6 +398,10 @@ namespace TaskLayer
             Tolerance testPrecursorMassToleranceForDatapointAcquisition = initPrecTol;
             Tolerance testProductMassToleranceForDatapointAcquisition = initProdTol;
 
+            double ms1avg = 0;
+            double ms1std = 0;
+            double ms2avg = 0;
+            double ms2std = 0;
             var round = 1;
             do
             {
@@ -421,12 +426,16 @@ namespace TaskLayer
                     Warn("Please validate tolerances used.");
                     return (0, null, null, null);
                 }
-
-                var computedPrecursorMassToleranceForDatapointAcquisition = new PpmTolerance(Math.Max(Math.Abs(currentResult.Ms1InfoPpm.Item1 + 6 * currentResult.Ms1InfoPpm.Item2), Math.Abs(currentResult.Ms1InfoPpm.Item1 - 6 * currentResult.Ms1InfoPpm.Item2)));
-                var computedProductMassToleranceForDatapointAcquisition = new PpmTolerance(Math.Max(Math.Abs(currentResult.Ms2InfoPpm.Item1 + 6 * currentResult.Ms2InfoPpm.Item2), Math.Abs(currentResult.Ms2InfoPpm.Item1 - 6 * currentResult.Ms2InfoPpm.Item2)));
-
-                bool ms1Worse = currentResult.Ms1List.Count <= bestResult.Ms1List.Count && ((currentResult.Ms1InfoPpm.Item2 / bestResult.Ms1InfoPpm.Item2) >= ((double)currentResult.Ms1List.Count / bestResult.Ms1List.Count));
-                bool ms2Worse = currentResult.Ms2List.Count <= bestResult.Ms2List.Count && ((currentResult.Ms2InfoPpm.Item2 / bestResult.Ms2InfoPpm.Item2) >= ((double)currentResult.Ms2List.Count / bestResult.Ms2List.Count));
+                ms1avg = currentResult.Ms1InfoPpm;
+                ms1std = currentResult.Ms1InfoPpm;
+                ms2avg = currentResult.Ms2InfoPpm;
+                ms2std = currentResult.Ms2InfoPpm;
+                var computedPrecursorMassToleranceForDatapointAcquisition = new PpmTolerance(9 * currentResult.Ms1InfoPpm);
+                var computedProductMassToleranceForDatapointAcquisition = new PpmTolerance(6 * currentResult.Ms2InfoPpm);
+            
+                //this line makes no sense. It should be a good thing the tolerance shrinks
+                bool ms1Worse = currentResult.Ms1List.Count <= bestResult.Ms1List.Count && ((currentResult.Ms1InfoPpm / bestResult.Ms1InfoPpm) >= ((double)currentResult.Ms1List.Count / bestResult.Ms1List.Count));
+                bool ms2Worse = currentResult.Ms2List.Count <= bestResult.Ms2List.Count && ((currentResult.Ms2InfoPpm / bestResult.Ms2InfoPpm) >= ((double)currentResult.Ms2List.Count / bestResult.Ms2List.Count));
 
                 if (ms1Worse || ms2Worse)
                     break;

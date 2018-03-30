@@ -26,8 +26,8 @@ namespace EngineLayer.Calibration
             Ms1InfoTh = Ms1List.Select(b => b.LabelTh).MeanStandardDeviation();
             Ms2InfoTh = Ms2List.Select(b => b.LabelTh).MeanStandardDeviation();
 
-            Ms1InfoPpm = Ms1List.Select(b => b.LabelPpm).MeanStandardDeviation();
-            Ms2InfoPpm = Ms2List.Select(b => b.LabelPpm).MeanStandardDeviation();
+            Ms1InfoPpm = Math.Max(Math.Abs(Ms1List.Select(b => b.LabelPpm).LowerQuartile()), Math.Abs(Ms1List.Select(b => b.LabelPpm).UpperQuartile()));
+            Ms2InfoPpm = Math.Max(Math.Abs(Ms2List.Select(b => b.LabelPpm).LowerQuartile()), Math.Abs(Ms2List.Select(b => b.LabelPpm).UpperQuartile()));
 
             NumMs1MassChargeCombinationsConsidered = numMs1MassChargeCombinationsConsidered;
             NumMs1MassChargeCombinationsThatAreIgnoredBecauseOfTooManyPeaks = numMs1MassChargeCombinationsThatAreIgnoredBecauseOfTooManyPeaks;
@@ -41,8 +41,8 @@ namespace EngineLayer.Calibration
 
         public Tuple<double, double> Ms1InfoTh { get; }
         public Tuple<double, double> Ms2InfoTh { get; }
-        public Tuple<double, double> Ms1InfoPpm { get; }
-        public Tuple<double, double> Ms2InfoPpm { get; }
+        public double Ms1InfoPpm { get; }
+        public double Ms2InfoPpm { get; }
 
         public int NumMs1MassChargeCombinationsConsidered { get; }
         public int NumMs1MassChargeCombinationsThatAreIgnoredBecauseOfTooManyPeaks { get; }
@@ -63,9 +63,9 @@ namespace EngineLayer.Calibration
             var sb = new StringBuilder();
             sb.AppendLine(base.ToString());
             sb.AppendLine("Ms1List.Count: " + Ms1List.Count + " Ms2List.Count: " + Ms2List.Count);
-            sb.AppendLine("Ms1ppm mean: " + Ms1InfoPpm.Item1 + " Ms1ppm sd: " + Ms1InfoPpm.Item2);
+            sb.AppendLine("Ms1ppm largest quartile: " + Ms1InfoPpm);
             sb.AppendLine("Ms1th mean: " + Ms1InfoTh.Item1 + " Ms1th sd: " + Ms1InfoTh.Item2);
-            sb.AppendLine("Ms2ppm mean: " + Ms2InfoPpm.Item1 + " Ms2ppm sd: " + Ms2InfoPpm.Item2);
+            sb.AppendLine("Ms2ppm largest quartile: " + Ms2InfoPpm);
             sb.AppendLine("Ms2th mean: " + Ms2InfoTh.Item1 + " Ms2th sd: " + Ms2InfoTh.Item2);
             sb.AppendLine("NumMs1MassChargeCombinationsConsidered: " + NumMs1MassChargeCombinationsConsidered);
             sb.AppendLine("NumMs1MassChargeCombinationsThatAreIgnoredBecauseOfTooManyPeaks: " + NumMs1MassChargeCombinationsThatAreIgnoredBecauseOfTooManyPeaks);

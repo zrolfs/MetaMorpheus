@@ -9,9 +9,9 @@ namespace TaskLayer
         public DigestionParams()
         {
             MaxMissedCleavages = 2;
-            MinPeptideLength = 5;
+            MinPeptideLength = 7;
             MaxPeptideLength = null;
-            MaxModificationIsoforms = 4096;
+            MaxModificationIsoforms = 20;
             Protease = GlobalVariables.ProteaseDictionary["trypsin"];
             InitiatorMethionineBehavior = InitiatorMethionineBehavior.Variable;
             MaxModsForPeptide = 3;
