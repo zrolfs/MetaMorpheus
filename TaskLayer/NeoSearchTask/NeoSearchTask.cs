@@ -146,7 +146,9 @@ namespace TaskLayer
                     IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
                     Status("Getting ms2 scans...", thisId);
                     Ms2ScanWithSpecificMass[] arrayOfMs2ScansSortedByMass = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).OrderBy(b => b.PrecursorMass).ToArray();
-
+                    Ms2ScanWithSpecificMass[] indexedSpectra = new Ms2ScanWithSpecificMass[arrayOfMs2ScansSortedByMass.Max(x => x.OneBasedScanNumber) + 1];
+                    foreach (Ms2ScanWithSpecificMass scan in arrayOfMs2ScansSortedByMass)
+                        indexedSpectra[scan.OneBasedScanNumber] = scan;
                     //Import Database
                     Status("Loading modifications...", taskId);
 
@@ -212,11 +214,11 @@ namespace TaskLayer
 
                     //Find Ambiguity
                     Status("Identifying Ambiguity...", taskId);
-                    NeoFindAmbiguity.FindAmbiguity(candidates, proteinList, arrayOfMs2ScansSortedByMass, dbFilenameList[0].FilePath);
+                    NeoFindAmbiguity.FindAmbiguity(candidates, proteinList, indexedSpectra, dbFilenameList[0].FilePath);
 
                     //Export Results
                     Status("Exporting Results...", taskId);
-                    NeoExport.ExportAll(candidates, arrayOfMs2ScansSortedByMass, OutputFolder);
+                    NeoExport.ExportAll(candidates, indexedSpectra, OutputFolder);
 
                     //Switch databases
                     string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "FusionDatabaseAppendixNC.fasta";

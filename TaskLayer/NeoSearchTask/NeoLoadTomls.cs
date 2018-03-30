@@ -190,6 +190,8 @@ namespace TaskLayer
                     newTomlLines.Add(GetCorrectValue("TerminusTypeSemiProtease", tomlFileName, line));
                 else if (line.Contains("Protease") && terminusType.Equals(TerminusType.None) && !spliceSearch) //this must be last, else other names including protease will be overwritten and crash.
                     newTomlLines.Add(GetCorrectValue("Protease", tomlFileName, line));
+                else if (line.Contains("ScoreCutoff"))
+                    newTomlLines.Add(GetCorrectValue("ScoreCutoff", tomlFileName, line));
                 else
                     newTomlLines.Add(line);
             }

@@ -219,6 +219,11 @@ namespace EngineLayer.ModernSearch
 
         private void IndexedScoring(List<int> binsToSearch, byte[] scoringTable, byte byteScoreCutoff, List<int> idsOfPeptidesPossiblyObserved, double scanPrecursorMass, double lowestMassPeptideToLookFor, double highestMassPeptideToLookFor)
         {
+            for(int i=0; i<fragmentIndex.Length; i++)
+            {
+                if(fragmentIndex[i]!=null)
+                { }
+            }
             // get all theoretical fragments this experimental fragment could be
             for (int i = 0; i < binsToSearch.Count; i++)
             {
@@ -258,9 +263,10 @@ namespace EngineLayer.ModernSearch
 
                 if (maximumMassThatFragmentIonScoreIsDoubled > 0)
                 {
+                    int maximumBin = Convert.ToInt32(maximumMassThatFragmentIonScoreIsDoubled * fragmentBinsPerDalton);
                     for (int j = lowestPeptideMassIndex; j <= highestPeptideMassIndex; j++)
                     {
-                        if (j < maximumMassThatFragmentIonScoreIsDoubled * fragmentBinsPerDalton)
+                        if (j < maximumBin)
                         {
                             int id = peptideIdsInThisBin[j];
                             scoringTable[id]++;

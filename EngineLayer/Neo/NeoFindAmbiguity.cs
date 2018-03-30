@@ -54,13 +54,11 @@ namespace EngineLayer.Neo
         {
             NeoFindAmbiguity.theoreticalProteins = theoreticalProteins;
             PopulateSequenceLookUpDictionaries(databaseFileName, theoreticalProteins);
-            Ms2ScanWithSpecificMass[] indexedSpectra = new Ms2ScanWithSpecificMass[spectra.Max(x => x.OneBasedScanNumber) + 1];
-            foreach (Ms2ScanWithSpecificMass scan in spectra)
-                indexedSpectra[scan.OneBasedScanNumber] = scan;
+
             for (int i = 0; i < candidates.Count(); i++) //must be mutable while iterating
             {
                 NeoPsm psm = candidates[i];
-                Ms2ScanWithSpecificMass spectrum = indexedSpectra[psm.scanNumber];
+                Ms2ScanWithSpecificMass spectrum = spectra[psm.scanNumber];
                 psm.fusionType = FusionCandidate.FusionType.TS; //for some maddening reason, this is not arriving here as trans, but instead translated
                 if (IsTooMessy(psm, spectrum)) //having explosion of combinations when greater than 3 consequtive peaks producing tens of thousands of sequences ids, causes hanging
                 {

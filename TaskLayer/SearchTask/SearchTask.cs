@@ -906,11 +906,13 @@ namespace TaskLayer
 
                 if (SearchParameters.SearchType == SearchType.Modern)
                 {
-                    for (int currentPartition = 0; currentPartition < combinedParams.TotalPartitions; currentPartition++)
+                    int numberOfPartitions = Math.Min(combinedParams.TotalPartitions, proteinList.Count); //issues when partitions>proteins
+                    for (int currentPartition = 0; currentPartition < numberOfPartitions; currentPartition++)
                     {
                         List<CompactPeptide> peptideIndex = null;
-                        List<Protein> proteinListSubset = proteinList.GetRange(currentPartition * proteinList.Count() / combinedParams.TotalPartitions, ((currentPartition + 1) * proteinList.Count() / combinedParams.TotalPartitions) - (currentPartition * proteinList.Count() / combinedParams.TotalPartitions));
-
+                        List<Protein> proteinListSubset = proteinList.GetRange(currentPartition * proteinList.Count() / numberOfPartitions, ((currentPartition + 1) * proteinList.Count() / numberOfPartitions) - (currentPartition * proteinList.Count() / numberOfPartitions));
+                        if (proteinListSubset.Count == 0)
+                        { }
                         #region Generate indices for modern search
 
                         Status("Getting fragment dictionary...", new List<string> { taskId });
@@ -925,19 +927,21 @@ namespace TaskLayer
 
                         new ModernSearchEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, peptideIndex, fragmentIndex, ionTypes, currentPartition, combinedParams, SearchParameters.AddCompIons, massDiffAcceptor, SearchParameters.MaximumMassThatFragmentIonScoreIsDoubled, thisId).Run();
 
-                        ReportProgress(new ProgressEventArgs(100, "Done with search " + (currentPartition + 1) + "/" + combinedParams.TotalPartitions + "!", thisId));
+                        ReportProgress(new ProgressEventArgs(100, "Done with search " + (currentPartition + 1) + "/" + numberOfPartitions + "!", thisId));
                     }
                 }
                 else if (SearchParameters.SearchType == SearchType.NonSpecific)
                 {
+                    int numberOfPartitions = Math.Min(combinedParams.TotalPartitions, proteinList.Count); //issues when partitions>proteins
                     List<List<ProductType>> terminusSeparatedIons = ProductTypeMethod.SeparateIonsByTerminus(ionTypes);
                     foreach (List<ProductType> terminusSpecificIons in terminusSeparatedIons)
                     {
-                        for (int currentPartition = 0; currentPartition < combinedParams.TotalPartitions; currentPartition++)
+                        for (int currentPartition = 0; currentPartition < numberOfPartitions; currentPartition++)
                         {
                             List<CompactPeptide> peptideIndex = null;
-                            List<Protein> proteinListSubset = proteinList.GetRange(currentPartition * proteinList.Count() / combinedParams.TotalPartitions, ((currentPartition + 1) * proteinList.Count() / combinedParams.TotalPartitions) - (currentPartition * proteinList.Count() / combinedParams.TotalPartitions));
-
+                            List<Protein> proteinListSubset = proteinList.GetRange(currentPartition * proteinList.Count() / numberOfPartitions, ((currentPartition + 1) * proteinList.Count() / numberOfPartitions) - (currentPartition * proteinList.Count() / numberOfPartitions));
+                            if(proteinListSubset.Count==0)
+                            { }
                             List<int>[] fragmentIndex = new List<int>[1];
 
                             #region Generate indices for nonspecifc search
@@ -953,7 +957,7 @@ namespace TaskLayer
 
                             Status("Getting precursor dictionary...", new List<string> { taskId });
                             List<CompactPeptide> peptideIndexPrecursor = null;
-                            List<Protein> proteinListSubsetPrecursor = proteinList.GetRange(currentPartition * proteinList.Count() / combinedParams.TotalPartitions, ((currentPartition + 1) * proteinList.Count() / combinedParams.TotalPartitions) - (currentPartition * proteinList.Count() / combinedParams.TotalPartitions));
+                            List<Protein> proteinListSubsetPrecursor = proteinList.GetRange(currentPartition * proteinList.Count() / numberOfPartitions, ((currentPartition + 1) * proteinList.Count() / numberOfPartitions) - (currentPartition * proteinList.Count() / numberOfPartitions));
                             List<int>[] fragmentIndexPrecursor = new List<int>[1];
                             var indexEnginePrecursor = new PrecursorIndexingEngine(proteinListSubsetPrecursor, variableModifications, fixedModifications, terminusSpecificIons, currentPartition, SearchParameters.DecoyType, ListOfDigestionParams, combinedParams, 0, new List<string> { taskId });
                             lock (indexLock)
@@ -968,7 +972,7 @@ namespace TaskLayer
 
                             new NonSpecificEnzymeSearchEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, peptideIndex, fragmentIndex, fragmentIndexPrecursor, terminusSpecificIons, currentPartition, combinedParams, SearchParameters.AddCompIons, massDiffAcceptor, SearchParameters.MaximumMassThatFragmentIonScoreIsDoubled, thisId).Run();
 
-                            ReportProgress(new ProgressEventArgs(100, "Done with search " + (currentPartition + 1) + "/" + combinedParams.TotalPartitions + "!", thisId));
+                            ReportProgress(new ProgressEventArgs(100, "Done with search " + (currentPartition + 1) + "/" + numberOfPartitions + "!", thisId));
                         }
                     }
                 }
