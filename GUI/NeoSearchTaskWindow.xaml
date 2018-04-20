@@ -280,11 +280,11 @@
                                 <Grid>
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal">
-                                            <Label x:Name="maxMissedConsecutiveLabel" Content="Max Missed Consecutive Cleavages" Margin="2" />
+                                            <Label x:Name="maxMissedConsecutiveLabel" Content="Max Missed Consecutive Fragments" Margin="2" />
                                             <TextBox x:Name="maxMissedConsecutiveTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal">
-                                            <Label x:Name="maxMissedLabel" Content="Max Missed Cleavages" Margin="2" />
+                                            <Label x:Name="maxMissedLabel" Content="Max Missed Fragments" Margin="2" />
                                             <TextBox x:Name="maxMissedTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal">
@@ -302,11 +302,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal">
-                                            <Label x:Name="minCisLengthLabel" Content="Min Distance (#AA) Allowed" Margin="2" />
-                                            <TextBox x:Name="minCisLengthTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" />
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Label x:Name="maxCisLengthLabel" Content="Max Distance (#AA) Allowed" Margin="2" />
+                                            <Label x:Name="maxCisLengthLabel" Content="Max Intervening Distance (#AA) Allowed" Margin="2" />
                                             <TextBox x:Name="maxCisLengthTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" TextChanged="maxCisLengthTextBox_TextChanged" />
                                         </StackPanel>
                                     </StackPanel>

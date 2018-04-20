@@ -28,9 +28,9 @@ namespace TaskLayer
             IDigestionParams tempDigParams = new DigestionParams
             {
                 MinPeptideLength = 8,
-                MaxPeptideLength = 13,
+                MaxPeptideLength = 16,
                 Protease = GlobalVariables.ProteaseDictionary["non-specific"],
-                MaxMissedCleavages = 12
+                MaxMissedCleavages = 15
             };
             CommonParameters = new CommonParameters
             {
@@ -134,11 +134,19 @@ namespace TaskLayer
                     parallelOptions.MaxDegreeOfParallelism = CommonParameters.MaxParallelFilesToAnalyze.Value;
                 MyFileManager myFileManager = new MyFileManager(true);
 
+
+
                 //Import Spectra
                 Parallel.For(0, currentRawFileList.Count, parallelOptions, spectraFileIndex =>
                 {
                     var origDataFile = currentRawFileList[spectraFileIndex];
                     ICommonParameters combinedParams = SetAllFileSpecificCommonParams(CommonParameters, fileSettingsList[spectraFileIndex]);
+                    //get parameters updated
+                    NeoFindAmbiguity.precursorMassTolerancePpm = combinedParams.PrecursorMassTolerance.Value;
+                    NeoFindAmbiguity.productMassTolerancePpm = combinedParams.ProductMassTolerance.Value;
+                    NeoFindAmbiguity.numInterveningResidues = NeoParameters.MaxDistanceAllowed;
+                    NeoFindAmbiguity.normalCis = NeoParameters.NormalCis;
+                    NeoFindAmbiguity.reverseCis = NeoParameters.ReverseCis;
 
                     var thisId = new List<string> { taskId, "Individual Spectra Files", origDataFile };
                     NewCollection(Path.GetFileName(origDataFile), thisId);
@@ -163,8 +171,6 @@ namespace TaskLayer
                         localizeableModificationTypes = GlobalVariables.AllModTypesKnown.Where(b => localizeableModificationTypes.Contains(b)).ToList();
 
                     #endregion Load modifications
-
-
 
                     var proteinList = dbFilenameList.SelectMany(b => LoadProteinDb(b.FilePath, true, DecoyType.None, localizeableModificationTypes, b.IsContaminant, out Dictionary<string, Modification> unknownModifications)).ToList();
 

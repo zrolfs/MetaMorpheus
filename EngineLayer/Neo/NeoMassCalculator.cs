@@ -12,6 +12,7 @@ namespace EngineLayer.Neo
         public static double[] MONOISOTOPIC_AMINO_ACID_MASSES;
         public static double[] AVERAGE_AMINO_ACID_MASSES;
         public static DataTable ModificationsDT = new DataTable();
+        private static bool massesImported = false;
 
         #endregion Public Fields
 
@@ -19,8 +20,11 @@ namespace EngineLayer.Neo
 
         public static void ImportMasses()
         {
+            if (massesImported) //don't do this again if we've already done it 
+                return;
             AminoAcidMasses();
             NeoFindAmbiguity.ReadMassDictionary();
+            massesImported = true;
         }
 
         public static bool IdenticalMasses(double experimental, double theoretical, double tolerance)
@@ -28,10 +32,10 @@ namespace EngineLayer.Neo
             return experimental * (1 + tolerance / 1000000) > theoretical && experimental * (1 - tolerance / 1000000) < theoretical;
         }
 
-        public static bool DecoyIdenticalMasses(double experimental, double theoretical)
-        {
-            return (((theoretical) > (experimental - 9.5) && (theoretical) < (experimental - 4.5)) || ((theoretical) > (experimental + 5.5) && (theoretical) < (experimental + 7.5)));
-        }
+        //public static bool DecoyIdenticalMasses(double experimental, double theoretical)
+        //{
+        //    return (((theoretical) > (experimental - 9.5) && (theoretical) < (experimental - 4.5)) || ((theoretical) > (experimental + 5.5) && (theoretical) < (experimental + 7.5)));
+        //}
 
         public static double MonoIsoptopicMass(string baseSequence)
         {

@@ -148,7 +148,6 @@ namespace MetaMorpheusGUI
             maxMissedConsecutiveTextBox.Text = task.NeoParameters.MaxMissedConsecutiveFragments.ToString();
             maxMissedTextBox.Text = task.NeoParameters.MaxMissedTotalFragments.ToString();
             maxCandidatesPerSpectrumTextBox.Text = task.NeoParameters.MaxCandidatesPerSpectrum.ToString();
-            minCisLengthTextBox.Text = task.NeoParameters.MinDistanceAllowed.ToString();
             maxCisLengthTextBox.Text = task.NeoParameters.MaxDistanceAllowed.ToString();
             searchNormalCis.IsChecked = task.NeoParameters.NormalCis;
             searchReverseCis.IsChecked = task.NeoParameters.ReverseCis;
@@ -300,7 +299,6 @@ namespace MetaMorpheusGUI
             neoParameters.MaxMissedConsecutiveFragments = int.Parse(maxMissedConsecutiveTextBox.Text);
             neoParameters.MaxMissedTotalFragments = int.Parse(maxMissedConsecutiveTextBox.Text);
             neoParameters.MaxCandidatesPerSpectrum = int.Parse(maxMissedConsecutiveTextBox.Text);
-            neoParameters.MinDistanceAllowed = int.Parse(minCisLengthTextBox.Text);
             neoParameters.MaxDistanceAllowed = int.Parse(maxCisLengthTextBox.Text);
             neoParameters.NormalCis = searchNormalCis.IsChecked.Value;
             neoParameters.ReverseCis = searchReverseCis.IsChecked.Value;

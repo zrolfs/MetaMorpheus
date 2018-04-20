@@ -19,12 +19,8 @@ namespace EngineLayer.Neo
         public static Dictionary<string, List<Protein>> foundSequences = new Dictionary<string, List<Protein>>();
         public static Dictionary<double, string[]> massDict = new Dictionary<double, string[]>();
         public static double[] keys;
-        public static double productMassTolerancePpm = 20;
-
-        //(Ppm)
-        public static double precursorMassTolerancePpm = 5;
-
-        //(Ppm)
+        public static double productMassTolerancePpm = 20; //(Ppm)
+        public static double precursorMassTolerancePpm = 5; //(Ppm)
         public static List<ProductType> ionsUsed = new List<ProductType> { ProductType.B, ProductType.Y };
 
         public static Dictionary<double, char> massesToResidues = new Dictionary<double, char>();
@@ -35,6 +31,8 @@ namespace EngineLayer.Neo
         public static Dictionary<string, List<Protein>> protDictionary = new Dictionary<string, List<Protein>>();
         public static char[] AANames = new char[20] { 'G', 'A', 'S', 'P', 'V', 'T', 'L', 'I', 'N', 'D', 'Q', 'K', 'E', 'M', 'H', 'F', 'R', 'C', 'Y', 'W' };
         public static int numInterveningResidues = 25;
+        public static bool normalCis = true;
+        public static bool reverseCis = true;
         #endregion Public Fields
 
         #region Private Fields
@@ -74,6 +72,7 @@ namespace EngineLayer.Neo
                     }
                 }
             }
+            //clear entries for subsequent runs
             nTermDictionary.Clear();
             cTermDictionary.Clear();
             protDictionary.Clear();
