@@ -169,6 +169,7 @@ namespace EngineLayer.Neo
         {
             //get minimum score of qThreshold
             List<PsmTsvLine> primaryAtQ = primaryPsms.Where(x => Convert.ToDouble(x.q) + 0.000001 > qThreshold && Convert.ToDouble(x.q) - 0.000001 < qThreshold).ToList();
+            //spliced must have score greater than cutoff
             double minScoreAllowed = primaryAtQ.Min(x => x.score);
 
             List<PsmTsvLine> aggregatedLines = new List<PsmTsvLine>();
@@ -186,7 +187,12 @@ namespace EngineLayer.Neo
                 }
                 else if (psmP.scanNumber > psmS.scanNumber)
                 {
-                    if (psmS.score - scoreDifferenceThreshold > minScoreAllowed)
+                    //CONTROVERSAL CODE CHANGE
+                    //Allow spliced peptides to be considered valid if they are above the minimum score threshold as assigned by the q value
+                    //previously, the score difference was included, such that the spliced peptide needed to have a score greater than the threshold while accounting for the difference
+                    //The idea being that if a splice score needed to be N greater than the corresponding normal score, the splice cutoff should be N greater than the normal cutoff.
+                    //if (psmS.score - scoreDifferenceThreshold > minScoreAllowed) //CONTROVERSAL
+                    if (psmS.score > minScoreAllowed)
                     {
                         psmS.neoType = PsmTsvLine.NeoType.Spliced;
                         aggregatedLines.Add(psmS);
@@ -195,7 +201,8 @@ namespace EngineLayer.Neo
                 }
                 else
                 {
-                    if (psmP.score > psmS.score - scoreDifferenceThreshold || psmS.score - scoreDifferenceThreshold < minScoreAllowed)
+                    //if (psmP.score > psmS.score - scoreDifferenceThreshold || psmS.score - scoreDifferenceThreshold < minScoreAllowed) //CONTROVERSAL
+                    if (psmP.score > psmS.score - scoreDifferenceThreshold || psmS.score < minScoreAllowed)
                     {
                         aggregatedLines.Add(psmP);
                     }

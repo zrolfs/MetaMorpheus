@@ -75,7 +75,7 @@ namespace TaskLayer
             if (NeoType.Equals(NeoTaskType.AggregateTargetDecoyFiles))
             {
                 //getfolders
-                if (NeoParameters.DecoyFilePath == null)
+                if (NeoParameters.DecoySearch)
                 {
                     NeoParameters.DecoyFilePath = new DirectoryInfo(OutputFolder).Name;
                     string taskString = NeoParameters.DecoyFilePath.Split('-')[0];
@@ -89,7 +89,7 @@ namespace TaskLayer
                         NeoParameters.TargetFilePath = OutputFolder.Substring(0, OutputFolder.Length - NeoParameters.TargetFilePath.Length) + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                     }
                 }
-                if (NeoParameters.TargetFilePath == null)
+                if (NeoParameters.TargetSearch)
                 {
                     NeoParameters.TargetFilePath = new DirectoryInfo(OutputFolder).Name;
                     string taskString = NeoParameters.TargetFilePath.Split('-')[0];
@@ -179,7 +179,7 @@ namespace TaskLayer
                     string cPath = NeoParameters.CFilePath;
                     //if termini input
 
-                    if (nPath == null || cPath == null)
+                    if (NeoParameters.SearchNTerminus || NeoParameters.SearchCTerminus)
                     {
                         //if no termini input
                         string taskHeader = "Task";
@@ -191,10 +191,10 @@ namespace TaskLayer
                         currentTaskNumber = currentTaskNumber.Substring(taskHeader.Length, currentTaskNumber.Length - taskHeader.Length);
                         string NHeader = "";
                         string CHeader = "";
-                        if (cPath == null)
+                        if (NeoParameters.SearchCTerminus)
                         {
                             CHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 1);
-                            if (nPath == null)
+                            if (NeoParameters.SearchNTerminus)
                                 NHeader = taskHeader + (Convert.ToInt16(currentTaskNumber) - 2);
                         }
                         else
