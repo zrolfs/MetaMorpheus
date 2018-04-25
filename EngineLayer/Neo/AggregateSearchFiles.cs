@@ -63,15 +63,13 @@ namespace EngineLayer.Neo
         public static void RecursiveNeoAggregation(string standardFilePath, string neoResultFilePath, string outputFolder, string identifier)
         {
             //This method determines the optimum cutoff for gold standard identification and the minimum score difference required for a splice to outscore a normal
-            double qThreshold = 0;
-            double oldQThreshold = 0;
-            double scoreDifferenceThreshold = 1;
-            double oldScoreDifferenceThreshold = 1;
-            int numSplicedHighScoreQ = -1; //highest number of splice assignments at a 1% local FDR
-            int numSplicedHighScoreThreshold = -1; //highest number of splice assignments at a 1% local FDR
-            int numSplicedScore = 0; //current number of splic assignments at a 1% local FDR
-            bool increaseQ = true;
-            bool increaseScoreDifference = true;
+            double desiredConfidence = 0.01;
+            double bestQ = -1; //q Cutoff at highest score
+            double bestThreshold = -1; //highest number of splice assignments at a 1% local FDR
+            int numSplicedHighScore = 0; //highest number of spliced peptides found
+            const double thresholdStep = 0.5;
+            const int minimumScoreDifference = 1;
+            const int maxmimumScoreDifference = 5;
 
             string[] primaryLines = (System.IO.File.ReadAllLines(@standardFilePath));
             string[] secondaryLines = (System.IO.File.ReadAllLines(@neoResultFilePath));
@@ -79,50 +77,22 @@ namespace EngineLayer.Neo
             primaryPsms.ForEach(x => x.neoType = PsmTsvLine.NeoType.Normal);
             List<PsmTsvLine> secondaryPsms = ImportPsmtsv.ImportLinesToAggregate(secondaryLines);
 
-            do //determine if score difference should be changed
+            for (double qThreshold = 0; qThreshold <= desiredConfidence;)
             {
-                if (numSplicedScore < numSplicedHighScoreThreshold || (numSplicedScore == numSplicedHighScoreThreshold && increaseScoreDifference && UpdateScoreDifferenceThreshold(scoreDifferenceThreshold, increaseScoreDifference) > 20)) //check second time around if move score Threhold the other way
-                    increaseScoreDifference = false;
-                else
+                qThreshold = UpdateQThreshold(primaryPsms, qThreshold, true);
+                for (double scoreDifferenceThreshold = minimumScoreDifference; scoreDifferenceThreshold < maxmimumScoreDifference; scoreDifferenceThreshold += thresholdStep)
                 {
-                    numSplicedHighScoreThreshold = numSplicedScore; //update highscore
-                    oldScoreDifferenceThreshold = scoreDifferenceThreshold; //update score difference
+                    List<PsmTsvLine> aggregatedLines = Percolate(primaryPsms, secondaryPsms, qThreshold, scoreDifferenceThreshold);
+                    int numSplicedScore = CalculateNumberOfConfidentSpliced(aggregatedLines, desiredConfidence);
+                    if (numSplicedHighScore < numSplicedScore)
+                    {
+                        numSplicedHighScore = numSplicedScore;
+                        bestQ = qThreshold;
+                        bestThreshold = scoreDifferenceThreshold;
+                    }
                 }
-                scoreDifferenceThreshold = UpdateScoreDifferenceThreshold(scoreDifferenceThreshold, increaseScoreDifference); //update score Threshold
-                double qStart = qThreshold;
-                List<PsmTsvLine> aggregatedLines = Percolate(primaryPsms, secondaryPsms, qThreshold, scoreDifferenceThreshold);
-                numSplicedScore = CalculateNumberOfConfidentSpliced(aggregatedLines);
-                do //determine gold standards to use
-                {
-                    oldQThreshold = qThreshold; //updateQ
-
-                    if (numSplicedScore < numSplicedHighScoreQ || (numSplicedScore == numSplicedHighScoreQ && increaseQ && UpdateQThreshold(primaryPsms, qThreshold, increaseQ) > 0.05)) //check second time around if move qValue the other way
-                    {
-                        if (numSplicedHighScoreThreshold == numSplicedScore && qStart==0)
-                            break;
-                        increaseQ = false;
-                    }
-                    else
-                    {
-                        numSplicedHighScoreQ = numSplicedScore; //update highscore
-                    }
-
-                    qThreshold = UpdateQThreshold(primaryPsms, qThreshold, increaseQ); //get qValue
-                    aggregatedLines = Percolate(primaryPsms, secondaryPsms, qThreshold, scoreDifferenceThreshold);
-                    numSplicedScore = CalculateNumberOfConfidentSpliced(aggregatedLines);
-                } while ((numSplicedScore >= numSplicedHighScoreQ || increaseQ) 
-                    && (numSplicedScore > numSplicedHighScoreQ || qThreshold < 0.05 || !increaseQ) && qThreshold > 0); //do again the otherway if done increasing
-                if (qThreshold == 0 && numSplicedScore>=numSplicedHighScoreQ)
-                    oldQThreshold = qThreshold;
-                List<PsmTsvLine> oldAggregatedLines = Percolate(primaryPsms, secondaryPsms, oldQThreshold, scoreDifferenceThreshold);
-                numSplicedScore = CalculateNumberOfConfidentSpliced(oldAggregatedLines);
-                increaseQ = true;
-                qThreshold = oldQThreshold;
-            } while ((numSplicedScore >= numSplicedHighScoreThreshold || increaseScoreDifference) 
-                && (numSplicedScore > numSplicedHighScoreThreshold || ((scoreDifferenceThreshold < 20 || !increaseScoreDifference) && scoreDifferenceThreshold > -20)));
-            List<PsmTsvLine> finalAggregatedLines = Percolate(primaryPsms, secondaryPsms, oldQThreshold, oldScoreDifferenceThreshold);
-            numSplicedScore = CalculateNumberOfConfidentSpliced(finalAggregatedLines);
-            SubtractScoresFromFusions(finalAggregatedLines, oldScoreDifferenceThreshold);
+            }
+            List<PsmTsvLine> finalAggregatedLines = Percolate(primaryPsms, secondaryPsms, bestQ, bestThreshold);
             finalAggregatedLines = finalAggregatedLines.OrderByDescending(x => x.score).ToList();
             using (StreamWriter file = new StreamWriter(Path.Combine(outputFolder, identifier)))
             {
@@ -132,8 +102,10 @@ namespace EngineLayer.Neo
             }
             using (StreamWriter file = new StreamWriter(Path.Combine(outputFolder, "PercolatorInfo_" + identifier)))
             {
-                file.WriteLine("Maxmimum q-Value of Gold Standards: " + oldQThreshold);
-                file.WriteLine("Minimum Score Difference for Splice Selection Over Normal: " + oldScoreDifferenceThreshold);
+                file.WriteLine("Maxmimum q-Value of Gold Standards: " + bestQ);
+                file.WriteLine("Minimum Score Difference for Splice Selection Over Normal: " + bestThreshold);
+                file.WriteLine("FDR for spliced peptides: " + desiredConfidence);
+                file.WriteLine("Number of spliced peptides identified at " + desiredConfidence + ": " + numSplicedHighScore);
             }
         }
 
@@ -157,19 +129,27 @@ namespace EngineLayer.Neo
             return qThreshold; //if nothing, return the same qValue
         }
 
-        public static double UpdateScoreDifferenceThreshold(double scoreDifferenceThreshold, bool increaseScoreDifference)
+        public static int CalculateNumberOfConfidentSpliced(List<PsmTsvLine> aggregatedLines, double desiredConfidence)
         {
-            if (increaseScoreDifference)
-                return scoreDifferenceThreshold += 0.05;
-            else
-                return scoreDifferenceThreshold -= 0.05;
+            int numConfidentSpliced = 0;
+            int numDecoySpliced = 0;
+            aggregatedLines = aggregatedLines.OrderByDescending(x => x.score).ToList();
+            foreach (PsmTsvLine line in aggregatedLines)
+            {
+                if (numConfidentSpliced != 0 && (1.0 * numDecoySpliced) / numConfidentSpliced >= desiredConfidence)
+                    break;
+                if (line.neoType.Equals(PsmTsvLine.NeoType.Spliced))
+                    numConfidentSpliced++;
+                else if (line.neoType.Equals(PsmTsvLine.NeoType.DecoySpliced))
+                    numDecoySpliced++;
+            }
+            return numConfidentSpliced;
         }
 
         public static List<PsmTsvLine> Percolate(List<PsmTsvLine> primaryPsms, List<PsmTsvLine> secondaryPsms, double qThreshold, double scoreDifferenceThreshold)
         {
             //get minimum score of qThreshold
             List<PsmTsvLine> primaryAtQ = primaryPsms.Where(x => Convert.ToDouble(x.q) + 0.000001 > qThreshold && Convert.ToDouble(x.q) - 0.000001 < qThreshold).ToList();
-            //spliced must have score greater than cutoff
             double minScoreAllowed = primaryAtQ.Min(x => x.score);
 
             List<PsmTsvLine> aggregatedLines = new List<PsmTsvLine>();
@@ -187,11 +167,6 @@ namespace EngineLayer.Neo
                 }
                 else if (psmP.scanNumber > psmS.scanNumber)
                 {
-                    //CONTROVERSAL CODE CHANGE
-                    //Allow spliced peptides to be considered valid if they are above the minimum score threshold as assigned by the q value
-                    //previously, the score difference was included, such that the spliced peptide needed to have a score greater than the threshold while accounting for the difference
-                    //The idea being that if a splice score needed to be N greater than the corresponding normal score, the splice cutoff should be N greater than the normal cutoff.
-                    //if (psmS.score - scoreDifferenceThreshold > minScoreAllowed) //CONTROVERSAL
                     if (psmS.score > minScoreAllowed)
                     {
                         psmS.neoType = PsmTsvLine.NeoType.Spliced;
@@ -201,7 +176,6 @@ namespace EngineLayer.Neo
                 }
                 else
                 {
-                    //if (psmP.score > psmS.score - scoreDifferenceThreshold || psmS.score - scoreDifferenceThreshold < minScoreAllowed) //CONTROVERSAL
                     if (psmP.score > psmS.score - scoreDifferenceThreshold || psmS.score < minScoreAllowed)
                     {
                         aggregatedLines.Add(psmP);
