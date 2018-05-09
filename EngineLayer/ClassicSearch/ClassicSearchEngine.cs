@@ -1,4 +1,5 @@
-﻿using MassSpectrometry;
+﻿using Chemistry;
+using MassSpectrometry;
 using MzLibUtil;
 using Proteomics;
 using System;
@@ -77,7 +78,65 @@ namespace EngineLayer.ClassicSearch
             
             if (proteins.Any())
             {
-                Parallel.ForEach(Partitioner.Create(0, proteins.Count), partitionRange =>
+                int numBins = 30000000;
+                int[] probability = new int[numBins];
+                object[] probLocks = new object[numBins];
+                for (int i = 0; i < probLocks.Length; i++)
+                {
+                    probLocks[i] = new object();
+                }
+                int globalTotal = 0;
+                //Parallel.ForEach(Partitioner.Create(0, proteins.Count), partitionRange =>
+                //{
+                //    int localTotal = 0;
+                //    for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
+                //    {
+                //        // digest each protein into peptides and search for each peptide in all spectra within precursor mass tolerance
+                //        foreach (var peptide in proteins[i].Digest(commonParameters.DigestionParams, fixedModifications, variableModifications))
+                //        {
+                //            localTotal++;
+                //            var compactPeptide = peptide.CompactPeptide(terminusType);
+
+                //            var productMasses = compactPeptide.ProductMassesMightHaveDuplicatesAndNaNs(lp);
+                //            foreach(double d in productMasses)
+                //            {
+                //                if (!double.IsNaN(d))
+                //                {
+                //                    int roundedMz = (int)Math.Floor((d + Constants.protonMass) * 1000);
+                //                    lock (probLocks[roundedMz])
+                //                    {
+                //                        probability[roundedMz]++;
+                //                    }
+                //                }
+                //            }
+                //        }
+                //    }
+                //    lock(probLocks[0])
+                //    { globalTotal += localTotal; }
+                //});
+                globalTotal = arrayOfSortedMS2Scans.Length;
+                Parallel.ForEach(Partitioner.Create(0, arrayOfSortedMS2Scans.Length), partitionRange =>
+                 {
+                     for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
+                     {
+                         var spectrum = arrayOfSortedMS2Scans[i];
+                         {
+                             foreach (double d in spectrum.TheScan.MassSpectrum.XArray)
+                             {
+                                 int max = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMaximumValue(d) * 1000);
+                                 for (int j = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(d) * 1000); j <= max; j++)
+                                 {
+                                     lock (probLocks[j])
+                                     {
+                                         probability[j]++;
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                 });
+
+                    Parallel.ForEach(Partitioner.Create(0, proteins.Count), partitionRange =>
                 {
                     for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
                     {
@@ -93,7 +152,7 @@ namespace EngineLayer.ClassicSearch
                             {
                                 double scanPrecursorMass = scan.theScan.PrecursorMass;
 
-                                var thisScore = CalculatePeptideScore(scan.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, scanPrecursorMass, dissociationTypes, addCompIons, 0);
+                                var thisScore = CalculatePeptideScore(scan.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, probability, globalTotal, scanPrecursorMass, dissociationTypes, addCompIons, 0);
 
                                 bool meetsScoreCutoff = thisScore >= commonParameters.ScoreCutoff;
                                 bool scoreImprovement = peptideSpectralMatches[scan.scanIndex] == null || (thisScore - peptideSpectralMatches[scan.scanIndex].RunnerUpScore) > -PeptideSpectralMatch.tolForScoreDifferentiation;

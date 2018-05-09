@@ -109,7 +109,7 @@ namespace EngineLayer.ModernSearch
 
                         double scanPrecursorMass = scan.PrecursorMass;
 
-                        var thisScore = CalculatePeptideScore(scan.TheScan, CommonParameters.ProductMassTolerance, productMasses, scanPrecursorMass, dissociationTypes, addCompIons, 0);
+                        var thisScore = 0;// CalculatePeptideScore(scan.TheScan, CommonParameters.ProductMassTolerance, productMasses, scanPrecursorMass, dissociationTypes, addCompIons, 0);
                         int notch = massDiffAcceptor.Accepts(scan.PrecursorMass, compactPeptide.MonoisotopicMassIncludingFixedMods);
 
                         bool meetsScoreCutoff = thisScore >= CommonParameters.ScoreCutoff;

@@ -202,13 +202,14 @@ namespace EngineLayer
             }
         }
 
-        public static double CalculatePeptideScore(IMsDataScan<IMzSpectrum<IMzPeak>> thisScan, Tolerance productMassTolerance, double[] sortedTheoreticalProductMassesForThisPeptide, double precursorMass, List<DissociationType> dissociationTypes, bool addCompIons, double maximumMassThatFragmentIonScoreIsDoubled)
+        public static double CalculatePeptideScore(IMsDataScan<IMzSpectrum<IMzPeak>> thisScan, Tolerance productMassTolerance, double[] sortedTheoreticalProductMassesForThisPeptide, int[] probabilities, int globalTotal, double precursorMass, List<DissociationType> dissociationTypes, bool addCompIons, double maximumMassThatFragmentIonScoreIsDoubled)
         {
             var TotalProductsHere = sortedTheoreticalProductMassesForThisPeptide.Length;
             if (TotalProductsHere == 0)
                 return 0;
             int MatchingProductsHere = 0;
             double MatchingIntensityHere = 0;
+            double Score = 1.0;
 
             int currentTheoreticalIndex = -1;
             double currentTheoreticalMass;
@@ -222,6 +223,7 @@ namespace EngineLayer
                 return 0;
 
             double currentTheoreticalMz = currentTheoreticalMass + Constants.protonMass;
+
             int testTheoreticalIndex;
             double testTheoreticalMz;
 
@@ -237,10 +239,13 @@ namespace EngineLayer
                 // If found match
                 if (productMassTolerance.Within(currentExperimentalMz, currentTheoreticalMz))
                 {
-                    MatchingProductsHere++;
-                    if (maximumMassThatFragmentIonScoreIsDoubled > currentTheoreticalMz)
-                        MatchingProductsHere++;
-                    MatchingIntensityHere += experimental_intensities[experimentalIndex];
+                    //MatchingProductsHere++;
+                    //if (maximumMassThatFragmentIonScoreIsDoubled > currentTheoreticalMz)
+                    //    MatchingProductsHere++;
+                    //MatchingIntensityHere += experimental_intensities[experimentalIndex];
+                    int roundedMz = (int)Math.Floor((currentExperimentalMz) * 1000);
+                    int numFound = probabilities[roundedMz];
+                    Score *= (1.0d * numFound) / globalTotal;
 
                     currentTheoreticalIndex++; //prevent multi counting
                     if (currentTheoreticalIndex == TotalProductsHere)
@@ -354,7 +359,7 @@ namespace EngineLayer
                     }
                 }
             }
-            return (MatchingProductsHere + MatchingIntensityHere / thisScan.TotalIonCurrent);
+            return -Math.Log10(Score);
         }
 
         public MetaMorpheusEngineResults Run()
