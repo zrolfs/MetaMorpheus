@@ -114,29 +114,64 @@ namespace EngineLayer.ClassicSearch
                 //    lock(probLocks[0])
                 //    { globalTotal += localTotal; }
                 //});
-                globalTotal = arrayOfSortedMS2Scans.Length;
-                Parallel.ForEach(Partitioner.Create(0, arrayOfSortedMS2Scans.Length), partitionRange =>
-                 {
-                     for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
-                     {
-                         var spectrum = arrayOfSortedMS2Scans[i];
-                         {
-                             foreach (double d in spectrum.TheScan.MassSpectrum.XArray)
-                             {
-                                 int max = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMaximumValue(d) * 1000);
-                                 for (int j = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(d) * 1000); j <= max; j++)
-                                 {
-                                     lock (probLocks[j])
-                                     {
-                                         probability[j]++;
-                                     }
-                                 }
-                             }
-                         }
-                     }
-                 });
 
-                    Parallel.ForEach(Partitioner.Create(0, proteins.Count), partitionRange =>
+
+                //globalTotal = arrayOfSortedMS2Scans.Length;
+                //Parallel.ForEach(Partitioner.Create(0, arrayOfSortedMS2Scans.Length), partitionRange =>
+                // {
+                //     for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
+                //     {
+                //         var spectrum = arrayOfSortedMS2Scans[i];
+                //         {
+                //             foreach (double d in spectrum.TheScan.MassSpectrum.XArray)
+                //             {
+                //                 int max = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMaximumValue(d) * 1000);
+                //                 for (int j = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(d) * 1000); j <= max; j++)
+                //                 {
+                //                     lock (probLocks[j])
+                //                     {
+                //                         probability[j]++;
+                //                     }
+                //                 }
+                //             }
+                //         }
+                //     }
+                // });
+
+                int numToExclude = 500;
+                var spectra = arrayOfSortedMS2Scans.ToList();
+                double maxValue = spectra.Max(x => x.TheScan.MassSpectrum.XArray.Last());
+                int numBinsPerDa = 1000;
+                int[] array = new int[(int)Math.Floor(commonParameters.ProductMassTolerance.GetMaximumValue(maxValue) * numBinsPerDa) + 1];
+                foreach (var spectrum in spectra)
+                {
+                    foreach (double d in spectrum.TheScan.MassSpectrum.XArray)
+                    {
+                        int max = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMaximumValue(d) * numBinsPerDa);
+                        for (int i = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(d) * numBinsPerDa); i < max; i++)
+                        {
+                            array[i]++;
+                        }
+                    }
+                }
+                List<double> exclusionList = new List<double>();
+                List<int> hits = array.ToList();
+                for (int i = 0; i < numToExclude; i++)
+                {
+                    int maxHits = hits.Max();
+                    if (maxHits == 0)
+                        break;
+                    int top = hits.IndexOf(maxHits);
+                    exclusionList.Add(top * 1.0d / numBinsPerDa);
+                    int max = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMaximumValue(top) + 1);
+                    for (int j = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(top)); j < max; j++)
+                    {
+                        hits[j] = 0;
+                    }
+                }
+                var mzsToExclude = exclusionList.OrderBy(x => x).ToArray();
+
+                Parallel.ForEach(Partitioner.Create(0, proteins.Count), partitionRange =>
                 {
                     for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
                     {
@@ -152,7 +187,8 @@ namespace EngineLayer.ClassicSearch
                             {
                                 double scanPrecursorMass = scan.theScan.PrecursorMass;
 
-                                var thisScore = CalculatePeptideScore(scan.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, probability, globalTotal, scanPrecursorMass, dissociationTypes, addCompIons, 0);
+                                //var thisScore = CalculatePeptideScore(scan.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, probability, globalTotal, scanPrecursorMass, dissociationTypes, addCompIons, 0);
+                                var thisScore = CalculatePeptideScore(scan.theScan.TheScan, commonParameters.ProductMassTolerance, productMasses, mzsToExclude, globalTotal, scanPrecursorMass, dissociationTypes, addCompIons, 0);
 
                                 bool meetsScoreCutoff = thisScore >= commonParameters.ScoreCutoff;
                                 bool scoreImprovement = peptideSpectralMatches[scan.scanIndex] == null || (thisScore - peptideSpectralMatches[scan.scanIndex].RunnerUpScore) > -PeptideSpectralMatch.tolForScoreDifferentiation;

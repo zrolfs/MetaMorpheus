@@ -202,7 +202,21 @@ namespace EngineLayer
             }
         }
 
-        public static double CalculatePeptideScore(IMsDataScan<IMzSpectrum<IMzPeak>> thisScan, Tolerance productMassTolerance, double[] sortedTheoreticalProductMassesForThisPeptide, int[] probabilities, int globalTotal, double precursorMass, List<DissociationType> dissociationTypes, bool addCompIons, double maximumMassThatFragmentIonScoreIsDoubled)
+        public static double GetClosestPeak(double mz, double[] mzs)
+        {
+            double closestMz = 0;
+            int index = 0;
+            while (mzs.Length > index && Math.Abs(mz - mzs[index]) < Math.Abs(mz - closestMz))
+            {
+                closestMz = mzs[index];
+                index++;
+            }
+            return closestMz;
+        }
+
+
+        // public static double CalculatePeptideScore(IMsDataScan<IMzSpectrum<IMzPeak>> thisScan, Tolerance productMassTolerance, double[] sortedTheoreticalProductMassesForThisPeptide, int[] probabilities, int globalTotal, double precursorMass, List<DissociationType> dissociationTypes, bool addCompIons, double maximumMassThatFragmentIonScoreIsDoubled)
+        public static double CalculatePeptideScore(IMsDataScan<IMzSpectrum<IMzPeak>> thisScan, Tolerance productMassTolerance, double[] sortedTheoreticalProductMassesForThisPeptide, double[] exclusion, int globalTotal, double precursorMass, List<DissociationType> dissociationTypes, bool addCompIons, double maximumMassThatFragmentIonScoreIsDoubled)
         {
             var TotalProductsHere = sortedTheoreticalProductMassesForThisPeptide.Length;
             if (TotalProductsHere == 0)
@@ -239,13 +253,15 @@ namespace EngineLayer
                 // If found match
                 if (productMassTolerance.Within(currentExperimentalMz, currentTheoreticalMz))
                 {
-                    //MatchingProductsHere++;
-                    //if (maximumMassThatFragmentIonScoreIsDoubled > currentTheoreticalMz)
-                    //    MatchingProductsHere++;
-                    //MatchingIntensityHere += experimental_intensities[experimentalIndex];
-                    int roundedMz = (int)Math.Floor((currentExperimentalMz) * 1000);
-                    int numFound = probabilities[roundedMz];
-                    Score *= (1.0d * numFound) / globalTotal;
+                    if (!productMassTolerance.Within(currentExperimentalMz, GetClosestPeak(currentExperimentalMz, exclusion)))
+                    {
+                        MatchingProductsHere++;
+                        if (maximumMassThatFragmentIonScoreIsDoubled > currentTheoreticalMz)
+                            MatchingProductsHere++;
+                        MatchingIntensityHere += experimental_intensities[experimentalIndex];
+                    } //int roundedMz = (int)Math.Floor((currentExperimentalMz) * 1000);
+                    //int numFound = probabilities[roundedMz];
+                    //Score *= (1.0d * numFound) / globalTotal;
 
                     currentTheoreticalIndex++; //prevent multi counting
                     if (currentTheoreticalIndex == TotalProductsHere)
@@ -359,7 +375,8 @@ namespace EngineLayer
                     }
                 }
             }
-            return -Math.Log10(Score);
+            return (MatchingProductsHere + MatchingIntensityHere / thisScan.TotalIonCurrent);
+            //return -Math.Log10(Score);
         }
 
         public MetaMorpheusEngineResults Run()
