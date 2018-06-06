@@ -1,0 +1,91 @@
+MetaMorpheus: version Not a release version. DEBUG.
+Time to run task: 00:00:05.1308019
+
+
+--------------------------------------------------
+
+
+
+
+
+--------------------------------------------------
+
+
+Engine Results:
+
+Time to run: 00:00:00.1355885
+
+Time to run: 00:00:00.0076171
+CompactPeptideToProteinPeptideMatching.Count: 1
+
+Time to run: 00:00:00.0085870
+PSMs within 1% fdr: 1
+Delta Score Used for FDR Analysis: False
+
+
+Time to run: 00:00:00.0465063
+MS1 calibration datapoint count: 0
+MS1 ppm error median: 0
+MS1 ppm error interquartile range: 0
+MS2 calibration datapoint count: 16
+MS2 ppm error median: 0
+MS2 ppm error interquartile range: 0
+
+
+Time to run: 00:00:00.0029048
+
+Time to run: 00:00:00.0032715
+CompactPeptideToProteinPeptideMatching.Count: 1
+
+Time to run: 00:00:00.0000075
+PSMs within 1% fdr: 1
+Delta Score Used for FDR Analysis: False
+
+
+Time to run: 00:00:00.0004262
+MS1 calibration datapoint count: 0
+MS1 ppm error median: 0
+MS1 ppm error interquartile range: 0
+MS2 calibration datapoint count: 16
+MS2 ppm error median: 0
+MS2 ppm error interquartile range: 0
+
+
+Time to run: 00:00:00.0004179
+
+Time to run: 00:00:00.0003520
+CompactPeptideToProteinPeptideMatching.Count: 1
+
+Time to run: 00:00:00.0000059
+PSMs within 1% fdr: 1
+Delta Score Used for FDR Analysis: False
+
+
+Time to run: 00:00:00.0003887
+MS1 calibration datapoint count: 0
+MS1 ppm error median: 0
+MS1 ppm error interquartile range: 0
+MS2 calibration datapoint count: 16
+MS2 ppm error median: 0
+MS2 ppm error interquartile range: 0
+
+
+Time to run: 00:00:00.0004566
+
+Time to run: 00:00:00.0004191
+CompactPeptideToProteinPeptideMatching.Count: 1
+
+Time to run: 00:00:00.0000126
+PSMs within 1% fdr: 1
+Delta Score Used for FDR Analysis: False
+
+
+Time to run: 00:00:00.0006743
+MS1 calibration datapoint count: 0
+MS1 ppm error median: 0
+MS1 ppm error interquartile range: 0
+MS2 calibration datapoint count: 16
+MS2 ppm error median: 0
+MS2 ppm error interquartile range: 0
+
+

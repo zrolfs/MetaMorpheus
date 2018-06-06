@@ -22,8 +22,9 @@ namespace Test
             //there should be a check that prevents mgfs from using that feature.
             string mgfName = @"TestData\ok.mgf";
             string xmlName = @"TestData\okk.xml";
-
-            SearchTask task1 = new SearchTask
+            CalibrationTask task1 = new CalibrationTask();
+            GptmdTask task2 = new GptmdTask();
+            SearchTask task3 = new SearchTask
             {
                 SearchParameters = new SearchParameters
                 {
@@ -34,6 +35,8 @@ namespace Test
             List<(string, MetaMorpheusTask)> taskList = new List<(string, MetaMorpheusTask)>
             {
                 ("task1", task1),
+                ("task2", task2),
+                ("task3", task3),
             };
             //run!
 

@@ -1,0 +1,8 @@
+The data analysis was performed using MetaMorpheus version Not a release version. DEBUG., available at https://github.com/smith-chem-wisc/MetaMorpheus. [INSERT CITATION] The following calibration settings were used: protease = trypsin; maximum missed cleavages = 2; minimum peptide length = 7; maximum peptide length = unspecified; initiator methionine behavior = Variable; fixed modifications = Carbamidomethyl of C, Carbamidomethyl of U; variable modifications = Oxidation of M; max mods per peptide = 2; max modification isoforms = 1024; precursor mass tolerance = ±15.0000 PPM; product mass tolerance = ±25.0000 PPM. The combined search database contained 3 non-decoy protein entries including 0 contaminant sequences. Data files were processed on a LENOVO 80NW computer using Windows version 6.2.9200.0 with a 64-Bit processor and 8 cores operating at 2.592GHz and 16GB installed RAM. The total time to perform the calibrate task on 1 spectra file(s) was 0.09 minutes.
+
+Published works using MetaMorpheus software are encouraged to cite: STEFAN'S VERY IMPORTANT PAPER
+
+Spectra files: 
+	D:\180503MM\MetaMorpheus\Test\TestData\ok.mgf
+Databases:
+	D:\180503MM\MetaMorpheus\Test\TestData\okk.xml

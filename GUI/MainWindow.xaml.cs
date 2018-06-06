@@ -455,7 +455,7 @@ namespace MetaMorpheusGUI
                     goto case ".mzml";
 
                 case ".mgf":
-                    GuiWarnHandler(null, new StringEventArgs(".mgf files lack MS1 spectra, which are needed for quantification and searching for coisolated peptides. All other features of MetaMorpheus will function.", null));
+                    GuiWarnHandler(null, new StringEventArgs(".mgf files lack MS1 spectra, which are needed for calibration, quantification, and searching for coisolated peptides. All other features of MetaMorpheus will function.", null));
                     goto case ".mzml";
 
                 case ".mzml":
