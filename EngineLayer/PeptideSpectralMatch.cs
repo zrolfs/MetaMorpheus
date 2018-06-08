@@ -15,15 +15,16 @@ namespace EngineLayer
         #region Private Fields
 
         private const double tolForDoubleResolution = 1e-6;
-       
+
         private Dictionary<CompactPeptideBase, Tuple<int, HashSet<PeptideWithSetModifications>>> compactPeptides = new Dictionary<CompactPeptideBase, Tuple<int, HashSet<PeptideWithSetModifications>>>();
+        private Dictionary<CompactPeptideBase, Tuple<int, HashSet<PeptideWithSetModifications>>> compactPeptidesRunnerUp = new Dictionary<CompactPeptideBase, Tuple<int, HashSet<PeptideWithSetModifications>>>();
 
         #endregion Private Fields
 
         #region Public Fields
 
         public const double tolForScoreDifferentiation = 1e-9;
-         
+
 
         #endregion Public Fields
 
@@ -48,7 +49,26 @@ namespace EngineLayer
             ProductMassErrorDa = new Dictionary<ProductType, double[]>();
             ProductMassErrorPpm = new Dictionary<ProductType, double[]>();
         }
-      
+
+        public PeptideSpectralMatch(string FullFilePath, int OneBasedScanNumber, int? OneBasedPrecursorScanNumber,
+            double RetentionTime, int NumPeaks, double TotalIonCurrent, int PrecursorCharge, double PrecursorMonoisotopicPeakMz, double PrecursorMass, DigestionParams digestionParams)
+        {
+            this.FullFilePath = FullFilePath;
+            this.ScanNumber = OneBasedScanNumber;
+            this.PrecursorScanNumber = OneBasedPrecursorScanNumber;
+            this.ScanRetentionTime = RetentionTime;
+            this.ScanExperimentalPeaks = NumPeaks;
+            this.TotalIonCurrent = TotalIonCurrent;
+            this.ScanPrecursorCharge = PrecursorCharge;
+            this.ScanPrecursorMonoisotopicPeakMz = PrecursorMonoisotopicPeakMz;
+            this.ScanPrecursorMass = PrecursorMass;
+            this.AllScores = new List<double>();
+            this.DigestionParams = digestionParams;
+            MatchedIonDictOnlyMatches = new Dictionary<ProductType, double[]>();
+            ProductMassErrorDa = new Dictionary<ProductType, double[]>();
+            ProductMassErrorPpm = new Dictionary<ProductType, double[]>();
+        }
+
         #endregion Public Constructors
 
         #region Public Properties
@@ -63,7 +83,7 @@ namespace EngineLayer
         public double ScanPrecursorMonoisotopicPeakMz { get; }
         public double ScanPrecursorMass { get; }
         public string FullFilePath { get; }
-        public int ScanIndex { get; }
+        public int ScanIndex { get; private set; }
         public IEnumerable<KeyValuePair<CompactPeptideBase, Tuple<int, HashSet<PeptideWithSetModifications>>>> CompactPeptides { get { return compactPeptides.AsEnumerable(); } }
         public int NumDifferentCompactPeptides { get { return compactPeptides.Count; } }
         public FdrInfo FdrInfo { get; private set; }
@@ -110,6 +130,7 @@ namespace EngineLayer
         {
             if (score - Score > tolForScoreDifferentiation) //if new score beat the old score, overwrite it
             {
+                compactPeptidesRunnerUp = compactPeptides;
                 compactPeptides = new Dictionary<CompactPeptideBase, Tuple<int, HashSet<PeptideWithSetModifications>>>
                 {
                     { compactPeptide, new  Tuple<int, HashSet<PeptideWithSetModifications>>(notch,null)}
@@ -127,6 +148,14 @@ namespace EngineLayer
             else if (Score - RunnerUpScore > tolForScoreDifferentiation)
             {
                 RunnerUpScore = score;
+                compactPeptidesRunnerUp = new Dictionary<CompactPeptideBase, Tuple<int, HashSet<PeptideWithSetModifications>>>
+                {
+                    { compactPeptide, new  Tuple<int, HashSet<PeptideWithSetModifications>>(notch,null)}
+                };
+            }
+            else if (RunnerUpScore - Score > -tolForScoreDifferentiation && reportAllAmbiguity) //else if the same score and ambiguity is allowed
+            {
+                compactPeptidesRunnerUp[compactPeptide] = new Tuple<int, HashSet<PeptideWithSetModifications>>(notch, null);
             }
         }
 
@@ -170,7 +199,7 @@ namespace EngineLayer
             ModsChemicalFormula = Resolve(pepsWithMods.Select(b => b.allModsOneIsNterminus.Select(c => (c.Value as ModificationWithMassAndCf)))).Item2;
             Notch = Resolve(compactPeptides.Select(b => b.Value.Item1)).Item2;
         }
-        
+
         public override string ToString()
         {
             return ToString(new Dictionary<string, int>());
@@ -212,6 +241,21 @@ namespace EngineLayer
                 CalculateEValue = calculateEValue
             };
         }
+
+        public PeptideSpectralMatch Clone()
+        {
+            PeptideSpectralMatch clonedPSM = new PeptideSpectralMatch(FullFilePath, ScanNumber, PrecursorScanNumber, ScanRetentionTime, ScanExperimentalPeaks, TotalIonCurrent, ScanPrecursorCharge, ScanPrecursorMonoisotopicPeakMz, ScanPrecursorMass, DigestionParams);
+            clonedPSM.compactPeptides = compactPeptidesRunnerUp;
+
+            clonedPSM.Score = RunnerUpScore;
+            ScanIndex *= 2;
+            clonedPSM.ScanIndex = ScanIndex + 1;
+            if (clonedPSM.compactPeptides == null || clonedPSM.compactPeptides.Count==0)
+                return null;
+            else
+                return clonedPSM;
+        }
+
 
         #endregion Public Methods
         
@@ -316,6 +360,10 @@ namespace EngineLayer
         private static Tuple<string, int?> Resolve(IEnumerable<int> enumerable)
         {
             var list = enumerable.ToList();
+            if (list.Count == 0)
+            {
+                return new Tuple<string, int?>("asdf",null);
+            }
             var first = list[0];
             if (list.All(b => first.Equals(b)))
             {

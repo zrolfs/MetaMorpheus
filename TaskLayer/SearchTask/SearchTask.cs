@@ -239,7 +239,17 @@ namespace TaskLayer
                 {
                     Status("Starting search...", thisId);
                     new ClassicSearchEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, variableModifications, fixedModifications, proteinList, ionTypes, massDiffAcceptor, SearchParameters.AddCompIons, combinedParams, thisId).Run();
-
+                    //PeptideSpectralMatch[] oldFileSpecificPsms = fileSpecificPsms;
+                    //fileSpecificPsms = new PeptideSpectralMatch[oldFileSpecificPsms.Length*2];
+                    //Ms2ScanWithSpecificMass[] oldArrayOfMs2ScansSortedByMass = arrayOfMs2ScansSortedByMass;
+                    //arrayOfMs2ScansSortedByMass = new Ms2ScanWithSpecificMass[oldArrayOfMs2ScansSortedByMass.Length * 2];
+                    //for (int index = 0; index < oldArrayOfMs2ScansSortedByMass.Length; index++)
+                    //{
+                    //    fileSpecificPsms[index * 2] = oldFileSpecificPsms[index];
+                    //    fileSpecificPsms[index * 2 + 1] = oldFileSpecificPsms[index]==null?null:oldFileSpecificPsms[index].Clone();
+                    //    arrayOfMs2ScansSortedByMass[index * 2] = oldArrayOfMs2ScansSortedByMass[index];
+                    //    arrayOfMs2ScansSortedByMass[index * 2 + 1] = oldArrayOfMs2ScansSortedByMass[index];
+                    //}
                     ReportProgress(new ProgressEventArgs(100, "Done with search!", thisId));
                 }
                 lock (psmLock)
