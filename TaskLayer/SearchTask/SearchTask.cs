@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace TaskLayer
 {
@@ -105,7 +106,9 @@ namespace TaskLayer
 
             // load proteins
             List<Protein> proteinList = LoadProteins(taskId, dbFilenameList, SearchParameters.SearchTarget, SearchParameters.DecoyType, localizeableModificationTypes);
-            
+
+
+
             // write prose settings
             ProseCreatedWhileRunning.Append("The following search settings were used: ");
             ProseCreatedWhileRunning.Append("protease = " + CommonParameters.DigestionParams.Protease + "; ");
@@ -142,8 +145,28 @@ namespace TaskLayer
 
             Status("Searching files...", taskId);
             Status("Searching files...", new List<string> { taskId, "Individual Spectra Files" });
+            int peptideCount = 0;
+            //foreach (Protein protein in proteinList)
+            //{
+            //    peptideCount += protein.Digest(CommonParameters.DigestionParams, fixedModifications, variableModifications).Count();
+            //}
+            Parallel.ForEach(Partitioner.Create(0, proteinList.Count), partitionRange =>
+            {
+                int localCount = 0;
+                for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
+                {
+                    // digest each protein into peptides and search for each peptide in all spectra within precursor mass tolerance
+                    localCount += proteinList[i].Digest(CommonParameters.DigestionParams, fixedModifications, variableModifications).Count();
+                }
 
-            Dictionary<string, int[]> numMs2SpectraPerFile = new Dictionary<string, int[]>();
+                lock (indexLock)
+                {
+                    peptideCount += localCount;
+                }
+            });
+
+            int stopplz = 0;
+
             Parallel.For(0, currentRawFileList.Count, parallelOptions, spectraFileIndex =>
             {
                 var origDataFile = currentRawFileList[spectraFileIndex];
@@ -161,7 +184,7 @@ namespace TaskLayer
                 MsDataFile myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
                 Status("Getting ms2 scans...", thisId);
                 Ms2ScanWithSpecificMass[] arrayOfMs2ScansSortedByMass = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).OrderBy(b => b.PrecursorMass).ToArray();
-                numMs2SpectraPerFile.Add(Path.GetFileNameWithoutExtension(origDataFile), new int[] { myMsDataFile.GetAllScansList().Count(p => p.MsnOrder == 2), arrayOfMs2ScansSortedByMass.Length });
+                //numMs2SpectraPerFile.Add(Path.GetFileNameWithoutExtension(origDataFile), new int[] { myMsDataFile.GetAllScansList().Count(p => p.MsnOrder == 2), arrayOfMs2ScansSortedByMass.Length });
                 myFileManager.DoneWithFile(origDataFile);
 
                 var fileSpecificPsms = new PeptideSpectralMatch[arrayOfMs2ScansSortedByMass.Length];
@@ -280,7 +303,7 @@ namespace TaskLayer
             parameters.OutputFolder = OutputFolder;
             parameters.FlashLfqResults = flashLfqResults;
             parameters.FileSettingsList = fileSettingsList;
-            parameters.NumMs2SpectraPerFile = numMs2SpectraPerFile;
+            //parameters.NumMs2SpectraPerFile = numMs2SpectraPerFile;
             parameters.DatabaseFilenameList = dbFilenameList;
             PostSearchAnalysisTask postProcessing = new PostSearchAnalysisTask();
             postProcessing.Parameters = parameters;
