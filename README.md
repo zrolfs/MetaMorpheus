@@ -31,7 +31,7 @@ UniProt .XML or .fasta format, may be used in compressed (.gz) format.
 
 ## Test Installation
 
-1. Download [Neo-Fusion](https://github.com/zrolfs/MetaMorpheus/releases) and unzip it.
+1. Download [Neo-Fusion.zip](https://github.com/zrolfs/MetaMorpheus/releases/download/0.1.0/Neo-Fusion.zip) and unzip it.
 2. Download the files at [https://uwmadison.box.com/v/MetaMorpheusPublic](https://uwmadison.app.box.com/folder/50992423301).
 3. Open Neo-Fusion.exe, and drag and drop the raw spectra file and the compressed Uniprot XML database into the GUI.
 4. Add a "Full Neo-Fusion Run" to the task list, located in the top right. The defaults parameters are well suited for the example data.
