@@ -37,8 +37,8 @@ namespace EngineLayer.Neo
 
         #region Private Fields
 
-        private const int maxMissingConsecutivePeaks = 2;
-        private const int maxNumPossibleSequences = 2000;
+        public static int maxMissingConsecutivePeaks = 2;
+        public static int maxNumPossibleSequences = 2000;
         private const int decimalDigitsForFragmentMassRounding = 3;
         private static readonly double waterMonoisotopicMass = Math.Round(PeriodicTable.GetElement("H").PrincipalIsotope.AtomicMass * 2 + PeriodicTable.GetElement("O").PrincipalIsotope.AtomicMass, decimalDigitsForFragmentMassRounding);
 

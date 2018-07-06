@@ -15,7 +15,6 @@
             MaxMissedConsecutiveFragments = 2;
             MaxMissedTotalFragments = 5;
             MaxCandidatesPerSpectrum = 2000;
-            MinDistanceAllowed = 1;
             MaxDistanceAllowed = 25;
             NormalCis = true;
             ReverseCis = true;
