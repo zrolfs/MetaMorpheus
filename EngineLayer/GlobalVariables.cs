@@ -22,16 +22,7 @@ namespace EngineLayer
         {
             #region Determine MetaMorpheusVersion
 
-            MetaMorpheusVersion = typeof(GlobalVariables).Assembly.GetName().Version.ToString();
-
-            if (MetaMorpheusVersion.Equals("1.0.0.0"))
-            {
-#if DEBUG
-                MetaMorpheusVersion = "Not a release version. DEBUG.";
-#else
-                MetaMorpheusVersion = "Not a release version.";
-#endif
-            }
+            MetaMorpheusVersion = "";
 
             #endregion Determine MetaMorpheusVersion
 

@@ -8,21 +8,6 @@
         Drop="Window_Drop" AllowDrop="true" WindowStartupLocation="CenterScreen" MinHeight="400" MinWidth="800" Height="500" Width="800"
         Loaded="MyWindow_Loaded">
     <DockPanel>
-        <Menu x:Name="menu" DockPanel.Dock="Top">
-            <MenuItem Header="Settings">
-                <MenuItem Header="Close MetaMorpheus and open global settings file" Click="MenuItem_Click_3"></MenuItem>
-                <MenuItem Header="Close MetaMorpheus and open GUI settings file" Click="MenuItem_Click_7"></MenuItem>
-            </MenuItem>
-            <MenuItem Header="Data">
-                <MenuItem Header="Open folder with mods/data files" Click="MenuItem_Click_6"></MenuItem>
-            </MenuItem>
-            <MenuItem Header="_Help">
-                <MenuItem Header="Check For Updates" Click="MenuItem_Click_2" />
-                <MenuItem Header="Open Wiki Page" Click="MenuItem_Click" />
-                <MenuItem Header="Submit an Issue on Github" Click="MenuItem_Click_5" />
-                <MenuItem Header="Email Support at mm_support@chem.wisc.edu" Click="MenuItem_Click_4" />
-            </MenuItem>
-        </Menu>
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
@@ -136,13 +121,12 @@
                             <RowDefinition Height="40" />
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button x:Name="addSearchTaskButton" Content="New Search Task" Click="AddSearchTaskButton_Click" />
-                            <Button x:Name="addCalibrateTaskButton" Content="New Calibrate Task" Click="AddCalibrateTaskButton_Click" />
-                            <Button x:Name="addGPTMDTaskButton" Content="New GPTMD Task" Click="AddGPTMDTaskButton_Click" />
-                            <Button x:Name="btnAddCrosslinkSearch" Content="New XL Task" Click="BtnAddCrosslinkSearch_Click" />
+                            <Button x:Name="addCalibrateTaskButton" Content="Calibrate" Click="AddCalibrateTaskButton_Click" />
+                            <Button x:Name="addGPTMDTaskButton" Content="G-PTM-D" Click="AddGPTMDTaskButton_Click" />
+                            <Button x:Name="addSearchTaskButton" Content="Traditional Search" Click="AddSearchTaskButton_Click" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Grid.Row="1">
-                            <Button x:Name="addNeoTaskButton" Content="New Neo Meta-Task" Click="AddNeoTaskButton_Click" />
+                            <Button x:Name="addNeoTaskButton" Content="Full Neo-Fusion Run" Click="AddNeoTaskButton_Click" />
                         </StackPanel>
                         <TreeView x:Name="tasksTreeView" Grid.Row="2" ItemsSource="{Binding}" MouseDoubleClick="TasksTreeView_MouseDoubleClick">
                             <TreeView.Resources>
