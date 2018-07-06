@@ -176,7 +176,7 @@ namespace EngineLayer.Neo
                 FindIons(fc, psm, spectrum);
                 int consecutiveMissedCounter = 0;
                 int totalHitCounter = 0;
-                if (fc.foundIons.Count(x => x) * 2 < fc.foundIons.Length)
+                if (fc.foundIons.Count(x => x) * 2 < fc.foundIons.Length) //removes the candidate if over half the peaks are missing
                 {
                     psm.candidates.RemoveAt(index);
                     index--;
@@ -592,19 +592,25 @@ namespace EngineLayer.Neo
                                         else
                                         {
                                             //it's cis!
-                                            psm.candidates.Add(new FusionCandidate(fc)
+                                             FusionCandidate tempCandidate = new FusionCandidate(fc)
                                             {
-                                                fusionType = FusionCandidate.FusionType.NC,
+                                                fusionType = FusionCandidate.FusionType.TS, //change if allowed!
                                                 accession = prot.Accession,
                                                 organism = prot.Organism,
                                                 nStart = indexes[n] + 1,
                                                 nStop = indexes[n] + substring.Length,
                                                 cStart = otherIndexes[c] + 1,
                                                 cStop = otherIndexes[c] + otherSubstring.Length
-                                            });
-                                            cis = true;
-                                            if (psm.fusionType == FusionCandidate.FusionType.TS)
-                                                psm.fusionType = FusionCandidate.FusionType.NC;
+                                            };
+                                            if (normalCis && tempCandidate.nStart < tempCandidate.cStart
+                                                || reverseCis && tempCandidate.nStart > tempCandidate.cStart)
+                                            {
+                                                tempCandidate.fusionType = FusionCandidate.FusionType.NC;
+                                                if (psm.fusionType == FusionCandidate.FusionType.TS)
+                                                    psm.fusionType = FusionCandidate.FusionType.NC;
+                                            }
+                                            psm.candidates.Add(tempCandidate);
+                                            cis = true; //not sure about this code in reference to behavior for the booleans of what is cis                                    
                                         }
                                         if (cis)
                                             break;
@@ -636,7 +642,7 @@ namespace EngineLayer.Neo
                                         List<int> indexes = new List<int>();
                                         List<int> otherIndexes = new List<int>();
                                         int index = seq.IndexOf(substring);
-                                        int maxStartingIndex = Math.Max(0, index - 25 - fc.Length);
+                                        int maxStartingIndex = Math.Max(0, index - numInterveningResidues - fc.Length);
                                         int otherIndex = seq.IndexOf(otherSubstring, maxStartingIndex);
 
                                         while (index != -1)
@@ -655,9 +661,9 @@ namespace EngineLayer.Neo
                                         while (n < indexes.Count && c < otherIndexes.Count)
                                         {
                                             int difference = otherIndexes[c] - (indexes[n] + i);
-                                            if (difference > 25)
+                                            if (difference > numInterveningResidues)
                                                 n++;
-                                            else if (difference < -25 - fc.Length)
+                                            else if (difference < -1*numInterveningResidues - fc.Length)
                                                 c++;
                                             else if (difference <= 0 && difference > -fc.Length)
                                             {
@@ -666,7 +672,7 @@ namespace EngineLayer.Neo
                                                 while (n < indexes.Count && c < otherIndexes.Count)
                                                 {
                                                     difference = otherIndexes[c] - (indexes[n] + i);
-                                                    if (difference > 25)
+                                                    if (difference > numInterveningResidues)
                                                     {
                                                         c = originalC;
                                                         n++;
@@ -680,19 +686,25 @@ namespace EngineLayer.Neo
                                             else
                                             {
                                                 //it's cis!
-                                                psm.candidates.Add(new FusionCandidate(fc)
+                                                FusionCandidate tempCandidate = new FusionCandidate(fc)
                                                 {
-                                                    fusionType = FusionCandidate.FusionType.NC,
+                                                    fusionType = FusionCandidate.FusionType.TS, //change if allowed!
                                                     accession = prot.Accession,
                                                     organism = prot.Organism,
                                                     nStart = indexes[n] + 1,
                                                     nStop = indexes[n] + substring.Length,
                                                     cStart = otherIndexes[c] + 1,
                                                     cStop = otherIndexes[c] + otherSubstring.Length
-                                                });
-                                                cis = true;
-                                                if (psm.fusionType == FusionCandidate.FusionType.TS)
-                                                    psm.fusionType = FusionCandidate.FusionType.NC;
+                                                };
+                                                if (normalCis && tempCandidate.nStart < tempCandidate.cStart
+                                                    || reverseCis && tempCandidate.nStart > tempCandidate.cStart)
+                                                {
+                                                    tempCandidate.fusionType = FusionCandidate.FusionType.NC;
+                                                    if (psm.fusionType == FusionCandidate.FusionType.TS)
+                                                        psm.fusionType = FusionCandidate.FusionType.NC;
+                                                }
+                                                psm.candidates.Add(tempCandidate);
+                                                cis = true; //not sure about this code in reference to behavior for the booleans of what is cis      
                                             }
                                             if (cis)
                                                 break;

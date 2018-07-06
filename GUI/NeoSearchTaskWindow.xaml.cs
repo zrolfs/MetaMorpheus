@@ -146,7 +146,6 @@ namespace MetaMorpheusGUI
             searchC.IsChecked = task.NeoParameters.SearchCTerminus;
             CPath.Text = task.NeoParameters.CFilePath != null ? task.NeoParameters.CFilePath : "";
             maxMissedConsecutiveTextBox.Text = task.NeoParameters.MaxMissedConsecutiveFragments.ToString();
-            maxMissedTextBox.Text = task.NeoParameters.MaxMissedTotalFragments.ToString();
             maxCandidatesPerSpectrumTextBox.Text = task.NeoParameters.MaxCandidatesPerSpectrum.ToString();
             maxCisLengthTextBox.Text = task.NeoParameters.MaxDistanceAllowed.ToString();
             searchNormalCis.IsChecked = task.NeoParameters.NormalCis;
@@ -252,11 +251,6 @@ namespace MetaMorpheusGUI
             if (!int.TryParse(maxMissedConsecutiveTextBox.Text, out int mmc) || mmc < 0)
             {
                 MessageBox.Show("The number of maximum missed consecutive cleavages contains unrecognized characters. \n You entered " + '"' + maxMissedConsecutiveTextBox.Text + '"' + "\n Please enter a positive number.");
-                return;
-            }
-            if (!int.TryParse(maxMissedTextBox.Text, out int mm) || mm <= 0)
-            {
-                MessageBox.Show("The number of maximum missed cleavages contains unrecognized characters. \n You entered " + '"' + maxMissedTextBox.Text + '"' + "\n Please enter a positive number.");
                 return;
             }
 

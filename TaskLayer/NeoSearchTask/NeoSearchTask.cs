@@ -70,25 +70,23 @@ namespace TaskLayer
 
         protected override MyTaskResults RunSpecific(string OutputFolder, List<DbForTask> dbFilenameList, List<string> currentRawFileList, string taskId, FileSpecificSettings[] fileSettingsList)
         {
-            //myTaskResults = new MyTaskResults(this);
-            //NeoFindAmbiguity.numInterveningResidues = NeoParameters.MaxDistanceAllowed;
-            //NeoFindAmbiguity.normalCis = NeoParameters.NormalCis;
-            //NeoFindAmbiguity.reverseCis = NeoParameters.ReverseCis;
-            //NeoFindAmbiguity.maxMissingConsecutivePeaks = NeoParameters.MaxMissedConsecutiveFragments;
-            //NeoFindAmbiguity.MaxNuPossibleSequences = NeoParameters.MaxCandidatesPerSpectrum;
+            myTaskResults = new MyTaskResults(this);
+            NeoFindAmbiguity.numInterveningResidues = NeoParameters.MaxDistanceAllowed;
+            NeoFindAmbiguity.normalCis = NeoParameters.NormalCis;
+            NeoFindAmbiguity.reverseCis = NeoParameters.ReverseCis;
+            NeoFindAmbiguity.maxMissingConsecutivePeaks = NeoParameters.MaxMissedConsecutiveFragments;
+            NeoFindAmbiguity.maxNumPossibleSequences = NeoParameters.MaxCandidatesPerSpectrum;
 
-            //List<ProductType> ionTypes = new List<ProductType>();
-            //if (CommonParameters.BIons && SearchParameters.AddCompIons)
-            //    ionTypes.Add(ProductType.B);
-            //else if (CommonParameters.BIons)
-            //    ionTypes.Add(ProductType.BnoB1ions);
-            //if (CommonParameters.YIons)
-            //    ionTypes.Add(ProductType.Y);
-            //if (CommonParameters.ZdotIons)
-            //    ionTypes.Add(ProductType.Zdot);
-            //if (CommonParameters.CIons)
-            //    ionTypes.Add(ProductType.C);
-            //NeoFindAmbiguity.IonsUsed = ionTypes;
+            List<ProductType> ionTypes = new List<ProductType>();
+            if (CommonParameters.BIons)
+                ionTypes.Add(ProductType.B);
+            if (CommonParameters.YIons)
+                ionTypes.Add(ProductType.Y);
+            if (CommonParameters.ZdotIons)
+                ionTypes.Add(ProductType.Zdot);
+            if (CommonParameters.CIons)
+                ionTypes.Add(ProductType.C);
+            NeoFindAmbiguity.ionsUsed = ionTypes;
 
             if (NeoType.Equals(NeoTaskType.AggregateTargetDecoyFiles))
             {
@@ -166,9 +164,6 @@ namespace TaskLayer
                     //get parameters updated
                     NeoFindAmbiguity.precursorMassTolerancePpm = combinedParams.PrecursorMassTolerance.Value;
                     NeoFindAmbiguity.productMassTolerancePpm = combinedParams.ProductMassTolerance.Value;
-                    NeoFindAmbiguity.numInterveningResidues = NeoParameters.MaxDistanceAllowed;
-                    NeoFindAmbiguity.normalCis = NeoParameters.NormalCis;
-                    NeoFindAmbiguity.reverseCis = NeoParameters.ReverseCis;
 
                     var thisId = new List<string> { taskId, "Individual Spectra Files", origDataFile };
                     NewCollection(Path.GetFileName(origDataFile), thisId);

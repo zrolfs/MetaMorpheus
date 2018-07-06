@@ -284,10 +284,6 @@
                                             <TextBox x:Name="maxMissedConsecutiveTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal">
-                                            <Label x:Name="maxMissedLabel" Content="Max Missed Fragments" Margin="2" />
-                                            <TextBox x:Name="maxMissedTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" />
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal">
                                             <Label x:Name="maxCandidatesPerSpectrumLabel" Content="Max Candidates Per Spectrum" Margin="2" />
                                             <TextBox x:Name="maxCandidatesPerSpectrumTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" />
                                         </StackPanel>
