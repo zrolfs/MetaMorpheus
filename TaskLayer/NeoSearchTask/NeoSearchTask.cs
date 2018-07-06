@@ -82,20 +82,24 @@ namespace TaskLayer
                     int taskNum = Convert.ToInt32(taskString.Substring(4, taskString.Length - 4));
                     taskNum--;
                     NeoParameters.DecoyFilePath = OutputFolder.Substring(0, OutputFolder.Length - NeoParameters.DecoyFilePath.Length) + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
-                    if (NeoParameters.TargetFilePath == null)
+                    if (NeoParameters.TargetSearch)
                     {
                         NeoParameters.TargetFilePath = new DirectoryInfo(OutputFolder).Name;
                         taskNum--;
                         NeoParameters.TargetFilePath = OutputFolder.Substring(0, OutputFolder.Length - NeoParameters.TargetFilePath.Length) + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                     }
                 }
-                if (NeoParameters.TargetSearch)
+                else if (NeoParameters.TargetSearch)
                 {
                     NeoParameters.TargetFilePath = new DirectoryInfo(OutputFolder).Name;
                     string taskString = NeoParameters.TargetFilePath.Split('-')[0];
                     int taskNum = Convert.ToInt32(taskString.Substring(4, taskString.Length - 4));
                     taskNum--;
                     NeoParameters.TargetFilePath = OutputFolder.Substring(0, OutputFolder.Length - NeoParameters.TargetFilePath.Length) + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
+                }
+                else
+                {
+                    //do nothing, both exist
                 }
                 AggregateSearchFiles.Combine(NeoParameters.TargetFilePath, NeoParameters.DecoyFilePath, OutputFolder + "\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]));
             }

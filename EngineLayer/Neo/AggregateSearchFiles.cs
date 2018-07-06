@@ -253,7 +253,7 @@ namespace EngineLayer.Neo
                 aggregatedLines.Add(primaryPsms[p]);
 
             for (; s < secondaryPsms.Count; s++)
-                aggregatedLines.Add(primaryPsms[s]);
+                aggregatedLines.Add(secondaryPsms[s]);
 
             return aggregatedLines;
         }
