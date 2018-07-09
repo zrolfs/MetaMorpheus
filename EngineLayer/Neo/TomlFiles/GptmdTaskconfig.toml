@@ -38,5 +38,5 @@ InitiatorMethionineBehavior = "Variable"
 MinPeptideLength = 6
 MaxPeptideLength = 50
 MaxModificationIsoforms = 4096
-MaxModsForPeptide = 3
+MaxModsForPeptide = 2
 Protease = "trypsin"
