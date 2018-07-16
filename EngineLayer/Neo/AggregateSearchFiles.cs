@@ -77,6 +77,9 @@ namespace EngineLayer.Neo
             primaryPsms.ForEach(x => x.neoType = PsmTsvLine.NeoType.Normal);
             List<PsmTsvLine> secondaryPsms = ImportPsmtsv.ImportLinesToAggregate(secondaryLines);
 
+            //fringe case where the qThreshold can't get up(down) to the desired confidence because not enough decoys were found.
+            //if qThrehold isn't changing, axe it.
+            double previousQThrehold = 0;
             for (double qThreshold = 0; qThreshold <= desiredConfidence;)
             {
                 qThreshold = UpdateQThreshold(primaryPsms, qThreshold, true);
@@ -90,6 +93,14 @@ namespace EngineLayer.Neo
                         bestQ = qThreshold;
                         bestThreshold = scoreDifferenceThreshold;
                     }
+                }
+                if (previousQThrehold == qThreshold) //if we haven't changed (because we can't), get out of the loop
+                {
+                    break;
+                }
+                else //update the previous
+                {
+                    previousQThrehold = qThreshold;
                 }
             }
             List<PsmTsvLine> finalAggregatedLines = Percolate(primaryPsms, secondaryPsms, bestQ, bestThreshold);
@@ -134,7 +145,7 @@ namespace EngineLayer.Neo
                     }
                 }
             }
-            return double.PositiveInfinity; //if nothing, return a maximum value to prevent infinite loops
+            return qThreshold; //if nothing, return the same qValue and catch it later
         }
 
         public static int CalculateNumberOfConfidentSpliced(List<PsmTsvLine> aggregatedLines, double desiredConfidence)

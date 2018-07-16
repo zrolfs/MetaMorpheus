@@ -122,10 +122,10 @@ namespace TaskLayer
             else if (NeoType.Equals(NeoTaskType.AggregateNormalSplicedFiles))
             {
                 //get folder info
-                string cisPath = new DirectoryInfo(OutputFolder).Name;
-                string taskString = cisPath.Split('-')[0];
+                string currentPath = new DirectoryInfo(OutputFolder).Name;
+                string taskString = currentPath.Split('-')[0];
                 int taskNum = Convert.ToInt32(taskString.Substring(4, taskString.Length - 4));
-                string outputFolderSubstring = OutputFolder.Substring(0, OutputFolder.Length - cisPath.Length);
+                string outputFolderSubstring = OutputFolder.Substring(0, OutputFolder.Length - currentPath.Length);
                 taskNum -= 1;
                 string translatedPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
 
@@ -140,8 +140,8 @@ namespace TaskLayer
                 taskNum -= 2;
                 string transPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                 taskNum -= 2;
-                cisPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
-                string normalPath = OutputFolder + "\\NormalAggregate_Targets.psmtsv";
+                string cisPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
+                string normalPath = OutputFolder + "\\NonsplicedAggregate_Targets.psmtsv";
                 string transAggPath = OutputFolder + "\\TransAggregate_Targets.psmtsv";
 
                 //combine cis and trans for trans analysis
