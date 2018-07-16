@@ -28,7 +28,6 @@ namespace Test
 
                 CalibrationParameters = new CalibrationParameters
                 {
-                    WriteIntermediateFiles = true,
                     NumFragmentsNeededForEveryIdentification = 6,
                 }
             };
