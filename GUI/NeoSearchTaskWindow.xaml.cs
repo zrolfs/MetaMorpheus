@@ -169,7 +169,7 @@ namespace MetaMorpheusGUI
             yCheckBox.IsChecked = task.CommonParameters.YIons;
             cCheckBox.IsChecked = task.CommonParameters.CIons;
             zdotCheckBox.IsChecked = task.CommonParameters.ZdotIons;
-            OutputFileNameTextBox.Text = task.CommonParameters.TaskDescriptor;
+            //OutputFileNameTextBox.Text = task.CommonParameters.TaskDescriptor;
 
             foreach (var mod in task.CommonParameters.ListOfModsFixed)
             {
@@ -276,9 +276,9 @@ namespace MetaMorpheusGUI
 
             CommonParameters CommonParamsToSave = new CommonParameters();
 
-            if (OutputFileNameTextBox.Text != "")
-                CommonParamsToSave.TaskDescriptor = OutputFileNameTextBox.Text;
-            else
+            //if (OutputFileNameTextBox.Text != "")
+            //    CommonParamsToSave.TaskDescriptor = OutputFileNameTextBox.Text;
+            //else
                 CommonParamsToSave.TaskDescriptor = "NeoSearchTask";
 
             //Code for determining SemiSpecific
