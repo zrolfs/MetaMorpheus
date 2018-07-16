@@ -899,31 +899,31 @@ namespace MetaMorpheusGUI
 
         private void ChangeFileParameters_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new ChangeParametersWindow(SelectedRawFiles);
-            if (dialog.ShowDialog() == true)
-            {
-                string[] fullPathofToml = new string[dialog.FileSpecificSettingsList.Count()];
-                for (int i = 0; i < dialog.FileSpecificSettingsList.Count(); i++)
-                {
-                    string directory = Directory.GetParent(SelectedRawFiles[i].FilePath).ToString();
-                    string fileName = Path.GetFileNameWithoutExtension(SelectedRawFiles[i].FileName);
-                    fullPathofToml[i] = Path.Combine(directory, fileName);
-                    //REMOVE DEFAULT INIT METHONINE:
+            //var dialog = new ChangeParametersWindow(SelectedRawFiles);
+            //if (dialog.ShowDialog() == true)
+            //{
+            //    string[] fullPathofToml = new string[dialog.FileSpecificSettingsList.Count()];
+            //    for (int i = 0; i < dialog.FileSpecificSettingsList.Count(); i++)
+            //    {
+            //        string directory = Directory.GetParent(SelectedRawFiles[i].FilePath).ToString();
+            //        string fileName = Path.GetFileNameWithoutExtension(SelectedRawFiles[i].FileName);
+            //        fullPathofToml[i] = Path.Combine(directory, fileName);
+            //        //REMOVE DEFAULT INIT METHONINE:
 
-                    string badLine = "InitiatorMethionineBehavior = \"Undefined\"";
+            //        string badLine = "InitiatorMethionineBehavior = \"Undefined\"";
 
-                    Toml.WriteFile(dialog.FileSpecificSettingsList[i], fullPathofToml[i] + ".toml", MetaMorpheusTask.tomlConfig);
-                    string[] lineArray = File.ReadAllLines(fullPathofToml[i] + ".toml");
-                    List<string> lines = lineArray.ToList();
-                    foreach (string line in lineArray)
-                    {
-                        if (line.Equals(badLine))
-                            lines.Remove(line);
-                    }
-                    File.WriteAllLines(fullPathofToml[i] + ".toml", lines);
-                }
-                UpdateFileSpecificParamsDisplay(fullPathofToml);
-            }
+            //        Toml.WriteFile(dialog.FileSpecificSettingsList[i], fullPathofToml[i] + ".toml", MetaMorpheusTask.tomlConfig);
+            //        string[] lineArray = File.ReadAllLines(fullPathofToml[i] + ".toml");
+            //        List<string> lines = lineArray.ToList();
+            //        foreach (string line in lineArray)
+            //        {
+            //            if (line.Equals(badLine))
+            //                lines.Remove(line);
+            //        }
+            //        File.WriteAllLines(fullPathofToml[i] + ".toml", lines);
+            //    }
+            //    UpdateFileSpecificParamsDisplay(fullPathofToml);
+            //}
         }
 
         private void MenuItem_Click_2(object sender, RoutedEventArgs e)

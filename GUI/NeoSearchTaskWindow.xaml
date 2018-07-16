@@ -13,34 +13,6 @@
         </Grid.RowDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                    <Label Content="Task Name" />
-                    <TextBox x:Name="OutputFileNameTextBox" Width="150">
-                        <TextBox.Style>
-                            <Style TargetType="TextBox" xmlns:sys="clr-namespace:System;assembly=mscorlib">
-                                <Style.Resources>
-                                    <VisualBrush x:Key="CueBannerBrush" AlignmentX="Left" AlignmentY="Center" Stretch="None">
-                                        <VisualBrush.Visual>
-                                            <Label Content="SearchTask" Foreground="Gray" />
-                                        </VisualBrush.Visual>
-                                    </VisualBrush>
-                                </Style.Resources>
-                                <Style.Triggers>
-                                    <Trigger Property="Text" Value="{x:Static sys:String.Empty}">
-                                        <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
-                                    </Trigger>
-                                    <Trigger Property="Text" Value="{x:Null}">
-                                        <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
-                                    </Trigger>
-                                    <Trigger Property="IsKeyboardFocused" Value="True">
-                                        <Setter Property="Background" Value="White" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBox.Style>
-                    </TextBox>
-                </StackPanel>
-
                 <GroupBox Header="Search Parameters" DockPanel.Dock="Top">
                     <Expander x:Name="ParameterExpander" Collapsed="ApmdExpander_Collapsed">
                         <Expander.Style>
@@ -247,12 +219,12 @@
                                 <Grid>
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="5">
-                                            <CheckBox x:Name="searchN" Content="Search N Ions" IsChecked="True" IsEnabled="false" Margin="1" Width="100" />
+                                            <CheckBox x:Name="searchN" Content="Search N-Ions" IsChecked="True" IsEnabled="false" Margin="1" Width="100" />
                                             <Button x:Name="addN" Content="Load N-Terminus Search" Click="addN_Click" Margin="10,1" Width="150" />
                                             <TextBox x:Name="NPath" Width="400" Margin="10,1" TextChanged="NPath_TextChanged" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="5">
-                                            <CheckBox x:Name="searchC" Content="Search C Ions" IsChecked="True" IsEnabled="false" Margin="1" Width="100" />
+                                            <CheckBox x:Name="searchC" Content="Search C-Ions" IsChecked="True" IsEnabled="false" Margin="1" Width="100" />
                                             <Button x:Name="addC" Content="Load C-Terminus Search" Click="addC_Click" Margin="10,1" Width="150" />
                                             <TextBox x:Name="CPath"  Width="400" Margin="10,1" TextChanged="CPath_TextChanged" />
                                         </StackPanel>
@@ -263,7 +235,7 @@
                     </Expander>
                 </GroupBox>
 
-                <GroupBox Header="Neo" DockPanel.Dock="Top">
+                <GroupBox Header="Neo-Fusion Specific Parameters" DockPanel.Dock="Top">
                     <Expander x:Name="SearchModeExpander" Collapsed="ApmdExpander_Collapsed">
                         <Expander.Style>
                             <Style TargetType="Expander">
@@ -298,7 +270,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal">
-                                            <Label x:Name="maxCisLengthLabel" Content="Max Intervening Distance (#AA) Allowed" Margin="2" />
+                                            <Label x:Name="maxCisLengthLabel" Content="Max Intervening Number of Amino Acids Allowed" Margin="2" />
                                             <TextBox x:Name="maxCisLengthTextBox" PreviewTextInput="PreviewIfInt" Width="45" Margin="2" TextChanged="maxCisLengthTextBox_TextChanged" />
                                         </StackPanel>
                                     </StackPanel>
@@ -319,7 +291,7 @@
         </ScrollViewer>
         <StackPanel  Orientation="Horizontal" HorizontalAlignment="Center" Grid.Row="1" Margin="5">
             <Button x:Name="cancelButton" Content="Cancel" Click="CancelButton_Click" />
-            <Button x:Name="saveButton" Content="Save Search Task" Click="SaveButton_Click" FontSize="24" />
+            <Button x:Name="saveButton" Content="Save Neo-Fusion Task" Click="SaveButton_Click" FontSize="24" />
         </StackPanel>
     </Grid>
 </Window>

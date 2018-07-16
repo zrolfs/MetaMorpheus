@@ -45,7 +45,7 @@ namespace MetaMorpheusGUI
                 ExpanderTitle = string.Join(", ", SearchModesForThisTask.Where(b => b.Use).Select(b => b.Name))
             };
             this.DataContext = dataContextForSearchTaskWindow;
-            this.saveButton.Content = "Add the Search Tasks";
+            this.saveButton.Content = "Add the Neo-Fusion Tasks";
         }
 
         public NeoSearchTaskWindow(NeoSearchTask task)
@@ -61,7 +61,7 @@ namespace MetaMorpheusGUI
                 ExpanderTitle = string.Join(", ", SearchModesForThisTask.Where(b => b.Use).Select(b => b.Name))
             };
             this.DataContext = dataContextForSearchTaskWindow;
-            this.saveButton.Content = "Add the Search Tasks";
+            this.saveButton.Content = "Add the Neo-Fusion Tasks";
         }
 
         #endregion Public Constructors
@@ -409,7 +409,7 @@ namespace MetaMorpheusGUI
             };
             if (openPicker.ShowDialog() == true)
             {
-                NPath.Text = openPicker.FileName; searchDecoy.IsChecked = false;
+                NPath.Text = openPicker.FileName;
                 searchN.IsChecked = false;
             }
         }
