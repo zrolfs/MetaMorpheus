@@ -374,11 +374,7 @@ namespace EngineLayer
             return string.Join(",", nestedIds);
         }
 
-        #endregion Public Methods
-
-        #region Protected Methods
-
-        protected static List<DissociationType> DetermineDissociationType(List<ProductType> lp)
+        public static List<DissociationType> DetermineDissociationType(List<ProductType> lp)
         {
             List<DissociationType> dissociationTypes = new List<DissociationType>();
 
@@ -390,6 +386,9 @@ namespace EngineLayer
 
             return dissociationTypes;
         }
+        #endregion Public Methods
+
+        #region Protected Methods
 
         protected void Warn(string v)
         {
