@@ -40,6 +40,111 @@
                         </TextBox.Style>
                     </TextBox>
                 </StackPanel>
+                <GroupBox Header="File Loading Parameters" DockPanel.Dock="Top">
+                    <Expander x:Name="FileLoadExpander" Collapsed="ApmdExpander_Collapsed">
+                        <StackPanel>
+                            <GroupBox Header="Deisotoping">
+                                <StackPanel>
+                                    <CheckBox x:Name="useProvidedPrecursor" Content="Use Provided Precursor" IsChecked="True" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                        <CheckBox.ToolTip>
+                                            <TextBlock>
+                                                Use the charge states and precursor masses determined by the instrument controller.
+                                            </TextBlock>
+                                        </CheckBox.ToolTip>
+                                    </CheckBox>
+                                    <CheckBox x:Name="deconvolutePrecursors" Content="Deconvolute Precursors" IsChecked="True" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                        <CheckBox.ToolTip>
+                                            <TextBlock>
+                                                Additionally searches for coisolated peptides, allowing for multiple peptides to be identified from a single MS2.
+                                            </TextBlock>
+                                        </CheckBox.ToolTip>
+                                    </CheckBox>
+                                    <!--<StackPanel Orientation="Horizontal" Margin="5">
+                                        <Label Content="Deconvolution Intensity Ratio " />
+                                        <TextBox x:Name="DeconvolutionIntensityRatioTextBox" Width="45" />
+                                    </StackPanel>-->
+                                    <StackPanel Orientation="Horizontal" Margin="5">
+                                        <Label Content="Deconvolution Max Assumed Charge State" />
+                                        <TextBox x:Name="DeconvolutionMaxAssumedChargeStateTextBox" PreviewTextInput="CheckIfNumber" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                            <TextBox.ToolTip>
+                                                <TextBlock>
+                                                    The maximum charge state that deconvolution should allow. Minimum is 1.
+                                                </TextBlock>
+                                            </TextBox.ToolTip>
+                                        </TextBox>
+                                    </StackPanel>
+                                    <!--<StackPanel Orientation="Horizontal" Margin="5">
+                                        <Label Content="Deconvolution Mass Tolerance in PPM" />
+                                        <TextBox x:Name="DeconvolutionMassToleranceInPpmTextBox" Width="45" />
+                                    </StackPanel>-->
+                                </StackPanel>
+                            </GroupBox>
+                            <GroupBox Header="Peak Trimming">
+                                <StackPanel>
+                                    <CheckBox x:Name="trimMs1" Content="Trim MS1 Peaks" IsChecked="True" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip Content="Remove low-intensity MS1 peaks using the below settings" />
+                                        </ToolTipService.ToolTip>
+                                    </CheckBox>
+                                    <CheckBox x:Name="trimMsMs" Content="Trim MS2 Peaks" IsChecked="True" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip Content="Remove low-intensity MS2 peaks using the below settings" />
+                                        </ToolTipService.ToolTip>
+                                    </CheckBox>
+                                    <StackPanel Orientation="Horizontal" Margin="5">
+                                        <Label Content="Top N peaks" />
+                                        <TextBox x:Name="TopNPeaksTextBox" PreviewTextInput="CheckIfNumber" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                            <ToolTipService.ToolTip>
+                                                <ToolTip Content="Use the N most intense peaks from the spectrum and remove all other peaks" />
+                                            </ToolTipService.ToolTip>
+                                        </TextBox>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="5">
+                                        <Label Content="Minimum intensity ratio" />
+                                        <TextBox x:Name="MinRatioTextBox" PreviewTextInput="CheckIfNumber" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                            <ToolTipService.ToolTip>
+                                                <ToolTip Content="Peaks must be this intense compared to the base peak" />
+                                            </ToolTipService.ToolTip>
+                                        </TextBox>
+                                    </StackPanel>
+                                </StackPanel>
+                            </GroupBox>
+                            <!--<CheckBox x:Name="disposeOfFilesWhenDone" Content="Dispose of files when done" IsChecked="True" />-->
+                        </StackPanel>
+                    </Expander>
+                </GroupBox>
+                <GroupBox Header="Assumed Spectral Data Parameters" DockPanel.Dock="Top">
+                    <Expander x:Name="AssumedSpectraDataParametersExpander" Collapsed="ApmdExpander_Collapsed">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <Label Content="Precursor Mass Tolerance" />
+                                <TextBox x:Name="precursorMassToleranceTextBox" PreviewTextInput="CheckIfNumber" HorizontalAlignment="Left" TextWrapping="Wrap" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                    <TextBox.ToolTip>
+                                        <TextBlock>
+                                            Accepted tolerance between experimental and theoretical MS1 peaks.
+                                            <LineBreak/>
+                                            This is a file specific parameter; calibration of spectra files will overwrite this value with the suggested tolerance(s).
+                                        </TextBlock>
+                                    </TextBox.ToolTip>
+                                </TextBox>
+                                <ComboBox x:Name="precursorMassToleranceComboBox" HorizontalAlignment="Left" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <Label Content="Product Mass Tolerance" />
+                                <TextBox x:Name="productMassToleranceTextBox" PreviewTextInput="CheckIfNumber" HorizontalAlignment="Left" TextWrapping="Wrap" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
+                                    <TextBox.ToolTip>
+                                        <TextBlock>
+                                            Accepted tolerance between experimental and theoretical MS2 peaks.
+                                            <LineBreak/>
+                                            This is a file specific parameter; calibration of spectra files will overwrite this value with the suggested tolerance(s).
+                                        </TextBlock>
+                                    </TextBox.ToolTip>
+                                </TextBox>
+                                <ComboBox x:Name="productMassToleranceComboBox" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+                </GroupBox>
                 <GroupBox Header="Aggregate Parameters" DockPanel.Dock="Top">
                     <Expander x:Name="SearchModeExpander">
                         <StackPanel>
@@ -50,32 +155,13 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="5">
-                                        <Label x:Name="precursorMassToleranceLabel" Content="Precursor Mass Tolerance" />
-                                        <TextBox x:Name="precursorMassToleranceTextBox" HorizontalAlignment="Left" TextWrapping="Wrap" Width="45" PreviewTextInput="CheckIfNumber" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
-                                            <TextBox.ToolTip>
-                                                <TextBlock>
-                                                    Accepted tolerance between experimental and theoretical MS1 peaks.
-                                                    <LineBreak/>
-                                                    For Aggregation, it is better to be too lenient than too strict
-                                                </TextBlock>
-                                            </TextBox.ToolTip>
-                                        </TextBox>
-                                        <ComboBox x:Name="precursorMassToleranceComboBox" HorizontalAlignment="Left" />
+                                        <Label x:Name="MS1Label">
+                                            <TextBlock FontSize="18" TextDecorations="Underline">
+                                                MS1 Parameters: 
+                                            </TextBlock>
+                                        </Label>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="5">
-                                        <Label x:Name="productMassToleranceLabel" Content="Product Mass Tolerance" />
-                                        <TextBox x:Name="productMassToleranceTextBox" HorizontalAlignment="Left" TextWrapping="Wrap" PreviewTextInput="CheckIfNumber" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
-                                            <TextBox.ToolTip>
-                                                <TextBlock>
-                                                    Accepted tolerance between experimental and theoretical MS2 peaks.
-                                                    <LineBreak/>
-                                                    For Aggregation, it is better to be too lenient than too strict
-                                                </TextBlock>
-                                            </TextBox.ToolTip>
-                                        </TextBox>
-                                        <ComboBox x:Name="productMassToleranceComboBox" HorizontalAlignment="Left" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="5">
+                                        <StackPanel Orientation="Horizontal" Margin="5">
                                         <Label x:Name="numMS1ToAverageLabel" Content="Number of MS1 Spectra to Average" />
                                         <TextBox x:Name="numMS1ToAverageTextBox" HorizontalAlignment="Left" TextWrapping="Wrap" PreviewTextInput="CheckIfNumber" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
                                             <TextBox.ToolTip>
@@ -87,6 +173,13 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1">
+                                    <StackPanel Orientation="Horizontal" Margin="5">
+                                        <Label x:Name="MS2Label">
+                                            <TextBlock FontSize="18" TextDecorations="Underline">
+                                                MS2 Parameters:
+                                            </TextBlock>
+                                        </Label>
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="5">
                                         <Label x:Name="retentionTimeToleranceLabel" Content="Retention Time Tolerance (Minutes)" />
                                         <TextBox x:Name="retentionTimeToleranceTextBox" HorizontalAlignment="Left" TextWrapping="Wrap" PreviewTextInput="CheckIfNumber" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">

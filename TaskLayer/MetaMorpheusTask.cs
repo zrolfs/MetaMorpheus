@@ -17,9 +17,10 @@ namespace TaskLayer
 {
     public enum MyTask
     {
-        Search,
-        Gptmd,
         Calibrate,
+        Aggregate,
+        Gptmd,
+        Search,
         XLSearch,
         Neo
     }
