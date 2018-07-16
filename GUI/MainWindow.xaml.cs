@@ -76,14 +76,14 @@ namespace MetaMorpheusGUI
 
                 GuiGlobalParams.AskAboutUpdating = false;
 
-            try
-            {
-                GetVersionNumbersFromWeb();
-            }
-            catch (Exception e)
-            {
-                GuiWarnHandler(null, new StringEventArgs("Could not get newest MM version from web: " + e.Message, null));
-            }
+            //try
+            //{
+            //    GetVersionNumbersFromWeb();
+            //}
+            //catch (Exception e)
+            //{
+            //    GuiWarnHandler(null, new StringEventArgs("Could not get newest MM version from web: " + e.Message, null));
+            //}
         }
 
         #endregion Public Constructors
