@@ -116,17 +116,25 @@ namespace EngineLayer.Neo
             {
                 qValues = qValues.OrderBy(x => x).ToList();
                 foreach (double qValue in qValues)
+                {
                     if (qValue > qThreshold)
+                    {
                         return qValue;
+                    }
+                }
             }
             else //get next lowest qValue
             {
                 qValues = qValues.OrderByDescending(x => x).ToList();
                 foreach (double qValue in qValues)
+                {
                     if (qValue < qThreshold)
+                    {
                         return qValue;
+                    }
+                }
             }
-            return qThreshold; //if nothing, return the same qValue
+            return double.PositiveInfinity; //if nothing, return a maximum value to prevent infinite loops
         }
 
         public static int CalculateNumberOfConfidentSpliced(List<PsmTsvLine> aggregatedLines, double desiredConfidence)
@@ -191,10 +199,16 @@ namespace EngineLayer.Neo
             }
             //wrap up any leftover psms without scanCounts
             for (; p < primaryPsms.Count; p++)
+            {
                 aggregatedLines.Add(primaryPsms[p]);
+            }
 
             for (; s < secondaryPsms.Count; s++)
-                aggregatedLines.Add(secondaryPsms[s]);
+            {
+                PsmTsvLine psmS = secondaryPsms[s];
+                psmS.neoType = PsmTsvLine.NeoType.Spliced;
+                aggregatedLines.Add(psmS);
+            }
 
             return aggregatedLines;
         }
@@ -206,7 +220,7 @@ namespace EngineLayer.Neo
             aggregatedLines = aggregatedLines.OrderByDescending(x => x.score).ToList();
             foreach (PsmTsvLine line in aggregatedLines)
             {
-                if (numConfidentSpliced!=0 && (1.0 * numDecoySpliced) / numConfidentSpliced >= 0.05)
+                if (numConfidentSpliced != 0 && (1.0 * numDecoySpliced) / numConfidentSpliced >= 0.05)
                     break;
                 if (line.neoType.Equals(PsmTsvLine.NeoType.Spliced))
                     numConfidentSpliced++;
@@ -319,8 +333,8 @@ namespace EngineLayer.Neo
 
         private static void SubtractScoresFromFusions(List<PsmTsvLine> finalList, double scoreCutOff)
         {
-            foreach(PsmTsvLine line in finalList)
-                if(line.neoType!=PsmTsvLine.NeoType.Normal)
+            foreach (PsmTsvLine line in finalList)
+                if (line.neoType != PsmTsvLine.NeoType.Normal)
                     line.score -= scoreCutOff;
         }
 

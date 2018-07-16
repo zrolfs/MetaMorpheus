@@ -60,7 +60,6 @@ namespace EngineLayer.Calibration
 
                 // y value
                 double mzError = datapoints.Ms1List[i].mz - datapoints.Ms1List[i].expectedMZ;
-
                 myMs1DataPoints.Add((explanatoryVariables, mzError));
             }
 

@@ -38,6 +38,9 @@ namespace EngineLayer
             AddOrReplace(peptide, score, notch, true);
             this.AllScores = new List<int>(new int[(int)Math.Floor(score) + 1]);
             this.AllScores[AllScores.Count - 1]++;
+            MatchedIonDictOnlyMatches = new Dictionary<ProductType, double[]>();
+            ProductMassErrorDa = new Dictionary<ProductType, double[]>();
+            ProductMassErrorPpm = new Dictionary<ProductType, double[]>();
         }
 
         #endregion Public Constructors

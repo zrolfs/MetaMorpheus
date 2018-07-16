@@ -131,7 +131,7 @@ namespace TaskLayer
 
                 //combine TL and traditional search
                 //getfolders
-                AggregateSearchFiles.Combine(NeoParameters.TargetFilePath, NeoParameters.DecoyFilePath, OutputFolder + "\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]), translatedPath);
+                AggregateSearchFiles.Combine(NeoParameters.TargetFilePath, NeoParameters.DecoyFilePath, OutputFolder + "\\NonsplicedAggregate", translatedPath);
 
                 //reset database
                 myTaskResults.newDatabases = StoredDatabases;
@@ -141,9 +141,15 @@ namespace TaskLayer
                 string transPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
                 taskNum -= 2;
                 cisPath = outputFolderSubstring + "Task" + taskNum + "-SearchTask\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_PSMs.psmtsv";
-                string normalPath = OutputFolder + "\\" + Path.GetFileNameWithoutExtension(currentRawFileList[0]) + "_Targets.psmtsv";
+                string normalPath = OutputFolder + "\\NormalAggregate_Targets.psmtsv";
+                string transAggPath = OutputFolder + "\\TransAggregate_Targets.psmtsv";
+
+                //combine cis and trans for trans analysis
+                AggregateSearchFiles.Combine(cisPath, NeoParameters.DecoyFilePath, OutputFolder + "\\TransAggregate", transPath); //this is trans and cis thrown together for trans analysis
+
+                //do cis and trans (separate) analysis
                 AggregateSearchFiles.RecursiveNeoAggregation(normalPath, cisPath, OutputFolder, "CisResults.psmtsv");
-                AggregateSearchFiles.RecursiveNeoAggregation(normalPath, transPath, OutputFolder, "TransResults.psmtsv");
+                AggregateSearchFiles.RecursiveNeoAggregation(normalPath, transAggPath, OutputFolder, "TransResults.psmtsv");
             }
             else if (NeoType.Equals(NeoTaskType.GenerateSplicedPeptides))
             {

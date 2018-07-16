@@ -128,6 +128,9 @@
     <Reference Include="SharpLearning.Metrics, Version=0.26.8.1, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpLearning.Metrics.0.26.8.1\lib\net461\SharpLearning.Metrics.dll</HintPath>
     </Reference>
+    <Reference Include="SharpLearning.Optimization, Version=0.26.8.1, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpLearning.Optimization.0.26.8.1\lib\net461\SharpLearning.Optimization.dll</HintPath>
+    </Reference>
     <Reference Include="SharpLearning.RandomForest, Version=0.26.8.1, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpLearning.RandomForest.0.26.8.1\lib\net461\SharpLearning.RandomForest.dll</HintPath>
     </Reference>
