@@ -101,6 +101,9 @@
     <Reference Include="Proteomics, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\mzLib.1.0.284\lib\net45\Proteomics.dll</HintPath>
     </Reference>
+    <Reference Include="SharpLearning.AdaBoost, Version=0.26.8.1, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpLearning.AdaBoost.0.26.8.1\lib\net461\SharpLearning.AdaBoost.dll</HintPath>
+    </Reference>
     <Reference Include="SharpLearning.Common.Interfaces, Version=0.26.8.1, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpLearning.Common.Interfaces.0.26.8.1\lib\net461\SharpLearning.Common.Interfaces.dll</HintPath>
     </Reference>
