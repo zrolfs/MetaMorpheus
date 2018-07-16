@@ -760,6 +760,16 @@ namespace MetaMorpheusGUI
             }
         }
 
+        private void AddAggregateTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new AggregateTaskWindow();
+            if (dialog.ShowDialog() == true)
+            {
+                AddTaskToCollection(dialog.TheTask);
+                UpdateTaskGuiStuff();
+            }
+        }
+
         private void AddGPTMDTaskButton_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new GptmdTaskWindow();

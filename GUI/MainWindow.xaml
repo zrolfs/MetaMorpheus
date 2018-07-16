@@ -164,6 +164,7 @@
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button x:Name="addCalibrateTaskButton" Content="Calibrate" Click="AddCalibrateTaskButton_Click" />
+                            <Button x:Name="addAggregateTaskButton" Content="Aggregate" Click="AddAggregateTaskButton_Click" />
                             <Button x:Name="addGPTMDTaskButton" Content="Discover PTMs" Click="AddGPTMDTaskButton_Click" />
                             <Button x:Name="addSearchTaskButton" Content="Search" Click="AddSearchTaskButton_Click" />
                             <Button x:Name="btnAddCrosslinkSearch" Content="XL Search" Click="BtnAddCrosslinkSearch_Click" />
