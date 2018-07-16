@@ -45,7 +45,7 @@ namespace MetaMorpheusGUI
                 ExpanderTitle = string.Join(", ", SearchModesForThisTask.Where(b => b.Use).Select(b => b.Name))
             };
             this.DataContext = dataContextForSearchTaskWindow;
-            this.saveButton.Content = "Add the Search Tasks";
+            this.saveButton.Content = "Add the Neo-Fusion Tasks";
         }
 
         public NeoSearchTaskWindow(NeoSearchTask task)
@@ -61,7 +61,7 @@ namespace MetaMorpheusGUI
                 ExpanderTitle = string.Join(", ", SearchModesForThisTask.Where(b => b.Use).Select(b => b.Name))
             };
             this.DataContext = dataContextForSearchTaskWindow;
-            this.saveButton.Content = "Add the Search Tasks";
+            this.saveButton.Content = "Add the Neo-Fusion Tasks";
         }
 
         #endregion Public Constructors
@@ -169,7 +169,7 @@ namespace MetaMorpheusGUI
             yCheckBox.IsChecked = task.CommonParameters.YIons;
             cCheckBox.IsChecked = task.CommonParameters.CIons;
             zdotCheckBox.IsChecked = task.CommonParameters.ZdotIons;
-            OutputFileNameTextBox.Text = task.CommonParameters.TaskDescriptor;
+            //OutputFileNameTextBox.Text = task.CommonParameters.TaskDescriptor;
 
             foreach (var mod in task.CommonParameters.ListOfModsFixed)
             {
@@ -276,9 +276,9 @@ namespace MetaMorpheusGUI
 
             CommonParameters CommonParamsToSave = new CommonParameters();
 
-            if (OutputFileNameTextBox.Text != "")
-                CommonParamsToSave.TaskDescriptor = OutputFileNameTextBox.Text;
-            else
+            //if (OutputFileNameTextBox.Text != "")
+            //    CommonParamsToSave.TaskDescriptor = OutputFileNameTextBox.Text;
+            //else
                 CommonParamsToSave.TaskDescriptor = "NeoSearchTask";
 
             //Code for determining SemiSpecific
@@ -409,7 +409,7 @@ namespace MetaMorpheusGUI
             };
             if (openPicker.ShowDialog() == true)
             {
-                NPath.Text = openPicker.FileName; searchDecoy.IsChecked = false;
+                NPath.Text = openPicker.FileName;
                 searchN.IsChecked = false;
             }
         }
