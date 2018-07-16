@@ -291,8 +291,8 @@ namespace MetaMorpheusGUI
             neoParameters.SearchNTerminus = searchN.IsChecked.Value;
             neoParameters.SearchCTerminus = searchC.IsChecked.Value;
             neoParameters.MaxMissedConsecutiveFragments = int.Parse(maxMissedConsecutiveTextBox.Text);
-            neoParameters.MaxMissedTotalFragments = int.Parse(maxMissedConsecutiveTextBox.Text);
-            neoParameters.MaxCandidatesPerSpectrum = int.Parse(maxMissedConsecutiveTextBox.Text);
+            //neoParameters.MaxMissedTotalFragments = int.Parse(maxMissedTotalTextBox.Text); //hard coded default is half
+            neoParameters.MaxCandidatesPerSpectrum = int.Parse(maxCandidatesPerSpectrumTextBox.Text);
             neoParameters.MaxDistanceAllowed = int.Parse(maxCisLengthTextBox.Text);
             neoParameters.NormalCis = searchNormalCis.IsChecked.Value;
             neoParameters.ReverseCis = searchReverseCis.IsChecked.Value;

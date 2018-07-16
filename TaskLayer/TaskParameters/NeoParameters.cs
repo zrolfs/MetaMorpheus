@@ -13,7 +13,7 @@
             SearchNTerminus = true;
             SearchCTerminus = true;
             MaxMissedConsecutiveFragments = 2;
-            MaxMissedTotalFragments = 5;
+            //MaxMissedTotalFragments = 5;
             MaxCandidatesPerSpectrum = 2000;
             MaxDistanceAllowed = 25;
             NormalCis = true;
@@ -39,7 +39,7 @@
         public string CFilePath { get; set; }
 
         public int MaxMissedConsecutiveFragments { get; set; }
-        public int MaxMissedTotalFragments { get; set; }
+        //public int MaxMissedTotalFragments { get; set; }
         public int MaxCandidatesPerSpectrum { get; set; }
 
         public int MinDistanceAllowed { get; set; }
