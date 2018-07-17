@@ -102,10 +102,7 @@ namespace TaskLayer
 
                 // load the file
                 Status("Loading spectra file...", new List<string> { taskId, "Individual Spectra Files" });
-                lock (lock1)
-                {
-                    myMsDataFile = myFileManager.LoadFile(originalUncalibratedFilePath, CommonParameters.TopNpeaks, CommonParameters.MinRatio, CommonParameters.TrimMs1Peaks, CommonParameters.TrimMsMsPeaks);
-                }
+                myMsDataFile = myFileManager.LoadFile(originalUncalibratedFilePath, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
 
                 // get datapoints to fit calibration function to
                 Status("Acquiring calibration data points...", new List<string> { taskId, "Individual Spectra Files" });

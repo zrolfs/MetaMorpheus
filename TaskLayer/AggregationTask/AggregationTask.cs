@@ -62,36 +62,36 @@ namespace TaskLayer
                 if (GlobalVariables.StopLoops) { break; }
 
                 // get filename stuff
-                var originalUnAggregatedFilePath = currentRawFileList[spectraFileIndex];
-                var originalUnAggregatedFilenameWithoutExtension = Path.GetFileNameWithoutExtension(originalUnAggregatedFilePath);
-                string aggregatedFilePath = Path.Combine(OutputFolder, originalUnAggregatedFilenameWithoutExtension + aggregateSuffix + ".mzML");
+                var origDataFile = currentRawFileList[spectraFileIndex];
+                var origDataFileWithoutExtension = Path.GetFileNameWithoutExtension(origDataFile);
+                string aggregatedFilePath = Path.Combine(OutputFolder, origDataFileWithoutExtension + aggregateSuffix + ".mzML");
 
                 // mark the file as in-progress
-                StartingDataFile(originalUnAggregatedFilePath, new List<string> { taskId, "Individual Spectra Files", originalUnAggregatedFilePath });
+                StartingDataFile(origDataFile, new List<string> { taskId, "Individual Spectra Files", origDataFile });
 
                 CommonParameters combinedParams = SetAllFileSpecificCommonParams(CommonParameters, fileSettingsList[spectraFileIndex]);
 
-                MsDataFile myMsDataFile;
+                var thisId = new List<string> { taskId, "Individual Spectra Files", origDataFile };
+                Status("Loading spectra file...", thisId);
+                MsDataFile myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
+                Status("Getting ms2 scans...", thisId);
+                Ms2ScanWithSpecificMass[] ms2Scans = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).ToArray();
 
-                // load the file
-                Status("Loading spectra file...", new List<string> { taskId, "Individual Spectra Files" });
-                lock (lock1)
-                {
-                    myMsDataFile = myFileManager.LoadFile(originalUnAggregatedFilePath, CommonParameters.TopNpeaks, CommonParameters.MinRatio, CommonParameters.TrimMs1Peaks, CommonParameters.TrimMsMsPeaks);
-                }
 
+                //no need to normalize until fix the cosine to pick the most similar intensity (currently picks lowest mass)
                 //normalize the ms2 spectra to facilitate 
                 //Status("Normalizing MS2 scans...", new List<string> { taskId, "Individual Spectra Files" });
                 //const int numHighestIntensityPeaksToSumAndNormalizeTo = 10;
                 //List<MsDataScan> scans = new List<MsDataScan>();
-                AggregationEngine engine = new AggregationEngine(myMsDataFile, CommonParameters, new List<string> { taskId, "Individual Spectra Files", originalUnAggregatedFilenameWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed, AggregationParameters.NumberOfMS1SpectraToAverage);
+                AggregationEngine engine = new AggregationEngine(myMsDataFile, ms2Scans, CommonParameters, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed, AggregationParameters.NumberOfMS1SpectraToAverage);
+                engine.Run();
 
                 // get datapoints to fit Aggregation function to
-                Status("Aggregating data points...", new List<string> { taskId, "Individual Spectra Files" });
+                Status("Aggregating data points...", thisId);
 
                 //Toml.WriteFile(fileSpecificParams, newTomlFileName, tomlConfig);
 
-               // SucessfullyFinishedWritingFile(newTomlFileName, new List<string> { taskId, "Individual Spectra Files", originalUncalibratedFilenameWithoutExtension });
+                // SucessfullyFinishedWritingFile(newTomlFileName, new List<string> { taskId, "Individual Spectra Files", originalUncalibratedFilenameWithoutExtension });
 
                 MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(myMsDataFile, aggregatedFilePath, false);
             }
