@@ -153,26 +153,7 @@
                                     <ColumnDefinition Width="1*" />
                                     <ColumnDefinition Width="1*" />
                                 </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="5">
-                                        <Label x:Name="MS1Label">
-                                            <TextBlock FontSize="18" TextDecorations="Underline">
-                                                MS1 Parameters: 
-                                            </TextBlock>
-                                        </Label>
-                                    </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="5">
-                                        <Label x:Name="numMS1ToAverageLabel" Content="Number of MS1 Spectra to Average" />
-                                        <TextBox x:Name="numMS1ToAverageTextBox" HorizontalAlignment="Left" TextWrapping="Wrap" PreviewTextInput="CheckIfNumber" Width="45" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
-                                            <TextBox.ToolTip>
-                                                <TextBlock>
-                                                    The maximum number of MS1 spectra to use when averaging m/zs of MS1 peaks.
-                                                </TextBlock>
-                                            </TextBox.ToolTip>
-                                        </TextBox>
-                                    </StackPanel>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1">
+                                <StackPanel Grid.Column="0">
                                     <StackPanel Orientation="Horizontal" Margin="5">
                                         <Label x:Name="MS2Label">
                                             <TextBlock FontSize="18" TextDecorations="Underline">

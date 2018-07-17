@@ -21,7 +21,6 @@ namespace EngineLayer.Aggregation
     {
         private readonly double MaxRetentionTimeDifferenceAllowedInMinutes;
         private readonly double MinCosineScoreAllowed;
-        private readonly int NumberOfMS1SpectraToAverage;
         private readonly Ms2ScanWithSpecificMass[] MS2Scans;
 
         private readonly MsDataFile OriginalFile;
@@ -30,19 +29,41 @@ namespace EngineLayer.Aggregation
         public Tolerance SuggestedProductTolerance { get; private set; }
 
 
-        public AggregationEngine(MsDataFile originalFile, Ms2ScanWithSpecificMass[] ms2scans, CommonParameters commonParameters, List<string> nestedIds, double maxRetentionTimeDifferenceAllowedInMinutes, double minCosineScoreAllowed, int numberOfMS1SpectraToAverage) : base(commonParameters, nestedIds)
+        public AggregationEngine(MsDataFile originalFile, Ms2ScanWithSpecificMass[] ms2scans, CommonParameters commonParameters, List<string> nestedIds, double maxRetentionTimeDifferenceAllowedInMinutes, double minCosineScoreAllowed) : base(commonParameters, nestedIds)
         {
             OriginalFile = originalFile;
             MS2Scans = ms2scans;
             MaxRetentionTimeDifferenceAllowedInMinutes = maxRetentionTimeDifferenceAllowedInMinutes;
             MinCosineScoreAllowed = minCosineScoreAllowed;
-            NumberOfMS1SpectraToAverage = numberOfMS1SpectraToAverage;
         }
 
         protected override MetaMorpheusEngineResults RunSpecific()
         {
-            Status("Identifying MS2 groups");
+            Status("Averaging MS1 spectra");
+            //we are ONLY averaging m/z and NOT intensity. Intensity averaging would convolute downstream quantification
+            MsDataScan[] ms1scans = OriginalFile.GetAllScansList().Where(x => x.MsnOrder == 1).ToArray();
+            //we have a set of peaks in the ms1 scan, and we'll cycle through until:
+            //-we have two consecutive ms1 scans that do not contain a peak, 
+            //-we reach the end of the file
+            //-we're told to stop by numberOfMs1SpectraToAverage
+            List<double>[] peaksThatWereFound = new List<double>[ms1scans.Length]; //index is the scan index that tracks the peaks (doubles) previously found to prevent duplicate comparisons
+            double[][] ms1mzs = ms1scans.Select(x => x.MassSpectrum.XArray).ToArray();
 
+            for (int index = 0; index < ms1mzs.Length; index++)
+            {
+                double[] currentMzs = ms1mzs[index]; //grab current ms1scan
+                List<double>[] allPeaksFound = currentMzs.Select(x => new List<double> { x }).ToArray(); //convert each mz into a seed for the list.
+                bool[] peaksRecentlyFound = Enumerable.Repeat(true, currentMzs.Length).ToArray(); //set default to true, since they're all in this spectrum.
+
+                //start cycling
+                for(int secondaryIndex = index+1; secondaryIndex<ms1mzs.Length; secondaryIndex++)
+                {
+
+                }
+            }
+
+
+            Status("Identifying MS2 groups");
             //need to group together which scans to compare
             //index ms2scans by precursor masses
             //Could change this to the max MS1 range observed
@@ -205,6 +226,35 @@ namespace EngineLayer.Aggregation
                 scoredGroups.AddRange(subGroups);
             }
             groups = scoredGroups; //save
+
+
+            Status("Averaging MS2 spectra");
+            //Each MS2 spectra is going to be assigned a new scan number that's placed at the earliest occurance of the group.
+            List<Ms2ScanWithSpecificMass> syntheticSpectra = new List<Ms2ScanWithSpecificMass>();
+            List<int> minimumScanNumbersForSyntheticSpectra = new List<int>();
+            foreach (List<Ms2ScanWithSpecificMass> group in groups)
+            {
+                if (group.Count == 1) //if nothing to aggregate, just save it
+                {
+                    syntheticSpectra.Add(group[0]);
+                    minimumScanNumbersForSyntheticSpectra.Add(group[0].OneBasedScanNumber);
+                }
+                else
+                {
+                    minimumScanNumbersForSyntheticSpectra.Add(group.Select(x => x.OneBasedScanNumber).Min());
+
+                    List<double> synethicMZs = new List<double>();
+                    List<double> syntheticIntensities = new List<double>();
+
+                    //get masses
+                    double[][] groupedMzs = group.Select(x => x.TheScan.MassSpectrum.XArray).ToArray();
+                    double[][] groupedIntensities = group.Select(x => x.TheScan.MassSpectrum.YArray).ToArray();
+
+
+                    //require a peak to be present in at least half of all grouped spectra for it to be saved
+
+                }
+            }
 
             AggregatedDataFile = new MsDataFile(OriginalFile.GetAllScansList().ToArray(), OriginalFile.SourceFile);
             return new MetaMorpheusEngineResults(this);
