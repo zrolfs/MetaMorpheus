@@ -22,19 +22,24 @@ namespace EngineLayer.Aggregation
         private readonly double MaxRetentionTimeDifferenceAllowedInMinutes;
         private readonly double MinCosineScoreAllowed;
         private readonly Ms2ScanWithSpecificMass[] MS2Scans;
-
+        private readonly Tolerance PrecursorTolerance;
+        private readonly Tolerance ProductTolerance;
         private readonly MsDataFile OriginalFile;
+        private const int numberOfStrikesBeforeOut = 2;
+
         public MsDataFile AggregatedDataFile { get; private set; }
         public Tolerance SuggestedPrecursorTolerance { get; private set; }
         public Tolerance SuggestedProductTolerance { get; private set; }
 
 
-        public AggregationEngine(MsDataFile originalFile, Ms2ScanWithSpecificMass[] ms2scans, CommonParameters commonParameters, List<string> nestedIds, double maxRetentionTimeDifferenceAllowedInMinutes, double minCosineScoreAllowed) : base(commonParameters, nestedIds)
+        public AggregationEngine(MsDataFile originalFile, CommonParameters commonParameters, List<string> nestedIds, double maxRetentionTimeDifferenceAllowedInMinutes, double minCosineScoreAllowed) : base(commonParameters, nestedIds)
         {
             OriginalFile = originalFile;
-            MS2Scans = ms2scans;
+            MS2Scans = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).ToArray();
             MaxRetentionTimeDifferenceAllowedInMinutes = maxRetentionTimeDifferenceAllowedInMinutes;
             MinCosineScoreAllowed = minCosineScoreAllowed;
+            PrecursorTolerance = commonParameters.PrecursorMassTolerance;
+            ProductTolerance = commonParameters.ProductMassTolerance;
         }
 
         protected override MetaMorpheusEngineResults RunSpecific()
@@ -45,20 +50,65 @@ namespace EngineLayer.Aggregation
             //we have a set of peaks in the ms1 scan, and we'll cycle through until:
             //-we have two consecutive ms1 scans that do not contain a peak, 
             //-we reach the end of the file
-            //-we're told to stop by numberOfMs1SpectraToAverage
             List<double>[] peaksThatWereFound = new List<double>[ms1scans.Length]; //index is the scan index that tracks the peaks (doubles) previously found to prevent duplicate comparisons
             double[][] ms1mzs = ms1scans.Select(x => x.MassSpectrum.XArray).ToArray();
 
-            for (int index = 0; index < ms1mzs.Length; index++)
+            for (int primaryIndex = 0; primaryIndex < ms1mzs.Length; primaryIndex++)
             {
-                double[] currentMzs = ms1mzs[index]; //grab current ms1scan
-                List<double>[] allPeaksFound = currentMzs.Select(x => new List<double> { x }).ToArray(); //convert each mz into a seed for the list.
-                bool[] peaksRecentlyFound = Enumerable.Repeat(true, currentMzs.Length).ToArray(); //set default to true, since they're all in this spectrum.
+                double[] seedMzs = ms1mzs[primaryIndex]; //grab current ms1scan
+                List<double>[] allPeaksFound = seedMzs.Select(x => new List<double> { x }).ToArray(); //convert each mz into a seed for the list.
+                int[] peaksRecentlyFound = new int[seedMzs.Length]; //Pseudo boolean where 0 is found, 1 is not found, 2 (numberOfStrikesBeforeOut) is out.
 
-                //start cycling
-                for(int secondaryIndex = index+1; secondaryIndex<ms1mzs.Length; secondaryIndex++)
+                //start cycling through other ms1 scans
+                for (int secondaryIndex = primaryIndex + 1; secondaryIndex < ms1mzs.Length; secondaryIndex++)
                 {
+                    bool done = true;
+                    double[] branchMzs = ms1mzs[secondaryIndex];
 
+                    int seedIndex = 0;
+                    int branchIndex = 0;
+                    //foreach peak in the seed spectrum, find matches in the branch spectrum
+                    while (seedIndex < seedMzs.Length && branchIndex < branchMzs.Length)
+                    {
+                        if (peaksRecentlyFound[seedIndex] != numberOfStrikesBeforeOut) //if this seed is not dead to us
+                        {
+                            double seedMz = seedMzs[seedIndex];
+                            //see if it has a buddy!
+                            for (; branchIndex < branchMzs.Length; branchIndex++)
+                            {
+                                if (branchMzs[branchIndex] > seedMz) //we went too far! or did we?
+                                {
+                                    break;
+                                }
+                            }
+
+                            //backup the branchIndex if needed
+                            if (branchIndex == branchMzs.Length
+                                || (branchIndex != 0 && branchMzs[branchIndex] - seedMz > seedMz - branchMzs[branchIndex - 1]))
+                            {
+                                branchIndex--; 
+                            }
+
+
+                            if (ProductTolerance.Within(seedMz, branchMzs[branchIndex])) //if a match
+                            {
+                                peaksRecentlyFound[seedIndex] = 0; //reset
+                                allPeaksFound[seedIndex].Add(branchMzs[branchIndex]);
+                            }
+                            else
+                            {
+                                peaksRecentlyFound[seedIndex]++; 
+                            }
+                        }
+                        else
+                        {
+                            seedIndex++;
+                        }
+                    }
+                    if (done) //if none of the peaks are still viable.
+                    {
+                        break; //let's move on to the next seed
+                    }
                 }
             }
 

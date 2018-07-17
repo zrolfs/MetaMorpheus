@@ -445,6 +445,69 @@ namespace EngineLayer
             return new MzSpectrum(newMzSpectrum, intensity, false);
         }
 
+        public static IEnumerable<Ms2ScanWithSpecificMass> GetMs2Scans(
+            MsDataFile myMSDataFile,
+            string fullFilePath,
+            bool doPrecursorDeconvolution,
+            bool useProvidedPrecursorInfo,
+            double deconvolutionIntensityRatio,
+            int deconvolutionMaxAssumedChargeState,
+            Tolerance deconvolutionMassTolerance)
+        {
+            foreach (var ms2scan in myMSDataFile.GetAllScansList().Where(x => x.MsnOrder != 1))
+            {
+                if (GlobalVariables.StopLoops) { break; }
+                List<(double, int)> isolatedStuff = new List<(double, int)>();
+                if (ms2scan.OneBasedPrecursorScanNumber.HasValue)
+                {
+                    var precursorSpectrum = myMSDataFile.GetOneBasedScan(ms2scan.OneBasedPrecursorScanNumber.Value);
+
+                    try
+                    {
+                        ms2scan.RefineSelectedMzAndIntensity(precursorSpectrum.MassSpectrum);
+                    }
+                    catch (MzLibException)
+                    {
+                        continue;
+                    }
+
+                    if (ms2scan.SelectedIonMonoisotopicGuessMz.HasValue)
+                    {
+                        ms2scan.ComputeMonoisotopicPeakIntensity(precursorSpectrum.MassSpectrum);
+                    }
+
+                    if (doPrecursorDeconvolution)
+                    {
+                        foreach (var envelope in ms2scan.GetIsolatedMassesAndCharges(precursorSpectrum.MassSpectrum, 1, deconvolutionMaxAssumedChargeState, deconvolutionMassTolerance.Value, deconvolutionIntensityRatio))
+                        {
+                            var monoPeakMz = envelope.monoisotopicMass.ToMz(envelope.charge);
+                            isolatedStuff.Add((monoPeakMz, envelope.charge));
+                        }
+                    }
+                }
+
+                if (useProvidedPrecursorInfo && ms2scan.SelectedIonChargeStateGuess.HasValue)
+                {
+                    var precursorCharge = ms2scan.SelectedIonChargeStateGuess.Value;
+                    if (ms2scan.SelectedIonMonoisotopicGuessMz.HasValue)
+                    {
+                        var precursorMZ = ms2scan.SelectedIonMonoisotopicGuessMz.Value;
+                        if (!isolatedStuff.Any(b => deconvolutionMassTolerance.Within(precursorMZ.ToMass(precursorCharge), b.Item1.ToMass(b.Item2))))
+                            isolatedStuff.Add((precursorMZ, precursorCharge));
+                    }
+                    else
+                    {
+                        var precursorMZ = ms2scan.SelectedIonMZ;
+                        if (!isolatedStuff.Any(b => deconvolutionMassTolerance.Within(precursorMZ.Value.ToMass(precursorCharge), b.Item1.ToMass(b.Item2))))
+                            isolatedStuff.Add((precursorMZ.Value, precursorCharge));
+                    }
+                }
+
+                foreach (var heh in isolatedStuff)
+                    yield return new Ms2ScanWithSpecificMass(ms2scan, heh.Item1, heh.Item2, fullFilePath);
+            }
+        }
+
         public MetaMorpheusEngineResults Run()
         {
             StartingSingleEngine();

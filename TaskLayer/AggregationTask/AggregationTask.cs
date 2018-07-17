@@ -75,16 +75,15 @@ namespace TaskLayer
                 Status("Loading spectra file...", thisId);
                 MsDataFile myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
                 Status("Getting ms2 scans...", thisId);
-                Ms2ScanWithSpecificMass[] ms2Scans = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).ToArray();
-
 
                 //no need to normalize until fix the cosine to pick the most similar intensity (currently picks lowest mass)
                 //normalize the ms2 spectra to facilitate 
                 //Status("Normalizing MS2 scans...", new List<string> { taskId, "Individual Spectra Files" });
                 //const int numHighestIntensityPeaksToSumAndNormalizeTo = 10;
                 //List<MsDataScan> scans = new List<MsDataScan>();
-                AggregationEngine engine = new AggregationEngine(myMsDataFile, ms2Scans, CommonParameters, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed);
+                AggregationEngine engine = new AggregationEngine(myMsDataFile, CommonParameters, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed);
                 engine.Run();
+                Ms2ScanWithSpecificMass[] ms2Scans = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).ToArray();
 
                 // get datapoints to fit Aggregation function to
                 Status("Aggregating data points...", thisId);
