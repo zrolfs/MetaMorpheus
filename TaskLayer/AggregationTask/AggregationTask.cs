@@ -81,9 +81,8 @@ namespace TaskLayer
                 //Status("Normalizing MS2 scans...", new List<string> { taskId, "Individual Spectra Files" });
                 //const int numHighestIntensityPeaksToSumAndNormalizeTo = 10;
                 //List<MsDataScan> scans = new List<MsDataScan>();
-                AggregationEngine engine = new AggregationEngine(myMsDataFile, CommonParameters, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed);
+                AggregationEngine engine = new AggregationEngine(myMsDataFile, origDataFile, combinedParams, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed);
                 engine.Run();
-                Ms2ScanWithSpecificMass[] ms2Scans = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).ToArray();
 
                 // get datapoints to fit Aggregation function to
                 Status("Aggregating data points...", thisId);

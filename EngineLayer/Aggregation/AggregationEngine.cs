@@ -32,10 +32,10 @@ namespace EngineLayer.Aggregation
         public Tolerance SuggestedProductTolerance { get; private set; }
 
 
-        public AggregationEngine(MsDataFile originalFile, CommonParameters commonParameters, List<string> nestedIds, double maxRetentionTimeDifferenceAllowedInMinutes, double minCosineScoreAllowed) : base(commonParameters, nestedIds)
+        public AggregationEngine(MsDataFile originalFile, string originalFilePath, CommonParameters commonParameters, List<string> nestedIds, double maxRetentionTimeDifferenceAllowedInMinutes, double minCosineScoreAllowed) : base(commonParameters, nestedIds)
         {
             OriginalFile = originalFile;
-            MS2Scans = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).ToArray();
+            MS2Scans = GetMs2Scans(originalFile, originalFilePath, commonParameters.DoPrecursorDeconvolution, commonParameters.UseProvidedPrecursorInfo, commonParameters.DeconvolutionIntensityRatio, commonParameters.DeconvolutionMaxAssumedChargeState, commonParameters.DeconvolutionMassTolerance).ToArray();
             MaxRetentionTimeDifferenceAllowedInMinutes = maxRetentionTimeDifferenceAllowedInMinutes;
             MinCosineScoreAllowed = minCosineScoreAllowed;
             PrecursorTolerance = commonParameters.PrecursorMassTolerance;

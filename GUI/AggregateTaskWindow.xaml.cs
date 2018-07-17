@@ -62,7 +62,6 @@ namespace MetaMorpheusGUI
             precursorMassToleranceTextBox.Text = task.CommonParameters.PrecursorMassTolerance.Value.ToString(CultureInfo.InvariantCulture);
             precursorMassToleranceComboBox.SelectedIndex = task.CommonParameters.PrecursorMassTolerance is AbsoluteTolerance ? 0 : 1;
 
-            numMS1ToAverageTextBox.Text = task.AggregationParameters.NumberOfMS1SpectraToAverage.ToString();
             retentionTimeToleranceTextBox.Text = task.AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes.ToString(CultureInfo.InvariantCulture);
             minimumCosineScoreTextBox.Text = task.AggregationParameters.MinCosineScoreAllowed.ToString(CultureInfo.InvariantCulture);
 
