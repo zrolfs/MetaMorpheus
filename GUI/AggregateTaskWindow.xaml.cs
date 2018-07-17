@@ -18,6 +18,9 @@ namespace MetaMorpheusGUI
     /// </summary>
     public partial class AggregateTaskWindow : Window
     {
+        private readonly DataContextForSearchTaskWindow dataContextForSearchTaskWindow;
+        private readonly ObservableCollection<SearchModeForDataGrid> SearchModesForThisTask = new ObservableCollection<SearchModeForDataGrid>();
+
         public AggregateTaskWindow()
         {
             InitializeComponent();
@@ -25,7 +28,11 @@ namespace MetaMorpheusGUI
 
             TheTask = new AggregationTask();
             UpdateFieldsFromTask(TheTask);
-
+            dataContextForSearchTaskWindow = new DataContextForSearchTaskWindow
+            {
+                ExpanderTitle = string.Join(", ", SearchModesForThisTask.Where(b => b.Use).Select(b => b.Name))
+            };
+            this.DataContext = dataContextForSearchTaskWindow;
             this.saveButton.Content = "Add the Aggregation Task";
         }
 
@@ -123,6 +130,11 @@ namespace MetaMorpheusGUI
         private void CheckIfNumber(object sender, TextCompositionEventArgs e)
         {
             e.Handled = !GlobalGuiSettings.CheckIsNumber(e.Text);
+        }
+
+        private void ApmdExpander_Collapsed(object sender, RoutedEventArgs e)
+        {
+            dataContextForSearchTaskWindow.ExpanderTitle = string.Join(", ", SearchModesForThisTask.Where(b => b.Use).Select(b => b.Name));
         }
     }
 }
