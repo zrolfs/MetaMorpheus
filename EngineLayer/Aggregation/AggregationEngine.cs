@@ -64,31 +64,26 @@ namespace EngineLayer.Aggregation
             //somewhat tricky. We want to group a scan with all the other scans, but there's a chance that the tolerance falls outside for some but not for others.
             //we can just expand the range for tolerance whenever another is added.
 
-            //List<int> testScans = new List<int>() { 62690, 62477, 62922 };
             //want to group all scans to compare and later subgroup those where the comparison is above a threshold
-            bool[] seen = new bool[MS2Scans.Length];
+            bool[] seen = new bool[MS2Scans.Length]; //don't double group stuff
             List<List<Ms2ScanWithSpecificMass>> groups = new List<List<Ms2ScanWithSpecificMass>>();
             for (int i = 0; i < MS2Scans.Length; i++)
             {
-                //i = 0;
-                //seen = new bool[ms2scans.Length];
-                //groups.Clear();
                 //get indexes to compare
                 if (!seen[i])
                 {
-                    seen[i] = true;
-                    var scan = MS2Scans[i];
+                    seen[i] = true; //we've seen it, so don't use it again
+                    var scan = MS2Scans[i]; //get the scan
                     int obsFragmentFloorMass = (int)Math.Floor((commonParameters.PrecursorMassTolerance.GetMinimumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
                     int obsFragmentCeilingMass = (int)Math.Ceiling((commonParameters.PrecursorMassTolerance.GetMaximumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
-                    int minBinObs = -1;
+                    int minBinObs = -1; //save outer bounds so we can expand tolerances if needed
                     int maxBinObs = -1;
-                    List<Ms2ScanWithSpecificMass> groupToAdd = new List<Ms2ScanWithSpecificMass>();
-                    List<int> binsFound = new List<int>();
+                    List<Ms2ScanWithSpecificMass> groupToAdd = new List<Ms2ScanWithSpecificMass>(); //current group
                     //foreach mz in range, expand range if necessary
-                    for (int bin = obsFragmentFloorMass; bin <= obsFragmentCeilingMass; bin++)
+                    for (int bin = obsFragmentFloorMass; bin <= obsFragmentCeilingMass; bin++) //go through bins and add to the group
                     {
                         List<int> scans = massIndex[bin];
-                        if (scans != null) //possible to group things twice since large mz ppm can hit a smaller mz where the small ppm wouldn't
+                        if (scans != null) //FIXME: It's still possible to group things twice since large mz ppm can hit a smaller mz where the small ppm wouldn't
                         {
                             if (minBinObs == -1)
                             {
@@ -102,9 +97,10 @@ namespace EngineLayer.Aggregation
                             }
                         }
                     }
+
+                    //get lower bound if it's expanded
                     int decreasingValues = obsFragmentFloorMass - 1;
                     int minimumValue = (int)Math.Floor(commonParameters.PrecursorMassTolerance.GetMinimumValue(minBinObs));
-
                     while (decreasingValues > minimumValue)
                     {
                         List<int> scans = massIndex[decreasingValues];
@@ -120,9 +116,10 @@ namespace EngineLayer.Aggregation
                         }
                         decreasingValues--;
                     }
+
+                    //get upper bound if it's expanded
                     int increasingValues = obsFragmentCeilingMass + 1;
                     int maximumValue = (int)Math.Ceiling(commonParameters.PrecursorMassTolerance.GetMaximumValue(maxBinObs));
-
                     while (increasingValues < maximumValue)
                     {
                         List<int> scans = massIndex[increasingValues];
@@ -142,9 +139,8 @@ namespace EngineLayer.Aggregation
                 }
             }
 
-            //Now that we've separated groups by mass, let's try to separate based on retention time?
+            //Now that we've separated groups by mass, let's try to separate based on retention time
             List<List<Ms2ScanWithSpecificMass>> retGroups = new List<List<Ms2ScanWithSpecificMass>>();
-            double timeDifference = 10;//minutes
             foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
             {
                 List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
@@ -155,8 +151,8 @@ namespace EngineLayer.Aggregation
                     {
                         Ms2ScanWithSpecificMass scanInSubGroup = subGroup.Last(); //only need to check the lawst
                         {
-                            if (scan.RetentionTime > scanInSubGroup.RetentionTime - timeDifference
-                                && scan.RetentionTime < scanInSubGroup.RetentionTime + timeDifference) //if a match, add it
+                            if (scan.RetentionTime > scanInSubGroup.RetentionTime - MaxRetentionTimeDifferenceAllowedInMinutes
+                                && scan.RetentionTime < scanInSubGroup.RetentionTime + MaxRetentionTimeDifferenceAllowedInMinutes) //if a match, add it
                             {
                                 subGroup.Add(scan);
                                 foundSpot = true;
@@ -175,12 +171,10 @@ namespace EngineLayer.Aggregation
                 }
                 retGroups.AddRange(subGroups);
             }
-
-            groups = retGroups;
+            groups = retGroups; //save reassignments
 
             //Now let's separate based on cosine score
             List<List<Ms2ScanWithSpecificMass>> scoredGroups = new List<List<Ms2ScanWithSpecificMass>>();
-            double cosineScoreCutoff = 0.1;
             foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
             {
                 List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
@@ -191,7 +185,7 @@ namespace EngineLayer.Aggregation
                     {
                         foreach (Ms2ScanWithSpecificMass scanInSubGroup in subGroup) //iterate through each member of each previously found group
                         {
-                            if (cosineScoreCutoff <= CosineScore(scan.TheScan.MassSpectrum, scanInSubGroup.TheScan.MassSpectrum, commonParameters.ProductMassTolerance)) //if a match, add it
+                            if (MinCosineScoreAllowed <= CosineScore(scan.TheScan.MassSpectrum, scanInSubGroup.TheScan.MassSpectrum, commonParameters.ProductMassTolerance)) //if a match, add it
                             {
                                 subGroup.Add(scan);
                                 foundSpot = true;
@@ -210,10 +204,9 @@ namespace EngineLayer.Aggregation
                 }
                 scoredGroups.AddRange(subGroups);
             }
+            groups = scoredGroups; //save
 
-            groups = scoredGroups;
-
-            AggregatedDataFile = new MsDataFile(OriginalFile.GetAllScansList().ToArray(), OriginalFile.SourceFile); 
+            AggregatedDataFile = new MsDataFile(OriginalFile.GetAllScansList().ToArray(), OriginalFile.SourceFile);
             return new MetaMorpheusEngineResults(this);
         }
 
