@@ -1085,15 +1085,22 @@ namespace MetaMorpheusGUI
         {
             var a = sender as TreeView;
             if (a.SelectedItem is PreRunTask preRunTask)
+            {
                 switch (preRunTask.metaMorpheusTask.TaskType)
                 {
-                    case MyTask.Search:
 
-                        var searchDialog = new SearchTaskWindow(preRunTask.metaMorpheusTask as SearchTask);
-                        searchDialog.ShowDialog();
-                        preRunTask.DisplayName = "Task" + (StaticTasksObservableCollection.IndexOf(preRunTask) + 1) + "-" + searchDialog.TheTask.CommonParameters.TaskDescriptor;
+                    case MyTask.Calibrate:
+                        var calibratedialog = new CalibrateTaskWindow(preRunTask.metaMorpheusTask as CalibrationTask);
+                        calibratedialog.ShowDialog();
+                        preRunTask.DisplayName = "Task" + (StaticTasksObservableCollection.IndexOf(preRunTask) + 1) + "-" + calibratedialog.TheTask.CommonParameters.TaskDescriptor;
                         tasksTreeView.Items.Refresh();
+                        return;
 
+                    case MyTask.Aggregate:
+                        var aggregateDialog = new AggregateTaskWindow(preRunTask.metaMorpheusTask as AggregationTask);
+                        aggregateDialog.ShowDialog();
+                        preRunTask.DisplayName = "Task" + (StaticTasksObservableCollection.IndexOf(preRunTask) + 1) + "-" + aggregateDialog.TheTask.CommonParameters.TaskDescriptor;
+                        tasksTreeView.Items.Refresh();
                         return;
 
                     case MyTask.Gptmd:
@@ -1101,13 +1108,12 @@ namespace MetaMorpheusGUI
                         gptmddialog.ShowDialog();
                         preRunTask.DisplayName = "Task" + (StaticTasksObservableCollection.IndexOf(preRunTask) + 1) + "-" + gptmddialog.TheTask.CommonParameters.TaskDescriptor;
                         tasksTreeView.Items.Refresh();
-
                         return;
 
-                    case MyTask.Calibrate:
-                        var calibratedialog = new CalibrateTaskWindow(preRunTask.metaMorpheusTask as CalibrationTask);
-                        calibratedialog.ShowDialog();
-                        preRunTask.DisplayName = "Task" + (StaticTasksObservableCollection.IndexOf(preRunTask) + 1) + "-" + calibratedialog.TheTask.CommonParameters.TaskDescriptor;
+                    case MyTask.Search:
+                        var searchDialog = new SearchTaskWindow(preRunTask.metaMorpheusTask as SearchTask);
+                        searchDialog.ShowDialog();
+                        preRunTask.DisplayName = "Task" + (StaticTasksObservableCollection.IndexOf(preRunTask) + 1) + "-" + searchDialog.TheTask.CommonParameters.TaskDescriptor;
                         tasksTreeView.Items.Refresh();
                         return;
 
@@ -1125,6 +1131,7 @@ namespace MetaMorpheusGUI
                         tasksTreeView.Items.Refresh();
                         return;
                 }
+            }
 
             if (a.SelectedItem is OutputFileForTreeView fileThing)
             {

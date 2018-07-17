@@ -49,10 +49,22 @@ namespace MetaMorpheusGUI
 
         private void UpdateFieldsFromTask(AggregationTask task)
         {
+            deconvolutePrecursors.IsChecked = task.CommonParameters.DoPrecursorDeconvolution;
+            useProvidedPrecursor.IsChecked = task.CommonParameters.UseProvidedPrecursorInfo;
+            DeconvolutionMaxAssumedChargeStateTextBox.Text = task.CommonParameters.DeconvolutionMaxAssumedChargeState.ToString();
+            trimMs1.IsChecked = task.CommonParameters.TrimMs1Peaks;
+            trimMsMs.IsChecked = task.CommonParameters.TrimMsMsPeaks;
+            TopNPeaksTextBox.Text = task.CommonParameters.TopNpeaks == int.MaxValue ? "" : task.CommonParameters.TopNpeaks.ToString(CultureInfo.InvariantCulture);
+            MinRatioTextBox.Text = task.CommonParameters.MinRatio.ToString(CultureInfo.InvariantCulture);
+
             productMassToleranceTextBox.Text = task.CommonParameters.ProductMassTolerance.Value.ToString(CultureInfo.InvariantCulture);
             productMassToleranceComboBox.SelectedIndex = task.CommonParameters.ProductMassTolerance is AbsoluteTolerance ? 0 : 1;
             precursorMassToleranceTextBox.Text = task.CommonParameters.PrecursorMassTolerance.Value.ToString(CultureInfo.InvariantCulture);
             precursorMassToleranceComboBox.SelectedIndex = task.CommonParameters.PrecursorMassTolerance is AbsoluteTolerance ? 0 : 1;
+
+            numMS1ToAverageTextBox.Text = task.AggregationParameters.NumberOfMS1SpectraToAverage.ToString();
+            retentionTimeToleranceTextBox.Text = task.AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes.ToString(CultureInfo.InvariantCulture);
+            minimumCosineScoreTextBox.Text = task.AggregationParameters.MinCosineScoreAllowed.ToString(CultureInfo.InvariantCulture);
 
             OutputFileNameTextBox.Text = task.CommonParameters.TaskDescriptor;
         }
