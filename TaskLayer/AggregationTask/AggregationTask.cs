@@ -24,11 +24,11 @@ namespace TaskLayer
         public AggregationTask() : base(MyTask.Aggregate)
         {
             CommonParameters = new CommonParameters(
-                productMassTolerance: new PpmTolerance(25),
-                precursorMassTolerance: new PpmTolerance(15),
+                productMassTolerance: new PpmTolerance(15),
+                precursorMassTolerance: new PpmTolerance(4),
                 trimMsMsPeaks: false,
-                doPrecursorDeconvolution: false,
-                scoreCutoff: 10);
+                doPrecursorDeconvolution: false
+                );
 
             AggregationParameters = new AggregationParameters();
         }
@@ -74,18 +74,13 @@ namespace TaskLayer
                 var thisId = new List<string> { taskId, "Individual Spectra Files", origDataFile };
                 Status("Loading spectra file...", thisId);
                 MsDataFile myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks);
-                Status("Getting ms2 scans...", thisId);
-
-                //no need to normalize until fix the cosine to pick the most similar intensity (currently picks lowest mass)
-                //normalize the ms2 spectra to facilitate 
-                //Status("Normalizing MS2 scans...", new List<string> { taskId, "Individual Spectra Files" });
-                //const int numHighestIntensityPeaksToSumAndNormalizeTo = 10;
-                //List<MsDataScan> scans = new List<MsDataScan>();
-                AggregationEngine engine = new AggregationEngine(myMsDataFile, origDataFile, combinedParams, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed);
-                engine.Run();
 
                 // get datapoints to fit Aggregation function to
                 Status("Aggregating data points...", thisId);
+                AggregationEngine engine = new AggregationEngine(myMsDataFile, origDataFile, combinedParams, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed);
+                engine.Run();
+
+
 
                 //Toml.WriteFile(fileSpecificParams, newTomlFileName, tomlConfig);
 
