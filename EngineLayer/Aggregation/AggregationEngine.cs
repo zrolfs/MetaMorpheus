@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using MzLibUtil;
 using MathNet.Numerics.Statistics;
 using System.Linq;
+using Chemistry;
 
 namespace EngineLayer.Aggregation
 {
@@ -165,7 +166,7 @@ namespace EngineLayer.Aggregation
                 }
 
                 //overwrite the existing spectrum
-                ms1scans[seedScanIndex] = CloneDataScanWithNewSpectrum(ms1scans[seedScanIndex], new MzSpectrum(mzsToAdd.ToArray(), intensitiesToAdd.ToArray(), false));
+                ms1scans[seedScanIndex] = CloneDataScanWithUpdatedFields(ms1scans[seedScanIndex], new MzSpectrum(mzsToAdd.ToArray(), intensitiesToAdd.ToArray(), false));
             }
 
             //update the datafile
@@ -346,28 +347,48 @@ namespace EngineLayer.Aggregation
             }
             groups = scoredGroups; //save
 
+            //order by the middle scan number
+            groups = groups.OrderBy(x => x[x.Count / 2].OneBasedScanNumber).ToList();
 
             Status("Averaging MS2 spectra");
-            //Each MS2 spectra is going to be assigned a new scan number that's placed at the earliest occurance of the group.
-            List<Ms2ScanWithSpecificMass> syntheticSpectra = new List<Ms2ScanWithSpecificMass>();
-            List<int> scanNumbersForSyntheticSpectra = new List<int>();
+            //Each MS2 spectra is going to be assigned a new scan number that's placed at the middle of the group. 
+            //There's the possibility that more spectra are generated because of chimeras, or fewer spectra because of aggregation (regardless, fewer comparisons afterward)
+            int assignedScanNumber = 0; //this gets ++ immediately, so there shouldn't be any 0 scan numbers
+            int ms1Index = 0;
+            int mostRecentPrecursorNumber = 0;
+
+            List<MsDataScan> syntheticSpectra = new List<MsDataScan>(); //include MS1 as we go through this
             foreach (List<Ms2ScanWithSpecificMass> group in groups)
             {
-                if (group.Count == 1) //if nothing to aggregate, just save it
+                assignedScanNumber++;
+                Ms2ScanWithSpecificMass representativeScan = group[group.Count / 2];
+
+                while (ms1Index < ms1scans.Length
+                    && representativeScan.OneBasedScanNumber > ms1scans[ms1Index].OneBasedScanNumber) //if there should be a precursor at this point
                 {
-                    syntheticSpectra.Add(group[0]);
-                    scanNumbersForSyntheticSpectra.Add(group[0].OneBasedScanNumber);
+                    mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
+                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                    ms1Index++; //update to the next precursor
+                    assignedScanNumber++; //update the current scan
+                }
+
+                if (group.Count == 1) //if nothing to aggregate, just save it after updating precursor info
+                {
+                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
+                        representativeScan.TheScan,                       
+                        precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
+                        precursorCharge: representativeScan.PrecursorCharge,
+                        precursorMass: representativeScan.PrecursorMass
+                        ));
                 }
                 else
                 {
-                    scanNumbersForSyntheticSpectra.Add(group[group.Count/2].OneBasedScanNumber);
-
-                    List<double> synethicMZs = new List<double>();
+                    List<double> syntheticMZs = new List<double>();
                     List<double> syntheticIntensities = new List<double>();
 
                     //get values
-                    double[][] groupedMzs = group.Select(x => x.TheScan.MassSpectrum.XArray).ToArray();
-                    double[][] groupedIntensities = group.Select(x => x.TheScan.MassSpectrum.YArray).ToArray();
+                    double[][] mzsForGroupedScans = group.Select(x => x.TheScan.MassSpectrum.XArray).ToArray();
+                    double[][] intensitiesForGroupedScans = group.Select(x => x.TheScan.MassSpectrum.YArray).ToArray();
 
                     List<double> allMzs = new List<double>();
                     List<double> groupedMzMaxRanges = new List<double>();
@@ -399,30 +420,61 @@ namespace EngineLayer.Aggregation
                     }
 
                     //we're done grouping peaks, see if there's enough info (half of all grouped Ms2s must contain this peak group)
-                    int numScansNeeded = group.Count / 2;
-                    int[] peakPositionArray = new int[group.Count];
+                    int[] peakPositionArray = new int[group.Count]; //save position so we don't have to iterate through each time
+
                     foreach (double maxValue in groupedMzMaxRanges) //foreach peak group
                     {
-                        for(int i=0; i<group.Count; i++) //foreach scan we're looking at here
+                        int numScansNeeded = group.Count / 2;
+                        List<(double mz, double intensity)> groupedPeaks = new List<(double mz, double intensity)>();
+                        for (int i = 0; i < group.Count; i++) //foreach scan we're looking at here
                         {
-                            double[] currentScanMzs = groupedMzs[i]; //get mzs
-                            double[] currentScanIntensities = groupedIntensities[i]; //get intensities
+                            double[] currentScanMzs = mzsForGroupedScans[i]; //get mzs
+                            double[] currentScanIntensities = intensitiesForGroupedScans[i]; //get intensities
                             int j = peakPositionArray[i]; //previous position we left off at
                             for (; j < currentScanMzs.Length; j++)
                             {
-                                if(currentScanMzs[j]<maxValue)
+                                if (currentScanMzs[j] < maxValue) //it's in range, so save it!
                                 {
-
+                                    groupedPeaks.Add((currentScanMzs[j], currentScanIntensities[j]));
+                                }
+                                else //not a match
+                                {
+                                    break;
                                 }
                             }
-                            peakPositionArray[i] = j;
+                            if (peakPositionArray[i] != j) //check if we found anything
+                            {
+                                peakPositionArray[i] = j; //update position
+                                numScansNeeded--; //we had a hit, so we need one fewer scan now!
+                            }
+                        }
+                        if (numScansNeeded <= 0) //if we saw this peak group enough times to believe it
+                        {
+                            (double mz, double intensity) syntheticPeak = AverageMzsAndIntensities(groupedPeaks);
+                            syntheticMZs.Add(syntheticPeak.mz);
+                            syntheticIntensities.Add(syntheticPeak.intensity);
                         }
                     }
-                    ///////////
+
+                    MzSpectrum syntheticSpectrum = new MzSpectrum(syntheticMZs.ToArray(), syntheticIntensities.ToArray(), false);
+                    MsDataScan syntheticScan = CloneDataScanWithUpdatedFields(
+                        representativeScan.TheScan,
+                        syntheticSpectrum,
+                        precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz, 
+                        precursorCharge: representativeScan.PrecursorCharge,
+                        precursorMass: representativeScan.PrecursorMass
+                        );
+                    
                 }
             }
+            //wrap up any precursor scans that didn't make it in
+            for(;ms1Index<ms1scans.Length; ms1Index++)
+            {
+                assignedScanNumber++; //update the current scan
+                syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+            }
 
-            AggregatedDataFile = new MsDataFile(originalFile.GetAllScansList().ToArray(), originalFile.SourceFile);
+            AggregatedDataFile = new MsDataFile(syntheticSpectra.ToArray(), originalFile.SourceFile);
             return new MetaMorpheusEngineResults(this);
         }
 
@@ -504,7 +556,7 @@ namespace EngineLayer.Aggregation
             return Math.Round(numerator / denominator * 1000) / 1000;
         }
 
-        public void AverageMzs(List<double> referenceListOfMzs)
+        public void AverageMzs(List<double> referenceListOfMzs) //use for MS1 scans
         {
             //Currently NOT using intensity for weighting. Reason being that it's more computationally intensive to save those values.
             if (referenceListOfMzs.Count != 1) //if it's worth averaging
@@ -519,11 +571,49 @@ namespace EngineLayer.Aggregation
             }
         }
 
-        public MsDataScan CloneDataScanWithNewSpectrum(MsDataScan oldScan, MzSpectrum updatedSpectrum)
+        public (double mz, double intensity) AverageMzsAndIntensities(List<(double mz, double intensity)> peaks) //use for MS2 scans
         {
+            double normalizedMzSum = peaks.Sum(x => x.mz * x.intensity); //weight by intensity
+            double intensitySum = peaks.Sum(x => x.intensity);
+            double averageMz = normalizedMzSum / intensitySum;
+            double averageIntensity = intensitySum / peaks.Count;
+            return (averageMz, averageIntensity);
+        }
+
+        public MsDataScan CloneDataScanWithUpdatedFields(MsDataScan oldScan, 
+            MzSpectrum updatedSpectrum = null,
+            int? scanNumber = null,
+            int? precursorScanNumber = null,
+            double? precursorMonoisotopicMz = null, 
+            int? precursorCharge = null, 
+            double? precursorMass = null
+            )
+        {
+            if (!scanNumber.HasValue)
+            {
+                scanNumber = oldScan.OneBasedScanNumber;
+            }
+            if (!precursorScanNumber.HasValue)
+            {
+                precursorScanNumber = oldScan.OneBasedPrecursorScanNumber;
+            }
+            if (updatedSpectrum == null)
+            {
+                updatedSpectrum = oldScan.MassSpectrum;
+            }
+            if(!precursorMonoisotopicMz.HasValue)
+            {
+                precursorMonoisotopicMz = oldScan.SelectedIonMonoisotopicGuessMz;
+            }
+            if(!precursorCharge.HasValue)
+            {
+                precursorCharge = oldScan.SelectedIonChargeStateGuess;
+            }
+            double? selectedIonMz = precursorMass.HasValue ? precursorMass.Value.ToMz(precursorCharge.Value) : oldScan.SelectedIonMZ;
+
             return new MsDataScan(
-                updatedSpectrum,
-                oldScan.OneBasedScanNumber,
+                updatedSpectrum, //changed?
+                scanNumber.Value, //changed?
                 oldScan.MsnOrder,
                 oldScan.IsCentroid,
                 oldScan.Polarity,
@@ -535,14 +625,14 @@ namespace EngineLayer.Aggregation
                 oldScan.InjectionTime,
                 oldScan.NoiseData,
                 oldScan.NativeId,
-                oldScan.SelectedIonMZ,
-                oldScan.SelectedIonChargeStateGuess,
+                selectedIonMz, //changed?
+                precursorCharge, //changed?
                 oldScan.SelectedIonIntensity,
-                oldScan.IsolationMz,
+                selectedIonMz, //changed?
                 oldScan.IsolationWidth,
                 oldScan.DissociationType,
-                oldScan.OneBasedPrecursorScanNumber,
-                oldScan.SelectedIonMonoisotopicGuessMz
+                precursorScanNumber, //changed?
+                precursorMonoisotopicMz //changed?
                 );
         }
     }
