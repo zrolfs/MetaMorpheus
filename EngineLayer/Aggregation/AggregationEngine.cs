@@ -1,14 +1,9 @@
 ﻿using MassSpectrometry;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using MzLibUtil;
-using MathNet.Numerics.Statistics;
-using System.Linq;
 using Chemistry;
-using System.Diagnostics;
 
 namespace EngineLayer.Aggregation
 {
@@ -391,18 +386,23 @@ namespace EngineLayer.Aggregation
                 {
                     mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
                     syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                    if(syntheticSpectra.Count != assignedScanNumber)
+                    { }
                     ms1Index++; //update to the next precursor
                     assignedScanNumber++; //update the current scan
                 }
 
-                if (group.Count == 1) //if nothing to aggregate, just save it after updating precursor info
+                if (group.Count == 1) //if nothing to aggregate, just save it after updating scan number and precursor info
                 {
                     syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
                         representativeScan.TheScan,
+                        scanNumber: assignedScanNumber, //update scan number
                         precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
                         precursorCharge: representativeScan.PrecursorCharge,
                         precursorMass: representativeScan.PrecursorMass
                         ));
+                    if (syntheticSpectra.Count != assignedScanNumber)
+                    { }
                 }
                 else
                 {
@@ -480,14 +480,16 @@ namespace EngineLayer.Aggregation
                     }
 
                     MzSpectrum syntheticSpectrum = new MzSpectrum(syntheticMZs.ToArray(), syntheticIntensities.ToArray(), false);
-                    MsDataScan syntheticScan = CloneDataScanWithUpdatedFields(
+                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
                         representativeScan.TheScan,
                         syntheticSpectrum,
+                        scanNumber: assignedScanNumber,
                         precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
                         precursorCharge: representativeScan.PrecursorCharge,
                         precursorMass: representativeScan.PrecursorMass
-                        );
-
+                        ));
+                    if (syntheticSpectra.Count != assignedScanNumber)
+                    { }
                 }
             }
             //wrap up any precursor scans that didn't make it in
@@ -495,6 +497,8 @@ namespace EngineLayer.Aggregation
             {
                 assignedScanNumber++; //update the current scan
                 syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                if (syntheticSpectra.Count != assignedScanNumber)
+                { }
             }
 
             #endregion Averaging MS2 spectra

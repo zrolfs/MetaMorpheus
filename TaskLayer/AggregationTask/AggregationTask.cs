@@ -1,19 +1,10 @@
 using EngineLayer;
 using EngineLayer.Aggregation;
-using EngineLayer.ClassicSearch;
-using EngineLayer.FdrAnalysis;
 using IO.MzML;
 using MassSpectrometry;
 using MzLibUtil;
-using Nett;
-using Proteomics;
-using Proteomics.AminoAcidPolymer;
-using Proteomics.ProteolyticDigestion;
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using UsefulProteomicsDatabases;
 
 namespace TaskLayer
 {
@@ -86,7 +77,5 @@ namespace TaskLayer
             }
             return MyTaskResults;
         }
-
-
     }
 }
