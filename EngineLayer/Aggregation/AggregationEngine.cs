@@ -1,13 +1,4 @@
 ﻿using MassSpectrometry;
-using SharpLearning.Common.Interfaces;
-using SharpLearning.Containers.Matrices;
-using SharpLearning.CrossValidation.TrainingTestSplitters;
-using SharpLearning.GradientBoost.Learners;
-using SharpLearning.GradientBoost.Models;
-using SharpLearning.Metrics.Regression;
-using SharpLearning.Optimization;
-using SharpLearning.RandomForest.Learners;
-using SharpLearning.RandomForest.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -17,6 +8,7 @@ using MzLibUtil;
 using MathNet.Numerics.Statistics;
 using System.Linq;
 using Chemistry;
+using System.Diagnostics;
 
 namespace EngineLayer.Aggregation
 {
@@ -48,16 +40,28 @@ namespace EngineLayer.Aggregation
 
         protected override MetaMorpheusEngineResults RunSpecific()
         {
+            int oldPercentProgress = 0; //progress keeper
+
+            #region Averaging MS1 spectra
+
             Status("Averaging MS1 spectra");
+
             //we are ONLY averaging m/z and NOT intensity. Intensity averaging would convolute downstream quantification
             List<MsDataScan> originalScans = originalFile.GetAllScansList();
             MsDataScan[] ms1scans = originalScans.Where(x => x.MsnOrder == 1).ToArray();
             //we have a set of peaks in the ms1 scan, and we'll cycle through until:
             //-we have two consecutive ms1 scans that do not contain a peak, 
             //-we reach the end of the file
-            double[][] ms1mzs = ms1scans.Select(x => x.MassSpectrum.XArray).ToArray();
-            List<double>[][] allMs1PeaksFound = new List<double>[ms1mzs.Length][]; //this is a tricky index. Each ms1 scan has an index of List<double>[], where each peak of the ms1 scan has a List<double> that contains all the grouped mzs for that peak.
+            double[][] ms1mzs = new double[ms1scans.Length][]; //quickly have mzs on hand
+            List<double>[][] allMs1PeaksFound = new List<double>[ms1scans.Length][]; //this is a tricky index. Each ms1 scan has an index of List<double>[], where each peak of the ms1 scan has a List<double> that contains all the grouped mzs for that peak.
+            for (int i = 0; i < ms1scans.Length; i++) //populate arrays
+            {
+                double[] mzArray = ms1scans[i].MassSpectrum.XArray;
+                ms1mzs[i] = mzArray;
+                allMs1PeaksFound[i] = new List<double>[mzArray.Length];
+            }
 
+            //go through every scan
             for (int seedScanIndex = 0; seedScanIndex < ms1mzs.Length; seedScanIndex++)
             {
                 double[] seedMzs = ms1mzs[seedScanIndex]; //grab current ms1scan
@@ -154,19 +158,30 @@ namespace EngineLayer.Aggregation
                 //All grouping is done for this seed, now update the scan with the aggregated mzs
                 List<double> mzsToAdd = new List<double>();
                 List<double> intensitiesToAdd = new List<double>();
-                double[] unchangedIntensities = ms1scans[seedScanIndex].MassSpectrum.YArray; //get the old intensities
+                MsDataScan originalScan = ms1scans[seedScanIndex];
+                double[] unchangedIntensities = originalScan.MassSpectrum.YArray; //get the old intensities
                 for (int peakIndex = 0; peakIndex < seedPeaksFound.Length; peakIndex++)
                 {
                     List<double> mz = seedPeaksFound[peakIndex];
-                    if (mz.Count != 0) // if we didn't remove the peak
+                    if (mz.Count == 1) // if we didn't remove the peak
                     {
-                        mzsToAdd.Add(mz[0]);
+                        mzsToAdd.Add(mz[0]); //[0] because there's only one value now that we've averaged them
                         intensitiesToAdd.Add(unchangedIntensities[peakIndex]);
                     }
                 }
 
-                //overwrite the existing spectrum
-                ms1scans[seedScanIndex] = CloneDataScanWithUpdatedFields(ms1scans[seedScanIndex], new MzSpectrum(mzsToAdd.ToArray(), intensitiesToAdd.ToArray(), false));
+                double[] mzArray = mzsToAdd.ToArray();
+                double[] intensityArray = intensitiesToAdd.ToArray();
+                MzSpectrum syntheticSpectrum = new MzSpectrum(mzArray, intensityArray, false);
+                ms1scans[seedScanIndex] = CloneDataScanWithUpdatedFields(originalScan, syntheticSpectrum);
+
+                var percentProgress = (int)((seedScanIndex / ms1mzs.Length) * 100);
+
+                if (percentProgress > oldPercentProgress)
+                {
+                    oldPercentProgress = percentProgress;
+                    ReportProgress(new ProgressEventArgs(percentProgress, "Averaging MS1 spectra... ", nestedIds));
+                }
             }
 
             //update the datafile
@@ -174,14 +189,18 @@ namespace EngineLayer.Aggregation
 
             //estimate optimal retention time tolerance
             //we previously recorded the difference between scan indexes for elutions, now use those
-            double totalRunTime = ms1scans.Last().RetentionTime;
-            double estimatedTimeBetweenMs1Scans = totalRunTime / ms1scans.Length;
-            double averageElution = elutionProfileWidthsInScans.Average() * estimatedTimeBetweenMs1Scans;
-            double innerQuartile = Statistics.InterquartileRange(elutionProfileWidthsInScans) * estimatedTimeBetweenMs1Scans;
+            //double totalRunTime = ms1scans.Last().RetentionTime;
+            //double estimatedTimeBetweenMs1Scans = totalRunTime / ms1scans.Length;
+            //double averageElution = elutionProfileWidthsInScans.Average() * estimatedTimeBetweenMs1Scans;
+            //double innerQuartile = Statistics.InterquartileRange(elutionProfileWidthsInScans) * estimatedTimeBetweenMs1Scans;
             //currently not doing anything with this info
+            
+            #endregion Averaging MS1 spectra
 
             Status("Getting ms2 scans...");
             Ms2ScanWithSpecificMass[] MS2Scans = GetMs2Scans(originalFile, OriginalFilePath, commonParameters.DoPrecursorDeconvolution, commonParameters.UseProvidedPrecursorInfo, commonParameters.DeconvolutionIntensityRatio, commonParameters.DeconvolutionMaxAssumedChargeState, commonParameters.DeconvolutionMassTolerance).ToArray();
+
+            #region Identifying MS2 groups
 
             Status("Identifying MS2 groups");
             //need to group together which scans to compare
@@ -215,8 +234,8 @@ namespace EngineLayer.Aggregation
                 {
                     seen[i] = true; //we've seen it, so don't use it again
                     var scan = MS2Scans[i]; //get the scan
-                    int obsFragmentFloorMass = (int)Math.Floor((commonParameters.PrecursorMassTolerance.GetMinimumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
-                    int obsFragmentCeilingMass = (int)Math.Ceiling((commonParameters.PrecursorMassTolerance.GetMaximumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
+                    int obsFragmentFloorMass = (int)Math.Floor((PrecursorTolerance.GetMinimumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
+                    int obsFragmentCeilingMass = (int)Math.Ceiling((PrecursorTolerance.GetMaximumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
                     int minBinObs = -1; //save outer bounds so we can expand tolerances if needed
                     int maxBinObs = -1; //save outer bounds so we can expand tolerances if needed
                     List<Ms2ScanWithSpecificMass> groupToAdd = new List<Ms2ScanWithSpecificMass>(); //current group
@@ -241,13 +260,13 @@ namespace EngineLayer.Aggregation
 
                     //get lower bound if it's expanded
                     int decreasingValues = obsFragmentFloorMass - 1;
-                    int minimumValue = (int)Math.Floor(commonParameters.PrecursorMassTolerance.GetMinimumValue(minBinObs));
+                    int minimumValue = (int)Math.Floor(PrecursorTolerance.GetMinimumValue(minBinObs));
                     while (decreasingValues > minimumValue)
                     {
                         List<int> scans = massIndex[decreasingValues];
                         if (scans != null)
                         {
-                            minimumValue = (int)Math.Floor(commonParameters.PrecursorMassTolerance.GetMinimumValue(decreasingValues));
+                            minimumValue = (int)Math.Floor(PrecursorTolerance.GetMinimumValue(decreasingValues));
 
                             foreach (int scanIndex in scans)
                             {
@@ -260,13 +279,13 @@ namespace EngineLayer.Aggregation
 
                     //get upper bound if it's expanded
                     int increasingValues = obsFragmentCeilingMass + 1;
-                    int maximumValue = (int)Math.Ceiling(commonParameters.PrecursorMassTolerance.GetMaximumValue(maxBinObs));
+                    int maximumValue = (int)Math.Ceiling(PrecursorTolerance.GetMaximumValue(maxBinObs));
                     while (increasingValues < maximumValue)
                     {
                         List<int> scans = massIndex[increasingValues];
                         if (scans != null)
                         {
-                            maximumValue = (int)Math.Ceiling(commonParameters.PrecursorMassTolerance.GetMaximumValue(increasingValues));
+                            maximumValue = (int)Math.Ceiling(PrecursorTolerance.GetMaximumValue(increasingValues));
 
                             foreach (int scanIndex in scans)
                             {
@@ -326,7 +345,7 @@ namespace EngineLayer.Aggregation
                     {
                         foreach (Ms2ScanWithSpecificMass scanInSubGroup in subGroup) //iterate through each member of each previously found group
                         {
-                            if (MinCosineScoreAllowed <= CosineScore(scan.TheScan.MassSpectrum, scanInSubGroup.TheScan.MassSpectrum, commonParameters.ProductMassTolerance)) //if a match, add it
+                            if (MinCosineScoreAllowed <= CosineScore(scan.TheScan.MassSpectrum, scanInSubGroup.TheScan.MassSpectrum, ProductTolerance)) //if a match, add it
                             {
                                 subGroup.Add(scan);
                                 foundSpot = true;
@@ -349,6 +368,10 @@ namespace EngineLayer.Aggregation
 
             //order by the middle scan number
             groups = groups.OrderBy(x => x[x.Count / 2].OneBasedScanNumber).ToList();
+
+            #endregion Identifying MS2 groups
+
+            #region Averaging MS2 spectra
 
             Status("Averaging MS2 spectra");
             //Each MS2 spectra is going to be assigned a new scan number that's placed at the middle of the group. 
@@ -375,7 +398,7 @@ namespace EngineLayer.Aggregation
                 if (group.Count == 1) //if nothing to aggregate, just save it after updating precursor info
                 {
                     syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
-                        representativeScan.TheScan,                       
+                        representativeScan.TheScan,
                         precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
                         precursorCharge: representativeScan.PrecursorCharge,
                         precursorMass: representativeScan.PrecursorMass
@@ -460,19 +483,21 @@ namespace EngineLayer.Aggregation
                     MsDataScan syntheticScan = CloneDataScanWithUpdatedFields(
                         representativeScan.TheScan,
                         syntheticSpectrum,
-                        precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz, 
+                        precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
                         precursorCharge: representativeScan.PrecursorCharge,
                         precursorMass: representativeScan.PrecursorMass
                         );
-                    
+
                 }
             }
             //wrap up any precursor scans that didn't make it in
-            for(;ms1Index<ms1scans.Length; ms1Index++)
+            for (; ms1Index < ms1scans.Length; ms1Index++)
             {
                 assignedScanNumber++; //update the current scan
                 syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
             }
+
+            #endregion Averaging MS2 spectra
 
             AggregatedDataFile = new MsDataFile(syntheticSpectra.ToArray(), originalFile.SourceFile);
             return new MetaMorpheusEngineResults(this);
@@ -580,20 +605,20 @@ namespace EngineLayer.Aggregation
             return (averageMz, averageIntensity);
         }
 
-        public MsDataScan CloneDataScanWithUpdatedFields(MsDataScan oldScan, 
+        public MsDataScan CloneDataScanWithUpdatedFields(MsDataScan oldScan,
             MzSpectrum updatedSpectrum = null,
-            int? scanNumber = null,
-            int? precursorScanNumber = null,
-            double? precursorMonoisotopicMz = null, 
-            int? precursorCharge = null, 
-            double? precursorMass = null
+            int scanNumber = -1,
+            int? precursorScanNumber = -1,
+            double? precursorMonoisotopicMz = -1,
+            int? precursorCharge = -1,
+            double? precursorMass = -1
             )
         {
-            if (!scanNumber.HasValue)
+            if (scanNumber == -1)
             {
                 scanNumber = oldScan.OneBasedScanNumber;
             }
-            if (!precursorScanNumber.HasValue)
+            if (precursorScanNumber == -1)
             {
                 precursorScanNumber = oldScan.OneBasedPrecursorScanNumber;
             }
@@ -601,19 +626,19 @@ namespace EngineLayer.Aggregation
             {
                 updatedSpectrum = oldScan.MassSpectrum;
             }
-            if(!precursorMonoisotopicMz.HasValue)
+            if (precursorMonoisotopicMz.Value == -1)
             {
                 precursorMonoisotopicMz = oldScan.SelectedIonMonoisotopicGuessMz;
             }
-            if(!precursorCharge.HasValue)
+            if (precursorCharge.Value == -1)
             {
                 precursorCharge = oldScan.SelectedIonChargeStateGuess;
             }
-            double? selectedIonMz = precursorMass.HasValue ? precursorMass.Value.ToMz(precursorCharge.Value) : oldScan.SelectedIonMZ;
+            double? selectedIonMz = precursorMass == -1 ? oldScan.SelectedIonMZ : precursorMass.Value.ToMz(precursorCharge.Value);
 
-            return new MsDataScan(
+            var scan = new MsDataScan(
                 updatedSpectrum, //changed?
-                scanNumber.Value, //changed?
+                scanNumber, //changed?
                 oldScan.MsnOrder,
                 oldScan.IsCentroid,
                 oldScan.Polarity,
@@ -634,6 +659,8 @@ namespace EngineLayer.Aggregation
                 precursorScanNumber, //changed?
                 precursorMonoisotopicMz //changed?
                 );
+
+            return scan;
         }
     }
 }

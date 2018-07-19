@@ -26,8 +26,7 @@ namespace TaskLayer
             CommonParameters = new CommonParameters(
                 productMassTolerance: new PpmTolerance(15),
                 precursorMassTolerance: new PpmTolerance(4),
-                trimMsMsPeaks: false,
-                doPrecursorDeconvolution: false
+                trimMsMsPeaks: false
                 );
 
             AggregationParameters = new AggregationParameters();
@@ -80,15 +79,14 @@ namespace TaskLayer
                 AggregationEngine engine = new AggregationEngine(myMsDataFile, origDataFile, combinedParams, new List<string> { taskId, "Individual Spectra Files", origDataFileWithoutExtension }, AggregationParameters.MaxRetentionTimeDifferenceAllowedInMinutes, AggregationParameters.MinCosineScoreAllowed);
                 engine.Run();
 
+                Status("Writing aggregated spectra...", thisId);
+                MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(engine.AggregatedDataFile, aggregatedFilePath, false);
 
-
-                //Toml.WriteFile(fileSpecificParams, newTomlFileName, tomlConfig);
-
-                // SucessfullyFinishedWritingFile(newTomlFileName, new List<string> { taskId, "Individual Spectra Files", originalUncalibratedFilenameWithoutExtension });
-
-                MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(myMsDataFile, aggregatedFilePath, false);
+                Status("Done!", thisId);
             }
             return MyTaskResults;
         }
+
+
     }
 }

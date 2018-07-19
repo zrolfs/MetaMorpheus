@@ -496,19 +496,24 @@ namespace MetaMorpheusGUI
                         {
                             switch (tomlFile.Get<string>("TaskType"))
                             {
-                                case "Search":
-                                    var ye1 = Toml.ReadFile<SearchTask>(draggedFilePath, MetaMorpheusTask.tomlConfig);
-                                    AddTaskToCollection(ye1);
-                                    break;
-
                                 case "Calibrate":
                                     var ye2 = Toml.ReadFile<CalibrationTask>(draggedFilePath, MetaMorpheusTask.tomlConfig);
                                     AddTaskToCollection(ye2);
                                     break;
 
+                                case "Aggregate":
+                                    var ye6 = Toml.ReadFile<AggregationTask>(draggedFilePath, MetaMorpheusTask.tomlConfig);
+                                    AddTaskToCollection(ye6);
+                                    break;
+
                                 case "Gptmd":
                                     var ye3 = Toml.ReadFile<GptmdTask>(draggedFilePath, MetaMorpheusTask.tomlConfig);
                                     AddTaskToCollection(ye3);
+                                    break;
+
+                                case "Search":
+                                    var ye1 = Toml.ReadFile<SearchTask>(draggedFilePath, MetaMorpheusTask.tomlConfig);
+                                    AddTaskToCollection(ye1);
                                     break;
 
                                 case "XLSearch":

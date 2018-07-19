@@ -75,19 +75,24 @@ namespace MetaMorpheusCommandLine
 
                         switch (uhum.Get<string>("TaskType"))
                         {
-                            case "Search":
-                                var ye1 = Toml.ReadFile<SearchTask>(filePath, MetaMorpheusTask.tomlConfig);
-                                taskList.Add(("Task" + (i + 1) + "SearchTask", ye1));
-                                break;
-
                             case "Calibrate":
                                 var ye2 = Toml.ReadFile<CalibrationTask>(filePath, MetaMorpheusTask.tomlConfig);
                                 taskList.Add(("Task" + (i + 1) + "CalibrationTask", ye2));
                                 break;
 
+                            case "Aggregate":
+                                var ye5 = Toml.ReadFile<SearchTask>(filePath, MetaMorpheusTask.tomlConfig);
+                                taskList.Add(("Task" + (i + 1) + "AggregationTask", ye5));
+                                break;
+
                             case "Gptmd":
                                 var ye3 = Toml.ReadFile<GptmdTask>(filePath, MetaMorpheusTask.tomlConfig);
                                 taskList.Add(("Task" + (i + 1) + "GptmdTask", ye3));
+                                break;
+
+                            case "Search":
+                                var ye1 = Toml.ReadFile<SearchTask>(filePath, MetaMorpheusTask.tomlConfig);
+                                taskList.Add(("Task" + (i + 1) + "SearchTask", ye1));
                                 break;
 
                             case "XLSearch":
@@ -111,16 +116,20 @@ namespace MetaMorpheusCommandLine
                         var uhum = Toml.ReadFile(filePath, MetaMorpheusTask.tomlConfig);
                         switch (uhum.Get<string>("TaskType"))
                         {
-                            case "Search":
-                                Console.WriteLine("Search tasks are individual tasks. Please use -t for task instead of -m. Skipping.");
-                                break;
-
                             case "Calibrate":
                                 Console.WriteLine("Calibrate tasks are individual tasks. Please use -t for task instead of -m. Skipping.");
                                 break;
 
+                            case "Aggregate":
+                                Console.WriteLine("Aggregate tasks are individual tasks. Pleasue use -t for task instead of -m. Skipping.");
+                                break;
+
                             case "Gptmd":
                                 Console.WriteLine("Gptmd tasks are individual tasks. Please use -t for task instead of -m. Skipping.");
+                                break;
+
+                            case "Search":
+                                Console.WriteLine("Search tasks are individual tasks. Please use -t for task instead of -m. Skipping.");
                                 break;
 
                             case "XLSearch":
