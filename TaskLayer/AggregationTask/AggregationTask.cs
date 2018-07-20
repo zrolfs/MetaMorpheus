@@ -3,6 +3,7 @@ using EngineLayer.Aggregation;
 using IO.MzML;
 using MassSpectrometry;
 using MzLibUtil;
+using Nett;
 using System.Collections.Generic;
 using System.IO;
 
@@ -71,9 +72,25 @@ namespace TaskLayer
                 engine.Run();
 
                 Status("Writing aggregated spectra...", thisId);
+                //write ms file
                 MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(engine.AggregatedDataFile, aggregatedFilePath, false);
+                MyTaskResults.NewSpectra.Add(aggregatedFilePath);
 
-                Status("Done!", thisId);
+                //write a copy of the old file specific parameters (if applicable)
+                if (fileSettingsList[spectraFileIndex] != null)
+                {
+                    string newTomlFileName = Path.Combine(OutputFolder, origDataFileWithoutExtension + aggregateSuffix + ".toml");
+                    Toml.WriteFile(fileSettingsList[spectraFileIndex], newTomlFileName, tomlConfig);
+                    MyTaskResults.NewFileSpecificTomls.Add(newTomlFileName);
+                }
+
+                //write diagnostics = 
+                string diagnosticFileName = Path.Combine(OutputFolder, origDataFileWithoutExtension + "-Diagnostics" + ".txt");
+                using (StreamWriter file = new StreamWriter(diagnosticFileName))
+                {
+                    engine.diagnosticLines.ForEach(x => file.WriteLine(x));
+                }
+                    Status("Done!", thisId);
             }
             return MyTaskResults;
         }

@@ -456,6 +456,8 @@ namespace EngineLayer
         {
             foreach (var ms2scan in myMSDataFile.GetAllScansList().Where(x => x.MsnOrder != 1))
             {
+                if (ms2scan.OneBasedScanNumber == 66749 || ms2scan.OneBasedScanNumber == 66751)
+                { }
                 if (GlobalVariables.StopLoops) { break; }
                 List<(double, int)> isolatedStuff = new List<(double, int)>();
                 if (ms2scan.OneBasedPrecursorScanNumber.HasValue)

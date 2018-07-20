@@ -21,6 +21,7 @@ namespace EngineLayer.Aggregation
         public List<double> elutionProfileWidthsInScans { get; private set; }
         public Tolerance SuggestedPrecursorTolerance { get; private set; }
         public Tolerance SuggestedProductTolerance { get; private set; }
+        public List<string> diagnosticLines { get; private set; }
 
 
         public AggregationEngine(MsDataFile originalFile, string originalFilePath, CommonParameters commonParameters, List<string> nestedIds, double maxRetentionTimeDifferenceAllowedInMinutes, double minCosineScoreAllowed) : base(commonParameters, nestedIds)
@@ -31,6 +32,10 @@ namespace EngineLayer.Aggregation
             PrecursorTolerance = commonParameters.PrecursorMassTolerance;
             ProductTolerance = commonParameters.ProductMassTolerance;
             elutionProfileWidthsInScans = new List<double>();
+            diagnosticLines = new List<string>
+            {
+                "Synthetic Scan Number\tAverage Precursor m/z\tCharge State\tOriginal Scan(s)"
+            };
         }
 
         protected override MetaMorpheusEngineResults RunSpecific()
@@ -47,7 +52,7 @@ namespace EngineLayer.Aggregation
             //we have a set of peaks in the ms1 scan, and we'll cycle through until:
             //-we have two consecutive ms1 scans that do not contain a peak, 
             //-we reach the end of the file
-            double[][] ms1mzs = new double[ms1scans.Length][]; //quickly have mzs on hand
+   /*         double[][] ms1mzs = new double[ms1scans.Length][]; //quickly have mzs on hand
             List<double>[][] allMs1PeaksFound = new List<double>[ms1scans.Length][]; //this is a tricky index. Each ms1 scan has an index of List<double>[], where each peak of the ms1 scan has a List<double> that contains all the grouped mzs for that peak.
             for (int i = 0; i < ms1scans.Length; i++) //populate arrays
             {
@@ -59,6 +64,10 @@ namespace EngineLayer.Aggregation
             //go through every scan
             for (int seedScanIndex = 0; seedScanIndex < ms1mzs.Length; seedScanIndex++)
             {
+                if (GlobalVariables.StopLoops)
+                {
+                    return new MetaMorpheusEngineResults(this);
+                }
                 double[] seedMzs = ms1mzs[seedScanIndex]; //grab current ms1scan
                 int[] numberOfStrikesForEachPeak = new int[seedMzs.Length]; //Pseudo boolean where 0 is found, 1 is not found, 2 (numberOfStrikesBeforeOut) is out.
 
@@ -178,7 +187,7 @@ namespace EngineLayer.Aggregation
                     ReportProgress(new ProgressEventArgs(percentProgress, "Averaging MS1 spectra... ", nestedIds));
                 }
             }
-
+            */
             //update the datafile
             originalFile = new MsDataFile(originalScans.ToArray(), originalFile.SourceFile); //don't need to update ms2 precursor info, because GetMS2Scans does it for us
 
@@ -194,7 +203,7 @@ namespace EngineLayer.Aggregation
 
             Status("Getting ms2 scans...");
             Ms2ScanWithSpecificMass[] MS2Scans = GetMs2Scans(originalFile, OriginalFilePath, commonParameters.DoPrecursorDeconvolution, commonParameters.UseProvidedPrecursorInfo, commonParameters.DeconvolutionIntensityRatio, commonParameters.DeconvolutionMaxAssumedChargeState, commonParameters.DeconvolutionMassTolerance).ToArray();
-
+            /*
             #region Identifying MS2 groups
 
             Status("Identifying MS2 groups");
@@ -227,6 +236,10 @@ namespace EngineLayer.Aggregation
                 //get indexes to compare
                 if (!seen[i])
                 {
+                    if (GlobalVariables.StopLoops)
+                    {
+                        return new MetaMorpheusEngineResults(this);
+                    }
                     seen[i] = true; //we've seen it, so don't use it again
                     var scan = MS2Scans[i]; //get the scan
                     int obsFragmentFloorMass = (int)Math.Floor((PrecursorTolerance.GetMinimumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
@@ -298,6 +311,10 @@ namespace EngineLayer.Aggregation
             List<List<Ms2ScanWithSpecificMass>> retGroups = new List<List<Ms2ScanWithSpecificMass>>();
             foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
             {
+                if (GlobalVariables.StopLoops)
+                {
+                    return new MetaMorpheusEngineResults(this);
+                }
                 List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
                 foreach (Ms2ScanWithSpecificMass scan in group) //iterate through each scan in the previous group
                 {
@@ -332,6 +349,10 @@ namespace EngineLayer.Aggregation
             List<List<Ms2ScanWithSpecificMass>> scoredGroups = new List<List<Ms2ScanWithSpecificMass>>();
             foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
             {
+                if (GlobalVariables.StopLoops)
+                {
+                    return new MetaMorpheusEngineResults(this);
+                }
                 List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
                 foreach (Ms2ScanWithSpecificMass scan in group) //iterate through each scan in the previous group
                 {
@@ -378,6 +399,10 @@ namespace EngineLayer.Aggregation
             List<MsDataScan> syntheticSpectra = new List<MsDataScan>(); //include MS1 as we go through this
             foreach (List<Ms2ScanWithSpecificMass> group in groups)
             {
+                if (GlobalVariables.StopLoops)
+                {
+                    return new MetaMorpheusEngineResults(this);
+                }
                 assignedScanNumber++;
                 Ms2ScanWithSpecificMass representativeScan = group[group.Count / 2];
 
@@ -386,8 +411,6 @@ namespace EngineLayer.Aggregation
                 {
                     mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
                     syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
-                    if(syntheticSpectra.Count != assignedScanNumber)
-                    { }
                     ms1Index++; //update to the next precursor
                     assignedScanNumber++; //update the current scan
                 }
@@ -397,12 +420,11 @@ namespace EngineLayer.Aggregation
                     syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
                         representativeScan.TheScan,
                         scanNumber: assignedScanNumber, //update scan number
+                        precursorScanNumber: mostRecentPrecursorNumber,
                         precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
                         precursorCharge: representativeScan.PrecursorCharge,
                         precursorMass: representativeScan.PrecursorMass
                         ));
-                    if (syntheticSpectra.Count != assignedScanNumber)
-                    { }
                 }
                 else
                 {
@@ -484,12 +506,11 @@ namespace EngineLayer.Aggregation
                         representativeScan.TheScan,
                         syntheticSpectrum,
                         scanNumber: assignedScanNumber,
+                        precursorScanNumber: mostRecentPrecursorNumber,
                         precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
                         precursorCharge: representativeScan.PrecursorCharge,
                         precursorMass: representativeScan.PrecursorMass
                         ));
-                    if (syntheticSpectra.Count != assignedScanNumber)
-                    { }
                 }
             }
             //wrap up any precursor scans that didn't make it in
@@ -497,11 +518,62 @@ namespace EngineLayer.Aggregation
             {
                 assignedScanNumber++; //update the current scan
                 syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
-                if (syntheticSpectra.Count != assignedScanNumber)
-                { }
             }
 
             #endregion Averaging MS2 spectra
+            */
+
+            //////////////
+            int assignedScanNumber = 0; //this gets ++ immediately, so there shouldn't be any 0 scan numbers
+            int ms1Index = 0;
+            int mostRecentPrecursorNumber = 0;
+            //Print diagnostics
+
+            List<MsDataScan> syntheticSpectra = new List<MsDataScan>(); //include MS1 as we go through this
+            foreach (Ms2ScanWithSpecificMass ms2 in MS2Scans)
+            {
+                assignedScanNumber++;
+                if(assignedScanNumber==66749)
+                { }
+                while (ms1Index < ms1scans.Length
+                    && ms2.OneBasedScanNumber > ms1scans[ms1Index].OneBasedScanNumber) //if there should be a precursor at this point
+                {
+                    mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
+                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+        diagnosticLines.Add(assignedScanNumber.ToString() +
+            '\t' + "0"+//ms2.PrecursorMonoisotopicPeakMz.ToString() +
+            '\t' + "0"+//ms2.PrecursorCharge.ToString() +
+            '\t' + ms1scans[ms1Index].OneBasedScanNumber);
+                    ms1Index++; //update to the next precursor
+                    assignedScanNumber++; //update the current scan
+                    if (assignedScanNumber == 66749)
+                    { }
+                }
+                syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
+    ms2.TheScan,
+    scanNumber: assignedScanNumber,
+    precursorScanNumber: mostRecentPrecursorNumber,
+    precursorMonoisotopicMz: ms2.PrecursorMonoisotopicPeakMz,
+    precursorCharge: ms2.PrecursorCharge,
+    precursorMass: ms2.PrecursorMass
+    ));
+                diagnosticLines.Add(assignedScanNumber.ToString() +
+    '\t' + ms2.PrecursorMonoisotopicPeakMz.ToString() +
+    '\t' + ms2.PrecursorCharge.ToString() +
+    '\t' + ms2.OneBasedScanNumber);
+            }
+            for (; ms1Index < ms1scans.Length; ms1Index++)
+            {
+                assignedScanNumber++; //update the current scan
+                if (assignedScanNumber == 66749)
+                { }
+                syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                diagnosticLines.Add(assignedScanNumber.ToString() +
+    '\t' + "0" +//ms2.PrecursorMonoisotopicPeakMz.ToString() +
+    '\t' + "0" +//ms2.PrecursorCharge.ToString() +
+    '\t' + ms1scans[ms1Index].OneBasedScanNumber);
+            }
+            ////////////////////
 
             AggregatedDataFile = new MsDataFile(syntheticSpectra.ToArray(), originalFile.SourceFile);
             return new MetaMorpheusEngineResults(this);

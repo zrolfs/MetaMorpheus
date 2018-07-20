@@ -147,9 +147,11 @@ namespace TaskLayer
                 Ms2ScanWithSpecificMass[] arrayOfMs2ScansSortedByMass = MetaMorpheusEngine.GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).OrderBy(b => b.PrecursorMass).ToArray();
                 numMs2SpectraPerFile.Add(Path.GetFileNameWithoutExtension(origDataFile), new int[] { myMsDataFile.GetAllScansList().Count(p => p.MsnOrder == 2), arrayOfMs2ScansSortedByMass.Length });
                 myFileManager.DoneWithFile(origDataFile);
-
+                var scan1234 = arrayOfMs2ScansSortedByMass.Where(x => x.OneBasedScanNumber == 66749).FirstOrDefault();
+                var scan2345 = arrayOfMs2ScansSortedByMass.Where(x => x.OneBasedScanNumber == 66751).FirstOrDefault();
                 var fileSpecificPsms = new PeptideSpectralMatch[arrayOfMs2ScansSortedByMass.Length];
                 // modern search
+                var scans12345 = arrayOfMs2ScansSortedByMass.Where(x => x.TheScan.NativeId.Contains("24887"));
                 if (SearchParameters.SearchType == SearchType.Modern)
                 {
                     for (int currentPartition = 0; currentPartition < combinedParams.TotalPartitions; currentPartition++)
@@ -212,6 +214,7 @@ namespace TaskLayer
                 // classic search
                 else
                 {
+                    var scans1234567 = arrayOfMs2ScansSortedByMass.Where(x => x.TheScan.NativeId.Contains("24887")).ToList();
                     Status("Starting search...", thisId);
                     new ClassicSearchEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, variableModifications, fixedModifications, proteinList, ionTypes, massDiffAcceptor, combinedParams, thisId).Run();
 
