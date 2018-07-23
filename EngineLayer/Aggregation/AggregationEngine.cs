@@ -52,7 +52,7 @@ namespace EngineLayer.Aggregation
             //we have a set of peaks in the ms1 scan, and we'll cycle through until:
             //-we have two consecutive ms1 scans that do not contain a peak, 
             //-we reach the end of the file
-   /*         double[][] ms1mzs = new double[ms1scans.Length][]; //quickly have mzs on hand
+            double[][] ms1mzs = new double[ms1scans.Length][]; //quickly have mzs on hand
             List<double>[][] allMs1PeaksFound = new List<double>[ms1scans.Length][]; //this is a tricky index. Each ms1 scan has an index of List<double>[], where each peak of the ms1 scan has a List<double> that contains all the grouped mzs for that peak.
             for (int i = 0; i < ms1scans.Length; i++) //populate arrays
             {
@@ -187,8 +187,26 @@ namespace EngineLayer.Aggregation
                     ReportProgress(new ProgressEventArgs(percentProgress, "Averaging MS1 spectra... ", nestedIds));
                 }
             }
-            */
+
             //update the datafile
+            int ms1Index = 0;
+            MsDataScan currentSyntheticMS1 = ms1scans[ms1Index];
+            for (int i = 0; i < originalScans.Count; i++)
+            {
+                if (currentSyntheticMS1.OneBasedScanNumber == originalScans[i].OneBasedScanNumber)
+                {
+                    originalScans[i] = currentSyntheticMS1;
+                    ms1Index++;
+                    if (ms1Index == ms1scans.Length)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        currentSyntheticMS1 = ms1scans[ms1Index];
+                    }
+                }
+            }
             originalFile = new MsDataFile(originalScans.ToArray(), originalFile.SourceFile); //don't need to update ms2 precursor info, because GetMS2Scans does it for us
 
             //estimate optimal retention time tolerance
@@ -203,375 +221,370 @@ namespace EngineLayer.Aggregation
 
             Status("Getting ms2 scans...");
             Ms2ScanWithSpecificMass[] MS2Scans = GetMs2Scans(originalFile, OriginalFilePath, commonParameters.DoPrecursorDeconvolution, commonParameters.UseProvidedPrecursorInfo, commonParameters.DeconvolutionIntensityRatio, commonParameters.DeconvolutionMaxAssumedChargeState, commonParameters.DeconvolutionMassTolerance).ToArray();
-            /*
-            #region Identifying MS2 groups
+           {/*
+                #region Identifying MS2 groups
 
-            Status("Identifying MS2 groups");
-            //need to group together which scans to compare
-            //index ms2scans by precursor masses
-            //Could change this to the max MS1 range observed
-            int maxMass = 30000;
-            int binsPerDalton = 1000;
-            List<int>[] massIndex = new List<int>[maxMass * binsPerDalton]; //scan number possesing a precursor mass of the index
-            for (int i = 0; i < MS2Scans.Length; i++)
-            {
-                int mass = (int)Math.Round(MS2Scans[i].PrecursorMonoisotopicPeakMz * binsPerDalton);
-                if (massIndex[mass] == null)
+                Status("Identifying MS2 groups");
+                //need to group together which scans to compare
+                //index ms2scans by precursor masses
+                //Could change this to the max MS1 range observed
+                int maxMass = 30000;
+                int binsPerDalton = 1000;
+                List<int>[] massIndex = new List<int>[maxMass * binsPerDalton]; //scan number possesing a precursor mass of the index
+                for (int i = 0; i < MS2Scans.Length; i++)
                 {
-                    massIndex[mass] = new List<int> { i };
+                    int mass = (int)Math.Round(MS2Scans[i].PrecursorMonoisotopicPeakMz * binsPerDalton);
+                    if (massIndex[mass] == null)
+                    {
+                        massIndex[mass] = new List<int> { i };
+                    }
+                    else
+                    {
+                        massIndex[mass].Add(i);
+                    }
                 }
-                else
-                {
-                    massIndex[mass].Add(i);
-                }
-            }
-            //somewhat tricky. We want to group a scan with all the other scans, but there's a chance that the tolerance falls outside for some but not for others.
-            //we can just expand the range for tolerance whenever another is added.
+                //somewhat tricky. We want to group a scan with all the other scans, but there's a chance that the tolerance falls outside for some but not for others.
+                //we can just expand the range for tolerance whenever another is added.
 
-            //want to group all scans to compare and later subgroup those where the comparison is above a threshold
-            bool[] seen = new bool[MS2Scans.Length]; //don't double group stuff
-            List<List<Ms2ScanWithSpecificMass>> groups = new List<List<Ms2ScanWithSpecificMass>>();
-            for (int i = 0; i < MS2Scans.Length; i++)
-            {
-                //get indexes to compare
-                if (!seen[i])
+                //want to group all scans to compare and later subgroup those where the comparison is above a threshold
+                bool[] seen = new bool[MS2Scans.Length]; //don't double group stuff
+                List<List<Ms2ScanWithSpecificMass>> groups = new List<List<Ms2ScanWithSpecificMass>>();
+                for (int i = 0; i < MS2Scans.Length; i++)
+                {
+                    //get indexes to compare
+                    if (!seen[i])
+                    {
+                        if (GlobalVariables.StopLoops)
+                        {
+                            return new MetaMorpheusEngineResults(this);
+                        }
+                        seen[i] = true; //we've seen it, so don't use it again
+                        var scan = MS2Scans[i]; //get the scan
+                        int obsFragmentFloorMass = (int)Math.Floor((PrecursorTolerance.GetMinimumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
+                        int obsFragmentCeilingMass = (int)Math.Ceiling((PrecursorTolerance.GetMaximumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
+                        int minBinObs = -1; //save outer bounds so we can expand tolerances if needed
+                        int maxBinObs = -1; //save outer bounds so we can expand tolerances if needed
+                        List<Ms2ScanWithSpecificMass> groupToAdd = new List<Ms2ScanWithSpecificMass>(); //current group
+                                                                                                        //foreach mz in range, expand range if necessary
+                        for (int bin = obsFragmentFloorMass; bin <= obsFragmentCeilingMass; bin++) //go through bins and add to the group
+                        {
+                            List<int> scans = massIndex[bin];
+                            if (scans != null) //FIXME: It's still possible to group things twice since large mz ppm can hit a smaller mz where the small ppm wouldn't
+                            {
+                                if (minBinObs == -1)
+                                {
+                                    minBinObs = bin;
+                                }
+                                maxBinObs = bin;
+                                foreach (int scanIndex in scans)
+                                {
+                                    seen[scanIndex] = true;
+                                    groupToAdd.Add(MS2Scans[scanIndex]);
+                                }
+                            }
+                        }
+
+                        //get lower bound if it's expanded
+                        int decreasingValues = obsFragmentFloorMass - 1;
+                        int minimumValue = (int)Math.Floor(PrecursorTolerance.GetMinimumValue(minBinObs));
+                        while (decreasingValues > minimumValue)
+                        {
+                            List<int> scans = massIndex[decreasingValues];
+                            if (scans != null)
+                            {
+                                minimumValue = (int)Math.Floor(PrecursorTolerance.GetMinimumValue(decreasingValues));
+
+                                foreach (int scanIndex in scans)
+                                {
+                                    seen[scanIndex] = true;
+                                    groupToAdd.Add(MS2Scans[scanIndex]);
+                                }
+                            }
+                            decreasingValues--;
+                        }
+
+                        //get upper bound if it's expanded
+                        int increasingValues = obsFragmentCeilingMass + 1;
+                        int maximumValue = (int)Math.Ceiling(PrecursorTolerance.GetMaximumValue(maxBinObs));
+                        while (increasingValues < maximumValue)
+                        {
+                            List<int> scans = massIndex[increasingValues];
+                            if (scans != null)
+                            {
+                                maximumValue = (int)Math.Ceiling(PrecursorTolerance.GetMaximumValue(increasingValues));
+
+                                foreach (int scanIndex in scans)
+                                {
+                                    seen[scanIndex] = true;
+                                    groupToAdd.Add(MS2Scans[scanIndex]);
+                                }
+                            }
+                            increasingValues++;
+                        }
+                        groups.Add(groupToAdd);
+                    }
+                }
+
+                //Now that we've separated groups by mass, let's try to separate based on retention time
+                List<List<Ms2ScanWithSpecificMass>> retGroups = new List<List<Ms2ScanWithSpecificMass>>();
+                foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
                 {
                     if (GlobalVariables.StopLoops)
                     {
                         return new MetaMorpheusEngineResults(this);
                     }
-                    seen[i] = true; //we've seen it, so don't use it again
-                    var scan = MS2Scans[i]; //get the scan
-                    int obsFragmentFloorMass = (int)Math.Floor((PrecursorTolerance.GetMinimumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
-                    int obsFragmentCeilingMass = (int)Math.Ceiling((PrecursorTolerance.GetMaximumValue(scan.PrecursorMonoisotopicPeakMz)) * binsPerDalton);
-                    int minBinObs = -1; //save outer bounds so we can expand tolerances if needed
-                    int maxBinObs = -1; //save outer bounds so we can expand tolerances if needed
-                    List<Ms2ScanWithSpecificMass> groupToAdd = new List<Ms2ScanWithSpecificMass>(); //current group
-                    //foreach mz in range, expand range if necessary
-                    for (int bin = obsFragmentFloorMass; bin <= obsFragmentCeilingMass; bin++) //go through bins and add to the group
+                    List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
+                    foreach (Ms2ScanWithSpecificMass scan in group) //iterate through each scan in the previous group
                     {
-                        List<int> scans = massIndex[bin];
-                        if (scans != null) //FIXME: It's still possible to group things twice since large mz ppm can hit a smaller mz where the small ppm wouldn't
+                        bool foundSpot = false;
+                        foreach (List<Ms2ScanWithSpecificMass> subGroup in subGroups) //see if the scan fits somewhere, if not make a new subgroup
                         {
-                            if (minBinObs == -1)
+                            Ms2ScanWithSpecificMass scanInSubGroup = subGroup.Last(); //only need to check the lawst
                             {
-                                minBinObs = bin;
-                            }
-                            maxBinObs = bin;
-                            foreach (int scanIndex in scans)
-                            {
-                                seen[scanIndex] = true;
-                                groupToAdd.Add(MS2Scans[scanIndex]);
-                            }
-                        }
-                    }
-
-                    //get lower bound if it's expanded
-                    int decreasingValues = obsFragmentFloorMass - 1;
-                    int minimumValue = (int)Math.Floor(PrecursorTolerance.GetMinimumValue(minBinObs));
-                    while (decreasingValues > minimumValue)
-                    {
-                        List<int> scans = massIndex[decreasingValues];
-                        if (scans != null)
-                        {
-                            minimumValue = (int)Math.Floor(PrecursorTolerance.GetMinimumValue(decreasingValues));
-
-                            foreach (int scanIndex in scans)
-                            {
-                                seen[scanIndex] = true;
-                                groupToAdd.Add(MS2Scans[scanIndex]);
-                            }
-                        }
-                        decreasingValues--;
-                    }
-
-                    //get upper bound if it's expanded
-                    int increasingValues = obsFragmentCeilingMass + 1;
-                    int maximumValue = (int)Math.Ceiling(PrecursorTolerance.GetMaximumValue(maxBinObs));
-                    while (increasingValues < maximumValue)
-                    {
-                        List<int> scans = massIndex[increasingValues];
-                        if (scans != null)
-                        {
-                            maximumValue = (int)Math.Ceiling(PrecursorTolerance.GetMaximumValue(increasingValues));
-
-                            foreach (int scanIndex in scans)
-                            {
-                                seen[scanIndex] = true;
-                                groupToAdd.Add(MS2Scans[scanIndex]);
-                            }
-                        }
-                        increasingValues++;
-                    }
-                    groups.Add(groupToAdd);
-                }
-            }
-
-            //Now that we've separated groups by mass, let's try to separate based on retention time
-            List<List<Ms2ScanWithSpecificMass>> retGroups = new List<List<Ms2ScanWithSpecificMass>>();
-            foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
-            {
-                if (GlobalVariables.StopLoops)
-                {
-                    return new MetaMorpheusEngineResults(this);
-                }
-                List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
-                foreach (Ms2ScanWithSpecificMass scan in group) //iterate through each scan in the previous group
-                {
-                    bool foundSpot = false;
-                    foreach (List<Ms2ScanWithSpecificMass> subGroup in subGroups) //see if the scan fits somewhere, if not make a new subgroup
-                    {
-                        Ms2ScanWithSpecificMass scanInSubGroup = subGroup.Last(); //only need to check the lawst
-                        {
-                            if (scan.RetentionTime > scanInSubGroup.RetentionTime - MaxRetentionTimeDifferenceAllowedInMinutes
-                                && scan.RetentionTime < scanInSubGroup.RetentionTime + MaxRetentionTimeDifferenceAllowedInMinutes) //if a match, add it
-                            {
-                                subGroup.Add(scan);
-                                foundSpot = true;
-                                break;
-                            }
-                        }
-                        if (foundSpot)
-                        {
-                            break;
-                        }
-                    }
-                    if (!foundSpot) //if not a match, create a new category
-                    {
-                        subGroups.Add(new List<Ms2ScanWithSpecificMass> { scan });
-                    }
-                }
-                retGroups.AddRange(subGroups);
-            }
-            groups = retGroups; //save reassignments
-
-            //Now let's separate based on cosine score
-            List<List<Ms2ScanWithSpecificMass>> scoredGroups = new List<List<Ms2ScanWithSpecificMass>>();
-            foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
-            {
-                if (GlobalVariables.StopLoops)
-                {
-                    return new MetaMorpheusEngineResults(this);
-                }
-                List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
-                foreach (Ms2ScanWithSpecificMass scan in group) //iterate through each scan in the previous group
-                {
-                    bool foundSpot = false;
-                    foreach (List<Ms2ScanWithSpecificMass> subGroup in subGroups) //see if the scan fits somewhere, if not make a new subgroup
-                    {
-                        foreach (Ms2ScanWithSpecificMass scanInSubGroup in subGroup) //iterate through each member of each previously found group
-                        {
-                            if (MinCosineScoreAllowed <= CosineScore(scan.TheScan.MassSpectrum, scanInSubGroup.TheScan.MassSpectrum, ProductTolerance)) //if a match, add it
-                            {
-                                subGroup.Add(scan);
-                                foundSpot = true;
-                                break;
-                            }
-                        }
-                        if (foundSpot)
-                        {
-                            break;
-                        }
-                    }
-                    if (!foundSpot) //if not a match, create a new category
-                    {
-                        subGroups.Add(new List<Ms2ScanWithSpecificMass> { scan });
-                    }
-                }
-                scoredGroups.AddRange(subGroups);
-            }
-            groups = scoredGroups; //save
-
-            //order by the middle scan number
-            groups = groups.OrderBy(x => x[x.Count / 2].OneBasedScanNumber).ToList();
-
-            #endregion Identifying MS2 groups
-
-            #region Averaging MS2 spectra
-
-            Status("Averaging MS2 spectra");
-            //Each MS2 spectra is going to be assigned a new scan number that's placed at the middle of the group. 
-            //There's the possibility that more spectra are generated because of chimeras, or fewer spectra because of aggregation (regardless, fewer comparisons afterward)
-            int assignedScanNumber = 0; //this gets ++ immediately, so there shouldn't be any 0 scan numbers
-            int ms1Index = 0;
-            int mostRecentPrecursorNumber = 0;
-
-            List<MsDataScan> syntheticSpectra = new List<MsDataScan>(); //include MS1 as we go through this
-            foreach (List<Ms2ScanWithSpecificMass> group in groups)
-            {
-                if (GlobalVariables.StopLoops)
-                {
-                    return new MetaMorpheusEngineResults(this);
-                }
-                assignedScanNumber++;
-                Ms2ScanWithSpecificMass representativeScan = group[group.Count / 2];
-
-                while (ms1Index < ms1scans.Length
-                    && representativeScan.OneBasedScanNumber > ms1scans[ms1Index].OneBasedScanNumber) //if there should be a precursor at this point
-                {
-                    mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
-                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
-                    ms1Index++; //update to the next precursor
-                    assignedScanNumber++; //update the current scan
-                }
-
-                if (group.Count == 1) //if nothing to aggregate, just save it after updating scan number and precursor info
-                {
-                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
-                        representativeScan.TheScan,
-                        scanNumber: assignedScanNumber, //update scan number
-                        precursorScanNumber: mostRecentPrecursorNumber,
-                        precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
-                        precursorCharge: representativeScan.PrecursorCharge,
-                        precursorMass: representativeScan.PrecursorMass
-                        ));
-                }
-                else
-                {
-                    List<double> syntheticMZs = new List<double>();
-                    List<double> syntheticIntensities = new List<double>();
-
-                    //get values
-                    double[][] mzsForGroupedScans = group.Select(x => x.TheScan.MassSpectrum.XArray).ToArray();
-                    double[][] intensitiesForGroupedScans = group.Select(x => x.TheScan.MassSpectrum.YArray).ToArray();
-
-                    List<double> allMzs = new List<double>();
-                    List<double> groupedMzMaxRanges = new List<double>();
-
-                    //Sort array of all mzs sorted low to high
-                    allMzs.Sort();
-
-                    //group mzs
-                    int seedIndex = 0;
-                    for (int i = 0; i < allMzs.Count; i++)
-                    {
-                        seedIndex = i; //the actual seed
-                        double maxValue = ProductTolerance.GetMaximumValue(allMzs[i]);
-                        i++;
-                        for (; i < allMzs.Count; i++)
-                        {
-                            double currentMz = allMzs[i];
-                            if (currentMz > maxValue) //stop if out of range
-                            {
-                                break;
-                            }
-                            else //update range
-                            {
-                                maxValue = ProductTolerance.GetMaximumValue(currentMz);
-                            }
-                        }
-                        //record
-                        groupedMzMaxRanges.Add(maxValue);
-                    }
-
-                    //we're done grouping peaks, see if there's enough info (half of all grouped Ms2s must contain this peak group)
-                    int[] peakPositionArray = new int[group.Count]; //save position so we don't have to iterate through each time
-
-                    foreach (double maxValue in groupedMzMaxRanges) //foreach peak group
-                    {
-                        int numScansNeeded = group.Count / 2;
-                        List<(double mz, double intensity)> groupedPeaks = new List<(double mz, double intensity)>();
-                        for (int i = 0; i < group.Count; i++) //foreach scan we're looking at here
-                        {
-                            double[] currentScanMzs = mzsForGroupedScans[i]; //get mzs
-                            double[] currentScanIntensities = intensitiesForGroupedScans[i]; //get intensities
-                            int j = peakPositionArray[i]; //previous position we left off at
-                            for (; j < currentScanMzs.Length; j++)
-                            {
-                                if (currentScanMzs[j] < maxValue) //it's in range, so save it!
+                                if (scan.RetentionTime > scanInSubGroup.RetentionTime - MaxRetentionTimeDifferenceAllowedInMinutes
+                                    && scan.RetentionTime < scanInSubGroup.RetentionTime + MaxRetentionTimeDifferenceAllowedInMinutes) //if a match, add it
                                 {
-                                    groupedPeaks.Add((currentScanMzs[j], currentScanIntensities[j]));
-                                }
-                                else //not a match
-                                {
+                                    subGroup.Add(scan);
+                                    foundSpot = true;
                                     break;
                                 }
                             }
-                            if (peakPositionArray[i] != j) //check if we found anything
+                            if (foundSpot)
                             {
-                                peakPositionArray[i] = j; //update position
-                                numScansNeeded--; //we had a hit, so we need one fewer scan now!
+                                break;
                             }
                         }
-                        if (numScansNeeded <= 0) //if we saw this peak group enough times to believe it
+                        if (!foundSpot) //if not a match, create a new category
                         {
-                            (double mz, double intensity) syntheticPeak = AverageMzsAndIntensities(groupedPeaks);
-                            syntheticMZs.Add(syntheticPeak.mz);
-                            syntheticIntensities.Add(syntheticPeak.intensity);
+                            subGroups.Add(new List<Ms2ScanWithSpecificMass> { scan });
                         }
                     }
-
-                    MzSpectrum syntheticSpectrum = new MzSpectrum(syntheticMZs.ToArray(), syntheticIntensities.ToArray(), false);
-                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
-                        representativeScan.TheScan,
-                        syntheticSpectrum,
-                        scanNumber: assignedScanNumber,
-                        precursorScanNumber: mostRecentPrecursorNumber,
-                        precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
-                        precursorCharge: representativeScan.PrecursorCharge,
-                        precursorMass: representativeScan.PrecursorMass
-                        ));
+                    retGroups.AddRange(subGroups);
                 }
-            }
-            //wrap up any precursor scans that didn't make it in
-            for (; ms1Index < ms1scans.Length; ms1Index++)
-            {
-                assignedScanNumber++; //update the current scan
-                syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
-            }
+                groups = retGroups; //save reassignments
 
-            #endregion Averaging MS2 spectra
-            */
-
-            //////////////
-            int assignedScanNumber = 0; //this gets ++ immediately, so there shouldn't be any 0 scan numbers
-            int ms1Index = 0;
-            int mostRecentPrecursorNumber = 0;
-            //Print diagnostics
-
-            List<MsDataScan> syntheticSpectra = new List<MsDataScan>(); //include MS1 as we go through this
-            foreach (Ms2ScanWithSpecificMass ms2 in MS2Scans)
-            {
-                assignedScanNumber++;
-                if(assignedScanNumber==66749)
-                { }
-                while (ms1Index < ms1scans.Length
-                    && ms2.OneBasedScanNumber > ms1scans[ms1Index].OneBasedScanNumber) //if there should be a precursor at this point
+                //Now let's separate based on cosine score
+                List<List<Ms2ScanWithSpecificMass>> scoredGroups = new List<List<Ms2ScanWithSpecificMass>>();
+                foreach (List<Ms2ScanWithSpecificMass> group in groups) //go over all the previously made groups
                 {
-                    mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
-                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
-        diagnosticLines.Add(assignedScanNumber.ToString() +
-            '\t' + "0"+//ms2.PrecursorMonoisotopicPeakMz.ToString() +
-            '\t' + "0"+//ms2.PrecursorCharge.ToString() +
-            '\t' + ms1scans[ms1Index].OneBasedScanNumber);
-                    ms1Index++; //update to the next precursor
-                    assignedScanNumber++; //update the current scan
-                    if (assignedScanNumber == 66749)
-                    { }
+                    if (GlobalVariables.StopLoops)
+                    {
+                        return new MetaMorpheusEngineResults(this);
+                    }
+                    List<List<Ms2ScanWithSpecificMass>> subGroups = new List<List<Ms2ScanWithSpecificMass>>(); //local subgroups go here, needed so you don't regroup previous classifications
+                    foreach (Ms2ScanWithSpecificMass scan in group) //iterate through each scan in the previous group
+                    {
+                        bool foundSpot = false;
+                        foreach (List<Ms2ScanWithSpecificMass> subGroup in subGroups) //see if the scan fits somewhere, if not make a new subgroup
+                        {
+                            foreach (Ms2ScanWithSpecificMass scanInSubGroup in subGroup) //iterate through each member of each previously found group
+                            {
+                                if (MinCosineScoreAllowed <= CosineScore(scan.TheScan.MassSpectrum, scanInSubGroup.TheScan.MassSpectrum, ProductTolerance)) //if a match, add it
+                                {
+                                    subGroup.Add(scan);
+                                    foundSpot = true;
+                                    break;
+                                }
+                            }
+                            if (foundSpot)
+                            {
+                                break;
+                            }
+                        }
+                        if (!foundSpot) //if not a match, create a new category
+                        {
+                            subGroups.Add(new List<Ms2ScanWithSpecificMass> { scan });
+                        }
+                    }
+                    scoredGroups.AddRange(subGroups);
                 }
-                syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
-    ms2.TheScan,
-    scanNumber: assignedScanNumber,
-    precursorScanNumber: mostRecentPrecursorNumber,
-    precursorMonoisotopicMz: ms2.PrecursorMonoisotopicPeakMz,
-    precursorCharge: ms2.PrecursorCharge,
-    precursorMass: ms2.PrecursorMass
-    ));
-                diagnosticLines.Add(assignedScanNumber.ToString() +
-    '\t' + ms2.PrecursorMonoisotopicPeakMz.ToString() +
-    '\t' + ms2.PrecursorCharge.ToString() +
-    '\t' + ms2.OneBasedScanNumber);
-            }
-            for (; ms1Index < ms1scans.Length; ms1Index++)
+                groups = scoredGroups; //save
+
+                //order by the middle scan number
+                groups = groups.OrderBy(x => x[x.Count / 2].OneBasedScanNumber).ToList();
+
+                #endregion Identifying MS2 groups
+
+                #region Averaging MS2 spectra
+
+                Status("Averaging MS2 spectra");
+                //Each MS2 spectra is going to be assigned a new scan number that's placed at the middle of the group. 
+                //There's the possibility that more spectra are generated because of chimeras, or fewer spectra because of aggregation (regardless, fewer comparisons afterward)
+                int assignedScanNumber = 0; //this gets ++ immediately, so there shouldn't be any 0 scan numbers
+                int ms1Index = 0;
+                int mostRecentPrecursorNumber = 0;
+
+                List<MsDataScan> syntheticSpectra = new List<MsDataScan>(); //include MS1 as we go through this
+                foreach (List<Ms2ScanWithSpecificMass> group in groups)
+                {
+                    if (GlobalVariables.StopLoops)
+                    {
+                        return new MetaMorpheusEngineResults(this);
+                    }
+                    assignedScanNumber++;
+                    Ms2ScanWithSpecificMass representativeScan = group[group.Count / 2];
+
+                    while (ms1Index < ms1scans.Length
+                        && representativeScan.OneBasedScanNumber > ms1scans[ms1Index].OneBasedScanNumber) //if there should be a precursor at this point
+                    {
+                        mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
+                        syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                        ms1Index++; //update to the next precursor
+                        assignedScanNumber++; //update the current scan
+                    }
+
+                    if (group.Count == 1) //if nothing to aggregate, just save it after updating scan number and precursor info
+                    {
+                        syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
+                            representativeScan.TheScan,
+                            scanNumber: assignedScanNumber, //update scan number
+                            precursorScanNumber: mostRecentPrecursorNumber,
+                            precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
+                            precursorCharge: representativeScan.PrecursorCharge,
+                            precursorMass: representativeScan.PrecursorMass
+                            ));
+                    }
+                    else
+                    {
+                        List<double> syntheticMZs = new List<double>();
+                        List<double> syntheticIntensities = new List<double>();
+
+                        //get values
+                        double[][] mzsForGroupedScans = group.Select(x => x.TheScan.MassSpectrum.XArray).ToArray();
+                        double[][] intensitiesForGroupedScans = group.Select(x => x.TheScan.MassSpectrum.YArray).ToArray();
+
+                        List<double> allMzs = new List<double>();
+                        List<double> groupedMzMaxRanges = new List<double>();
+
+                        //Sort array of all mzs sorted low to high
+                        allMzs.Sort();
+
+                        //group mzs
+                        int seedIndex = 0;
+                        for (int i = 0; i < allMzs.Count; i++)
+                        {
+                            seedIndex = i; //the actual seed
+                            double maxValue = ProductTolerance.GetMaximumValue(allMzs[i]);
+                            i++;
+                            for (; i < allMzs.Count; i++)
+                            {
+                                double currentMz = allMzs[i];
+                                if (currentMz > maxValue) //stop if out of range
+                                {
+                                    break;
+                                }
+                                else //update range
+                                {
+                                    maxValue = ProductTolerance.GetMaximumValue(currentMz);
+                                }
+                            }
+                            //record
+                            groupedMzMaxRanges.Add(maxValue);
+                        }
+
+                        //we're done grouping peaks, see if there's enough info (half of all grouped Ms2s must contain this peak group)
+                        int[] peakPositionArray = new int[group.Count]; //save position so we don't have to iterate through each time
+
+                        foreach (double maxValue in groupedMzMaxRanges) //foreach peak group
+                        {
+                            int numScansNeeded = group.Count / 2;
+                            List<(double mz, double intensity)> groupedPeaks = new List<(double mz, double intensity)>();
+                            for (int i = 0; i < group.Count; i++) //foreach scan we're looking at here
+                            {
+                                double[] currentScanMzs = mzsForGroupedScans[i]; //get mzs
+                                double[] currentScanIntensities = intensitiesForGroupedScans[i]; //get intensities
+                                int j = peakPositionArray[i]; //previous position we left off at
+                                for (; j < currentScanMzs.Length; j++)
+                                {
+                                    if (currentScanMzs[j] < maxValue) //it's in range, so save it!
+                                    {
+                                        groupedPeaks.Add((currentScanMzs[j], currentScanIntensities[j]));
+                                    }
+                                    else //not a match
+                                    {
+                                        break;
+                                    }
+                                }
+                                if (peakPositionArray[i] != j) //check if we found anything
+                                {
+                                    peakPositionArray[i] = j; //update position
+                                    numScansNeeded--; //we had a hit, so we need one fewer scan now!
+                                }
+                            }
+                            if (numScansNeeded <= 0) //if we saw this peak group enough times to believe it
+                            {
+                                (double mz, double intensity) syntheticPeak = AverageMzsAndIntensities(groupedPeaks);
+                                syntheticMZs.Add(syntheticPeak.mz);
+                                syntheticIntensities.Add(syntheticPeak.intensity);
+                            }
+                        }
+
+                        MzSpectrum syntheticSpectrum = new MzSpectrum(syntheticMZs.ToArray(), syntheticIntensities.ToArray(), false);
+                        syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
+                            representativeScan.TheScan,
+                            syntheticSpectrum,
+                            scanNumber: assignedScanNumber,
+                            precursorScanNumber: mostRecentPrecursorNumber,
+                            precursorMonoisotopicMz: representativeScan.PrecursorMonoisotopicPeakMz,
+                            precursorCharge: representativeScan.PrecursorCharge,
+                            precursorMass: representativeScan.PrecursorMass
+                            ));
+                    }
+                }
+                //wrap up any precursor scans that didn't make it in
+                for (; ms1Index < ms1scans.Length; ms1Index++)
+                {
+                    assignedScanNumber++; //update the current scan
+                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                }
+
+                #endregion Averaging MS2 spectra            
+                */ }
+            ////////////// TEST WRITE
+            List<MsDataScan> syntheticSpectra = new List<MsDataScan>(); //include MS1 as we go through this
             {
-                assignedScanNumber++; //update the current scan
-                if (assignedScanNumber == 66749)
-                { }
-                syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
-                diagnosticLines.Add(assignedScanNumber.ToString() +
-    '\t' + "0" +//ms2.PrecursorMonoisotopicPeakMz.ToString() +
-    '\t' + "0" +//ms2.PrecursorCharge.ToString() +
-    '\t' + ms1scans[ms1Index].OneBasedScanNumber);
+                int assignedScanNumber = 0; //this gets ++ immediately, so there shouldn't be any 0 scan numbers
+                ms1Index = 0;
+                int mostRecentPrecursorNumber = 0;
+                //Print diagnostics
+
+                foreach (Ms2ScanWithSpecificMass ms2 in MS2Scans)
+                {
+                    assignedScanNumber++;
+                    while (ms1Index < ms1scans.Length
+                        && ms2.OneBasedScanNumber > ms1scans[ms1Index].OneBasedScanNumber) //if there should be a precursor at this point
+                    {
+                        mostRecentPrecursorNumber = assignedScanNumber; //track so that ms2 precursor scan numbers can be updated
+                        syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                        diagnosticLines.Add(assignedScanNumber.ToString() +
+                            '\t' + "0" +//ms2.PrecursorMonoisotopicPeakMz.ToString() +
+                            '\t' + "0" +//ms2.PrecursorCharge.ToString() +
+                            '\t' + ms1scans[ms1Index].OneBasedScanNumber);
+                        ms1Index++; //update to the next precursor
+                        assignedScanNumber++; //update the current scan
+                    }
+                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(
+        ms2.TheScan,
+        scanNumber: assignedScanNumber,
+        precursorScanNumber: mostRecentPrecursorNumber,
+        precursorMonoisotopicMz: ms2.PrecursorMonoisotopicPeakMz,
+        precursorCharge: ms2.PrecursorCharge,
+        precursorMass: ms2.PrecursorMass
+        ));
+                    diagnosticLines.Add(assignedScanNumber.ToString() +
+        '\t' + ms2.PrecursorMonoisotopicPeakMz.ToString() +
+        '\t' + ms2.PrecursorCharge.ToString() +
+        '\t' + ms2.OneBasedScanNumber);
+                }
+                for (; ms1Index < ms1scans.Length; ms1Index++)
+                {
+                    assignedScanNumber++; //update the current scan
+                    syntheticSpectra.Add(CloneDataScanWithUpdatedFields(ms1scans[ms1Index], scanNumber: assignedScanNumber)); //update scan number
+                    diagnosticLines.Add(assignedScanNumber.ToString() +
+        '\t' + "0" +//ms2.PrecursorMonoisotopicPeakMz.ToString() +
+        '\t' + "0" +//ms2.PrecursorCharge.ToString() +
+        '\t' + ms1scans[ms1Index].OneBasedScanNumber);
+                }
             }
             ////////////////////
 
