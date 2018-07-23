@@ -15,7 +15,7 @@ namespace EngineLayer.Aggregation
         private readonly Tolerance ProductTolerance;
         private MsDataFile originalFile;
         private readonly string OriginalFilePath;
-        private const int numberOfStrikesBeforeOut = 2;
+        private const int numberOfStrikesBeforeOut = 50;
 
         public MsDataFile AggregatedDataFile { get; private set; }
         public List<double> elutionProfileWidthsInScans { get; private set; }
@@ -115,13 +115,14 @@ namespace EngineLayer.Aggregation
                                 branchPeakIndex--;
                             }
 
-
-                            if (ProductTolerance.Within(seedMz, branchMzs[branchPeakIndex])) //if a match
+                            double branchMz = branchMzs[branchPeakIndex];
+                            if (ProductTolerance.Within(seedMz, branchMz)) //if a match
                             {
                                 done = false;
                                 numberOfStrikesForEachPeak[seedPeakIndex] = 0; //reset
-                                seedPeaksFound[seedPeakIndex].Add(branchMzs[branchPeakIndex]);
+                                seedPeaksFound[seedPeakIndex].Add(branchMz);
                                 allMs1PeaksFound[branchScanIndex][branchPeakIndex] = seedPeaksFound[seedPeakIndex]; //update index so future seeds don't have to look
+                                seedMzs[seedPeakIndex] = (branchMz + seedMz) / 2; //update seed Mz so that the Mz we look for is closest to the most recent Mz (instead of the first). This helps if there's drift over time. Average prevents a single mistaken peak from throwing us off too terribly
                             }
                             else
                             {
@@ -163,6 +164,7 @@ namespace EngineLayer.Aggregation
                 List<double> mzsToAdd = new List<double>();
                 List<double> intensitiesToAdd = new List<double>();
                 MsDataScan originalScan = ms1scans[seedScanIndex];
+
                 double[] unchangedIntensities = originalScan.MassSpectrum.YArray; //get the old intensities
                 for (int peakIndex = 0; peakIndex < seedPeaksFound.Length; peakIndex++)
                 {
@@ -672,7 +674,7 @@ namespace EngineLayer.Aggregation
 
         public void AverageMzs(List<double> referenceListOfMzs) //use for MS1 scans
         {
-            //Currently NOT using intensity for weighting. Reason being that it's more computationally intensive to save those values.
+            //Currently NOT using intensity for weighting. Reason being that it's more computationally intensive to save those values. Also manual studies found intensity yielded poorer results
             if (referenceListOfMzs.Count != 1) //if it's worth averaging
             {
                 double averageMZ = referenceListOfMzs.Average();
