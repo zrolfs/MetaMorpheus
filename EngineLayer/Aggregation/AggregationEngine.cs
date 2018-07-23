@@ -15,7 +15,7 @@ namespace EngineLayer.Aggregation
         private readonly Tolerance ProductTolerance;
         private MsDataFile originalFile;
         private readonly string OriginalFilePath;
-        private const int numberOfStrikesBeforeOut = 50;
+        private const int numberOfStrikesBeforeOut = 2;
 
         public MsDataFile AggregatedDataFile { get; private set; }
         public List<double> elutionProfileWidthsInScans { get; private set; }
