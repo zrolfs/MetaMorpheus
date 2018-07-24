@@ -181,7 +181,7 @@ namespace EngineLayer.Aggregation
                 MzSpectrum syntheticSpectrum = new MzSpectrum(mzArray, intensityArray, false);
                 ms1scans[seedScanIndex] = CloneDataScanWithUpdatedFields(originalScan, syntheticSpectrum);
 
-                var percentProgress = (int)((seedScanIndex / ms1mzs.Length) * 100);
+                int percentProgress = (int)((seedScanIndex / ms1mzs.Length) * 100);
 
                 if (percentProgress > oldPercentProgress)
                 {
@@ -677,7 +677,8 @@ namespace EngineLayer.Aggregation
             //Currently NOT using intensity for weighting. Reason being that it's more computationally intensive to save those values. Also manual studies found intensity yielded poorer results
             if (referenceListOfMzs.Count != 1) //if it's worth averaging
             {
-                double averageMZ = referenceListOfMzs.Average();
+                referenceListOfMzs.Sort();
+                double averageMZ = referenceListOfMzs[referenceListOfMzs.Count/2]; //get the median
                 referenceListOfMzs.Clear(); //need to clear to keep the reference
                 referenceListOfMzs.Add(averageMZ); //add the average as the only peak
             }

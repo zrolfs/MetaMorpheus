@@ -19,6 +19,12 @@ namespace TaskLayer
 {
     public class CalibrationTask : MetaMorpheusTask
     {
+        private const int NumRequiredPsms = 20;
+        private const int NumRequiredMs1Datapoints = 50;
+        private const int NumRequiredMs2Datapoints = 100;
+        private const string CalibSuffix = "-calib";
+        public CalibrationParameters CalibrationParameters { get; set; }
+
         public CalibrationTask() : base(MyTask.Calibrate)
         {
             CommonParameters = new CommonParameters(
@@ -30,8 +36,6 @@ namespace TaskLayer
 
             CalibrationParameters = new CalibrationParameters();
         }
-
-        public CalibrationParameters CalibrationParameters { get; set; }
 
         protected override MyTaskResults RunSpecific(string OutputFolder, List<DbForTask> dbFilenameList, List<string> currentRawFileList, string taskId, FileSpecificParameters[] fileSettingsList)
         {
@@ -251,11 +255,6 @@ namespace TaskLayer
 
             return MyTaskResults;
         }
-
-        private int NumRequiredPsms = 20;
-        private int NumRequiredMs1Datapoints = 50;
-        private int NumRequiredMs2Datapoints = 100;
-        private const string CalibSuffix = "-calib";
 
         private bool ImprovGlobal(double prevPrecTol, double prevProdTol, int prevPsmCount, int thisRoundPsmCount, double thisRoundPrecTol, double thisRoundProdTol)
         {

@@ -99,12 +99,12 @@ namespace EngineLayer.Calibration
             //var ms1Model = GetGradientBoostModel(myMs1DataPoints, ms1fracForTraining);
 
             Status("Generating MS2 calibration function");
-            var ms2Model = GetRandomForestModel(myMs2DataPoints, ms2fracForTraining);
+           // var ms2Model = GetRandomForestModel(myMs2DataPoints, ms2fracForTraining);
             //var ms2Model = GetGradientBoostModel(myMs2DataPoints, ms2fracForTraining);
 
             Status("Calibrating spectra");
 
-            CalibrateSpectra(ms1Model, ms2Model);
+            CalibrateSpectra(ms1Model, ms1Model);
 
             return new MetaMorpheusEngineResults(this);
         }
