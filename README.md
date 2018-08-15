@@ -35,4 +35,5 @@ UniProt .XML or .fasta format, may be used in compressed (.gz) format.
 2. Download the test files [here](https://uwmadison.box.com/s/53jzoznpzckrj9pl8levwoc80rq6olqz).
 3. Open Neo-Fusion.exe and drag and drop the raw spectra file and the compressed Uniprot XML database into the GUI.
 4. Add a "Full Neo-Fusion Run" to the task list, located in the top right. The defaults parameters are well suited for the example data.
-5. Click Run All Tasks!
+5. We suggest double clicking on Task1-Calibration and changing the min and max peptide lengths to 9. This will result in a substantially faster calibration with negligible difference in calibration quality. Save the task afterwards.
+6. Click Run All Tasks!
