@@ -21,8 +21,9 @@ namespace EngineLayer.ClassicSearch
         private readonly double[] MyScanPrecursorMasses;
         private readonly List<ProductType> ProductTypes;
         private readonly List<DissociationType> DissociationTypes;
+        private readonly MsDataFile TheFile;
 
-        public ClassicSearchEngine(PeptideSpectralMatch[] globalPsms, Ms2ScanWithSpecificMass[] arrayOfSortedMS2Scans, List<ModificationWithMass> variableModifications, List<ModificationWithMass> fixedModifications, List<Protein> proteinList, List<ProductType> lp, MassDiffAcceptor searchMode, CommonParameters commonParameters, List<string> nestedIds) : base(commonParameters, nestedIds)
+        public ClassicSearchEngine(PeptideSpectralMatch[] globalPsms, MsDataFile theFile, Ms2ScanWithSpecificMass[] arrayOfSortedMS2Scans, List<ModificationWithMass> variableModifications, List<ModificationWithMass> fixedModifications, List<Protein> proteinList, List<ProductType> lp, MassDiffAcceptor searchMode, CommonParameters commonParameters, List<string> nestedIds) : base(commonParameters, nestedIds)
         {
             PeptideSpectralMatches = globalPsms;
             ArrayOfSortedMS2Scans = arrayOfSortedMS2Scans;
@@ -33,6 +34,7 @@ namespace EngineLayer.ClassicSearch
             SearchMode = searchMode;
             ProductTypes = lp;
             DissociationTypes = DetermineDissociationType(lp);
+            TheFile = theFile;
         }
 
         protected override MetaMorpheusEngineResults RunSpecific()
@@ -101,7 +103,7 @@ namespace EngineLayer.ClassicSearch
                                         {
                                             if (PeptideSpectralMatches[scan.ScanIndex] == null)
                                             {
-                                                PeptideSpectralMatches[scan.ScanIndex] = new PeptideSpectralMatch(compactPeptide, scan.Notch, thisScore, scan.ScanIndex, scan.TheScan, commonParameters.DigestionParams);
+                                                PeptideSpectralMatches[scan.ScanIndex] = new PeptideSpectralMatch(compactPeptide, scan.Notch, thisScore, scan.ScanIndex,  scan.TheScan, commonParameters.DigestionParams, TheFile.GetOneBasedScan(scan.TheScan.OneBasedPrecursorScanNumber.Value));
                                             }
                                             else
                                             {

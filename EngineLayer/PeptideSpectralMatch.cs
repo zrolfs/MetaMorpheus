@@ -20,18 +20,36 @@ namespace EngineLayer
 
         public const double ToleranceForScoreDifferentiation = 1e-9;
 
-        public PeptideSpectralMatch(CompactPeptideBase peptide, int notch, double score, int scanIndex, IScan scan, DigestionParams digestionParams)
+        public PeptideSpectralMatch(CompactPeptideBase peptide, int notch, double score, int scanIndex, IScan ms2scan, DigestionParams digestionParams, MsDataScan ms1scan = null)
         {
             ScanIndex = scanIndex;
-            FullFilePath = scan.FullFilePath;
-            ScanNumber = scan.OneBasedScanNumber;
-            PrecursorScanNumber = scan.OneBasedPrecursorScanNumber;
-            ScanRetentionTime = scan.RetentionTime;
-            ScanExperimentalPeaks = scan.NumPeaks;
-            TotalIonCurrent = scan.TotalIonCurrent;
-            ScanPrecursorCharge = scan.PrecursorCharge;
-            ScanPrecursorMonoisotopicPeakMz = scan.PrecursorMonoisotopicPeakMz;
-            ScanPrecursorMass = scan.PrecursorMass;
+            FullFilePath = ms2scan.FullFilePath;
+            ScanNumber = ms2scan.OneBasedScanNumber;
+            PrecursorScanNumber = ms2scan.OneBasedPrecursorScanNumber;
+            ScanRetentionTime = ms2scan.RetentionTime;
+            ScanExperimentalPeaks = ms2scan.NumPeaks;
+            MS1TotalIonCurrent = ms1scan.TotalIonCurrent;
+            MS2TotalIonCurrent = ms2scan.TotalIonCurrent;
+            int index = 0;
+            double[] mzs = ms1scan.MassSpectrum.XArray;
+            for(; index<mzs.Length; index++)
+            {
+                if(mzs[index]>ms2scan.PrecursorMonoisotopicPeakMz)
+                {
+                    if(index!=0)
+                    {
+                        if(mzs[index]-ms2scan.PrecursorMonoisotopicPeakMz > ms2scan.PrecursorMonoisotopicPeakMz-mzs[index-1])
+                        {
+                            index--;
+                        }
+                    }
+                    break;
+                }
+            }
+            PrecursorIntensity = ms1scan.MassSpectrum.YArray[index];
+            ScanPrecursorCharge = ms2scan.PrecursorCharge;
+            ScanPrecursorMonoisotopicPeakMz = ms2scan.PrecursorMonoisotopicPeakMz;
+            ScanPrecursorMass = ms2scan.PrecursorMass;
             AddOrReplace(peptide, score, notch, true);
             AllScores = new List<double>();
             DigestionParams = digestionParams;
@@ -48,7 +66,9 @@ namespace EngineLayer
         public int? PrecursorScanNumber { get; }
         public double ScanRetentionTime { get; }
         public int ScanExperimentalPeaks { get; }
-        public double TotalIonCurrent { get; }
+        public double MS1TotalIonCurrent { get; }
+        public double MS2TotalIonCurrent { get; }
+        public double PrecursorIntensity { get; }
         public int ScanPrecursorCharge { get; }
         public double ScanPrecursorMonoisotopicPeakMz { get; }
         public double ScanPrecursorMass { get; }
@@ -340,7 +360,9 @@ namespace EngineLayer
             s["Scan Number"] = peptide == null ? " " : peptide.ScanNumber.ToString(CultureInfo.InvariantCulture);
             s["Scan Retention Time"] = peptide == null ? " " : peptide.ScanRetentionTime.ToString("F5", CultureInfo.InvariantCulture);
             s["Num Experimental Peaks"] = peptide == null ? " " : peptide.ScanExperimentalPeaks.ToString("F5", CultureInfo.InvariantCulture);
-            s["Total Ion Current"] = peptide == null ? " " : peptide.TotalIonCurrent.ToString("F5", CultureInfo.InvariantCulture);
+            s["MS1 Total Ion Current"] = peptide == null ? " " : peptide.MS1TotalIonCurrent.ToString("F5", CultureInfo.InvariantCulture);
+            s["MS2 Total Ion Current"] = peptide == null ? " " : peptide.MS2TotalIonCurrent.ToString("F5", CultureInfo.InvariantCulture);
+            s["Precursor Intensity"] = peptide == null ? " " : peptide.PrecursorIntensity.ToString("F5", CultureInfo.InvariantCulture);
             s["Precursor Scan Number"] = peptide == null ? " " : peptide.PrecursorScanNumber.HasValue ? peptide.PrecursorScanNumber.Value.ToString(CultureInfo.InvariantCulture) : "unknown";
             s["Precursor Charge"] = peptide == null ? " " : peptide.ScanPrecursorCharge.ToString("F5", CultureInfo.InvariantCulture);
             s["Precursor MZ"] = peptide == null ? " " : peptide.ScanPrecursorMonoisotopicPeakMz.ToString("F5", CultureInfo.InvariantCulture);
