@@ -217,8 +217,11 @@ namespace EngineLayer.Neo
             for (; s < secondaryPsms.Count; s++)
             {
                 PsmTsvLine psmS = secondaryPsms[s];
-                psmS.neoType = PsmTsvLine.NeoType.Spliced;
-                aggregatedLines.Add(psmS);
+                if (psmS.score > minScoreAllowed)
+                {
+                    psmS.neoType = PsmTsvLine.NeoType.Spliced;
+                    aggregatedLines.Add(psmS);
+                }
             }
 
             return aggregatedLines;
