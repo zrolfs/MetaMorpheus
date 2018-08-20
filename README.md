@@ -5,9 +5,9 @@
 Download the current version at [https://github.com/zrolfs/MetaMorpheus/releases](https://github.com/zrolfs/MetaMorpheus/releases).
  
 Neo-Fusion is a proteomics database search software designed to identify proteasome-spliced peptides with integrated calibration and post-translational modification (PTM) discovery capability.
-This program is largely built off of features in [MetaMorpheus](https://github.com/smith-chem-wisc/MetaMorpheus).
+This program is built on a branch of [MetaMorpheus](https://github.com/smith-chem-wisc/MetaMorpheus). If there is substantial interest in further developement, Neo-Fusion will be merged into MetaMorpheus for better support.
 
-Check out the [wiki page](https://github.com/zrolfs/MetaMorpheus/wiki) for software details and a video!
+Check out the [wiki page](https://github.com/zrolfs/MetaMorpheus/wiki) for software details and a tutorial video!
 
 ## System Requirements
 
