@@ -34,6 +34,6 @@ UniProt .XML or .fasta format, may be used in compressed (.gz) format.
 1. Download [Neo-Fusion.zip](https://github.com/zrolfs/MetaMorpheus/releases/download/0.1.0/Neo-Fusion.zip) and unzip it.
 2. Download the test files [here](https://uwmadison.box.com/s/53jzoznpzckrj9pl8levwoc80rq6olqz).
 3. Open Neo-Fusion.exe and drag and drop the raw spectra file and the compressed Uniprot XML database into the GUI.
-4. Add a "Full Neo-Fusion Run" to the task list, located in the top right. The defaults parameters are well suited for the example data.
-5. We suggest double clicking on Task1-Calibration and changing the min and max peptide lengths to 9. This will result in a substantially faster calibration with negligible difference in calibration quality. Save the task afterwards.
+4. Add a "Full Neo-Fusion Run" to the task list, located in the top right. A window will pop-up showing available parameters. Additionally, data from previous runs can be loaded here for reanalysis. The defaults parameters are well suited for the example data, so simply click "Add the Search Tasks" in the pop-up window to close that window.
+5. Before starting, we suggest double clicking on Task1-Calibration. This will bring up a new pop-up window with parameters specifically for the calibration task. Under "Search Parameters", change both the Min and Max Peptide Len to 9 and the "Max Missed Cleavages" to 8. This will result in a substantially faster calibration with negligible difference in calibration quality. Save the task afterwards by pressing "Save Calibrate Task" in the pop-up window.
 6. Click Run All Tasks!
