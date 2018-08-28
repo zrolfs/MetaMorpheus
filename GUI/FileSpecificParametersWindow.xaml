@@ -84,6 +84,16 @@
             <Label x:Name="lbMaxModNum" Margin="20,0,0,0" Width="130" Content="Max mods per peptide" IsEnabled="{Binding IsChecked, ElementName=fileSpecificMaxModNumEnabled}" />
             <TextBox x:Name="MaxModNumTextBox" PreviewTextInput="CheckIfNumber" Width="45" IsEnabled="{Binding IsChecked, ElementName=fileSpecificMaxModNumEnabled}" />
         </StackPanel>
+        <!-- File-specific Deconvlute Precursors -->
+        <StackPanel Orientation="Horizontal" Margin="10,0,0,8">
+            <CheckBox x:Name="fileSpecificDeconvolutePrecursorsEnabled" Margin="10,0,0,0" VerticalAlignment="Center" IsChecked="False">
+                <ToolTipService.ToolTip>
+                    <ToolTip Content="Override the deconvolute precursors option with the checkbox here" />
+                </ToolTipService.ToolTip>
+            </CheckBox>
+            <Label x:Name="deconvolutePrecursorsLabel" Margin="20,0,0,0" Width="135" Content="Deconvolute Precursors" IsEnabled="{Binding IsChecked, ElementName=fileSpecificDeconvolutePrecursorsEnabled}"  />
+            <CheckBox x:Name="deconvolutePrecursorsCheckBox"  Margin="10,0,0,0" VerticalAlignment="Center" IsChecked="False" IsEnabled="{Binding IsChecked, ElementName=fileSpecificDeconvolutePrecursorsEnabled}" />
+        </StackPanel>
         <!-- File-specific Ion Types -->
         <!--<StackPanel Grid.Column="1" Margin="10,0,0,8">
             <StackPanel Orientation="Horizontal" Margin="0">
