@@ -120,6 +120,7 @@ namespace Test
             string outputFolder = Path.Combine(TestContext.CurrentContext.TestDirectory, @"TestSemiSpecific");
             string myFile = Path.Combine(TestContext.CurrentContext.TestDirectory, @"TestData\PrunedDbSpectra.mzml");
             string myDatabase = Path.Combine(TestContext.CurrentContext.TestDirectory, @"TestData\DbForPrunedDb.fasta");
+
             foreach (FragmentationTerminus fragTerm in terminiToTest)
             {
                 SearchTask searchTask = new SearchTask()
@@ -149,8 +150,9 @@ namespace Test
                 Assert.That(output.Length == 12); //if N is only producing 11 lines, then the c is not being searched with it.
             }
             Directory.Delete(outputFolder, true);
-        }
 
+        }
+               
         /// <summary>
         /// Tests that normalization in a search task works properly with an Experimental Design file read in,
         /// and crashes when that file is absent

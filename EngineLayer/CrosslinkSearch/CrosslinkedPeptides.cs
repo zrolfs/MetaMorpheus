@@ -95,8 +95,9 @@ namespace EngineLayer.CrosslinkSearch
                     {
                         modDict.Add(position1 + 1, loopMass);
                     }
-                    PeptideWithSetModifications peptideWithLoop = new PeptideWithSetModifications(peptide.Protein, peptide.DigestionParams,
-                        peptide.OneBasedStartResidueInProtein, peptide.OneBasedEndResidueInProtein, peptide.CleavageSpecificityForFdrCategory,
+
+                    PeptideWithSetModifications peptideWithLoop = new PeptideWithSetModifications(peptide.Protein, peptide.DigestionParams, 
+                        peptide.OneBasedStartResidueInProtein, peptide.OneBasedEndResidueInProtein, peptide.CleavageSpecificityForFdrCategory, 
                         peptide.PeptideDescription, peptide.MissedCleavages, modDict, peptide.NumFixedMods);
                     loopFragments.AddRange(peptideWithLoop.Fragment(dissociationType, FragmentationTerminus.Both)
                         .Where(p => p.TerminusFragment.Terminus == FragmentationTerminus.N && p.TerminusFragment.AminoAcidPosition >= position2));
@@ -119,7 +120,8 @@ namespace EngineLayer.CrosslinkSearch
                         modDict.Add(position2 + 1, loopMass);
                     }
                     peptideWithLoop = new PeptideWithSetModifications(peptide.Protein, peptide.DigestionParams,
-                        peptide.OneBasedStartResidueInProtein, peptide.OneBasedEndResidueInProtein, peptide.CleavageSpecificityForFdrCategory,
+
+                        peptide.OneBasedStartResidueInProtein, peptide.OneBasedEndResidueInProtein, peptide.CleavageSpecificityForFdrCategory, 
                         peptide.PeptideDescription, peptide.MissedCleavages, modDict, peptide.NumFixedMods);
                     loopFragments.AddRange(peptideWithLoop.Fragment(dissociationType, FragmentationTerminus.Both)
                         .Where(p => p.TerminusFragment.Terminus == FragmentationTerminus.C && p.TerminusFragment.AminoAcidPosition <= position1));

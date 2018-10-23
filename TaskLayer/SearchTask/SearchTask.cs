@@ -94,14 +94,12 @@ namespace TaskLayer
 
             // start the search task
             MyTaskResults = new MyTaskResults(this);
-            List<PeptideSpectralMatch> allPsms = new List<PeptideSpectralMatch>();
 
-            //generate an array to store category specific fdr values (for speedy semi/nonspecific searches)
             int numFdrCategories = (int)(Enum.GetValues(typeof(FdrCategory)).Cast<FdrCategory>().Last() + 1); //+1 because it starts at zero
-            List<PeptideSpectralMatch>[] allCategorySpecificPsms = new List<PeptideSpectralMatch>[numFdrCategories];
-            for (int i = 0; i < numFdrCategories; i++)
+            List<PeptideSpectralMatch>[] allPsms = new List<PeptideSpectralMatch>[numFdrCategories];
+            foreach (int localFDRCategory in SearchParameters.LocalFdrCategories) //only add if we're using for FDR, else ignore it as null.
             {
-                allCategorySpecificPsms[i] = new List<PeptideSpectralMatch>();
+                allPsms[localFDRCategory] = new List<PeptideSpectralMatch>();
             }
 
             FlashLfqResults flashLfqResults = null;
@@ -140,7 +138,12 @@ namespace TaskLayer
                 numMs2SpectraPerFile.Add(Path.GetFileNameWithoutExtension(origDataFile), new int[] { myMsDataFile.GetAllScansList().Count(p => p.MsnOrder == 2), arrayOfMs2ScansSortedByMass.Length });
                 myFileManager.DoneWithFile(origDataFile);
 
-                PeptideSpectralMatch[] fileSpecificPsms = new PeptideSpectralMatch[arrayOfMs2ScansSortedByMass.Length];
+
+                PeptideSpectralMatch[][] fileSpecificPsms = new PeptideSpectralMatch[numFdrCategories][]; //generate an array of all possible locals
+                foreach (int localFDRCategory in SearchParameters.LocalFdrCategories) //only add if we're using for FDR, else ignore it as null.
+                {
+                    fileSpecificPsms[localFDRCategory] = new PeptideSpectralMatch[arrayOfMs2ScansSortedByMass.Length];
+                }
 
                 // modern search
                 if (SearchParameters.SearchType == SearchType.Modern)
@@ -230,7 +233,13 @@ namespace TaskLayer
 
                 lock (psmLock)
                 {
-                    allPsms.AddRange(fileSpecificPsms);
+                    for (int i = 0; i < allPsms.Length; i++)
+                    {
+                        if (allPsms[i] != null)
+                        {
+                            allPsms[i].AddRange(fileSpecificPsms[i]);
+                        }
+                    }
                 }
 
                 completedFiles++;

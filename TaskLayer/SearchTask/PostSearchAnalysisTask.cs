@@ -47,17 +47,34 @@ namespace TaskLayer
             }
 
             //update all psms with peptide info
-            if (Parameters.SearchParameters.SearchType != SearchType.NonSpecific) //if it hasn't been done already
+
+            Parameters.AllPsms.ToList()
+                .Where(psmArray=>psmArray!=null).ToList()
+                .ForEach(psmArray => psmArray.Where(psm => psm != null).ToList()
+                .ForEach(psm => psm.ResolveAllAmbiguities()));
+
+            foreach (var psmsArray in Parameters.AllPsms)
             {
-                Parameters.AllPsms = Parameters.AllPsms.Where(psm => psm != null).ToList();
-                Parameters.AllPsms.ForEach(psm => psm.ResolveAllAmbiguities());
+                if (psmsArray != null)
+                {
+                    var cleanedPsmsArray = psmsArray.Where(b=>b!=null).OrderByDescending(b => b.Score)
+                       .ThenBy(b => b.PeptideMonisotopicMass.HasValue ? Math.Abs(b.ScanPrecursorMass - b.PeptideMonisotopicMass.Value) : double.MaxValue)
+                       .GroupBy(b => (b.FullFilePath, b.ScanNumber, b.PeptideMonisotopicMass)).Select(b => b.First()).ToList();
 
-                Parameters.AllPsms = Parameters.AllPsms.OrderByDescending(b => b.Score)
-                   .ThenBy(b => b.PeptideMonisotopicMass.HasValue ? Math.Abs(b.ScanPrecursorMass - b.PeptideMonisotopicMass.Value) : double.MaxValue)
-                   .GroupBy(b => (b.FullFilePath, b.ScanNumber, b.PeptideMonisotopicMass)).Select(b => b.First()).ToList();
-
-                CalculatePsmFdr();
+                    CalculatePsmFdr(cleanedPsmsArray);
+                    for(int i=0; i<psmsArray.Count; i++)
+                    {
+                        if(psmsArray[i]!=null)
+                        {
+                            if(psmsArray[i].FdrInfo==null) //if it was grouped in the cleanedPsmsArray
+                            {
+                                psmsArray[i] = null;
+                            }
+                        }
+                    }
+                }
             }
+            Parameters.BestPsms = ResolveFdrCategorySpecificPsms(Parameters.AllPsms, Parameters.NumNotches, Parameters.SearchTaskId, CommonParameters);
 
             DoMassDifferenceLocalizationAnalysis();
             ProteinAnalysis();
@@ -82,7 +99,7 @@ namespace TaskLayer
         /// <summary>
         /// Calculate estimated false-discovery rate (FDR) for peptide spectral matches (PSMs)
         /// </summary>
-        private void CalculatePsmFdr()
+        private void CalculatePsmFdr(List<PeptideSpectralMatch> psmArray)
         {
             // TODO: because FDR is done before parsimony, if a PSM matches to a target and a decoy protein, there may be conflicts between how it's handled in parsimony and the FDR engine here
             // for example, here it may be treated as a decoy PSM, where as in parsimony it will be determined by the parsimony algorithm which is agnostic of target/decoy assignments
@@ -90,15 +107,8 @@ namespace TaskLayer
 
             Status("Estimating PSM FDR...", Parameters.SearchTaskId);
             int massDiffAcceptorNumNotches = Parameters.NumNotches;
-            new FdrAnalysisEngine(Parameters.AllPsms, massDiffAcceptorNumNotches, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run();
 
-            // sort by q-value because of group FDR stuff
-            // e.g. multiprotease FDR, non/semi-specific protease, etc
-            Parameters.AllPsms = Parameters.AllPsms
-                .OrderBy(p => p.FdrInfo.QValue)
-                .ThenByDescending(p => p.Score)
-                .ThenBy(p => p.FdrInfo.CumulativeTarget)
-                .ToList();
+            new FdrAnalysisEngine(psmArray, massDiffAcceptorNumNotches, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run();
 
             Status("Done estimating PSM FDR!", Parameters.SearchTaskId);
         }
@@ -113,15 +123,15 @@ namespace TaskLayer
             Status("Constructing protein groups...", Parameters.SearchTaskId);
 
             // run parsimony
-            ProteinParsimonyResults proteinAnalysisResults = (ProteinParsimonyResults)(new ProteinParsimonyEngine(Parameters.AllPsms, Parameters.SearchParameters.ModPeptidesAreDifferent, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run());
+            ProteinParsimonyResults proteinAnalysisResults = (ProteinParsimonyResults)(new ProteinParsimonyEngine(Parameters.BestPsms, Parameters.SearchParameters.ModPeptidesAreDifferent, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run());
 
             // score protein groups and calculate FDR
-            ProteinScoringAndFdrResults proteinScoringAndFdrResults = (ProteinScoringAndFdrResults)new ProteinScoringAndFdrEngine(proteinAnalysisResults.ProteinGroups, Parameters.AllPsms,
+            ProteinScoringAndFdrResults proteinScoringAndFdrResults = (ProteinScoringAndFdrResults)new ProteinScoringAndFdrEngine(proteinAnalysisResults.ProteinGroups, Parameters.BestPsms,
                 Parameters.SearchParameters.NoOneHitWonders, Parameters.SearchParameters.ModPeptidesAreDifferent, true, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run();
 
             ProteinGroups = proteinScoringAndFdrResults.SortedAndScoredProteinGroups;
 
-            foreach (PeptideSpectralMatch psm in Parameters.AllPsms)
+            foreach (PeptideSpectralMatch psm in Parameters.BestPsms)
             {
                 psm.ResolveAllAmbiguities();
             }
@@ -141,7 +151,7 @@ namespace TaskLayer
                     var origDataFile = Parameters.CurrentRawFileList[spectraFileIndex];
                     Status("Running mass-difference localization analysis...", new List<string> { Parameters.SearchTaskId, "Individual Spectra Files", origDataFile });
                     MsDataFile myMsDataFile = Parameters.MyFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks, combinedParams);
-                    new LocalizationEngine(Parameters.AllPsms.Where(b => b.FullFilePath.Equals(origDataFile)).ToList(),
+                    new LocalizationEngine(Parameters.BestPsms.Where(b => b.FullFilePath.Equals(origDataFile)).ToList(),
                         myMsDataFile, combinedParams, new List<string> { Parameters.SearchTaskId, "Individual Spectra Files", origDataFile }).Run();
                     Parameters.MyFileManager.DoneWithFile(origDataFile);
                     ReportProgress(new ProgressEventArgs(100, "Done with localization analysis!", new List<string> { Parameters.SearchTaskId, "Individual Spectra Files", origDataFile }));
@@ -149,7 +159,7 @@ namespace TaskLayer
             }
 
             // count different modifications observed
-            new ModificationAnalysisEngine(Parameters.AllPsms, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run();
+            new ModificationAnalysisEngine(Parameters.BestPsms, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run();
         }
 
         private void QuantificationAnalysis()
@@ -214,7 +224,7 @@ namespace TaskLayer
             }
 
             // get PSMs to pass to FlashLFQ
-            var unambiguousPsmsBelowOnePercentFdr = Parameters.AllPsms.Where(p =>
+            var unambiguousPsmsBelowOnePercentFdr = Parameters.BestPsms.Where(p =>
                 p.FdrInfo.QValue <= 0.01
                 && p.FdrInfo.QValueNotch <= 0.01
                 && !p.IsDecoy
@@ -396,7 +406,7 @@ namespace TaskLayer
         {
             if (Parameters.SearchParameters.DoHistogramAnalysis)
             {
-                var limitedpsms_with_fdr = Parameters.AllPsms.Where(b => (b.FdrInfo.QValue <= 0.01)).ToList();
+                var limitedpsms_with_fdr = Parameters.BestPsms.Where(b => (b.FdrInfo.QValue <= 0.01)).ToList();
                 if (limitedpsms_with_fdr.Any(b => !b.IsDecoy))
                 {
                     Status("Running histogram analysis...", new List<string> { Parameters.SearchTaskId });
@@ -412,7 +422,7 @@ namespace TaskLayer
         private void WritePsmResults()
         {
             Status("Writing results...", Parameters.SearchTaskId);
-            List<PeptideSpectralMatch> filteredPsmListForOutput = Parameters.AllPsms
+            List<PeptideSpectralMatch> filteredPsmListForOutput = Parameters.BestPsms
                 .Where(p => p.FdrInfo.QValue <= CommonParameters.QValueOutputFilter
                 && p.FdrInfo.QValueNotch <= CommonParameters.QValueOutputFilter).ToList();
 
@@ -437,12 +447,12 @@ namespace TaskLayer
 
             // write best (highest-scoring) PSM per peptide
             writtenFile = Path.Combine(Parameters.OutputFolder, "AllPeptides.psmtsv");
-            List<PeptideSpectralMatch> peptides = Parameters.AllPsms.GroupBy(b => b.FullSequence).Select(b => b.FirstOrDefault()).ToList();
+            List<PeptideSpectralMatch> peptides = Parameters.BestPsms.GroupBy(b => b.FullSequence).Select(b => b.FirstOrDefault()).ToList();
             WritePsmsToTsv(filteredPsmListForOutput.GroupBy(b => b.FullSequence).Select(b => b.FirstOrDefault()).ToList(), writtenFile, Parameters.SearchParameters.ModsToWriteSelection);
             FinishedWritingFile(writtenFile, new List<string> { Parameters.SearchTaskId });
 
             // write summary text
-            Parameters.SearchTaskResults.AddNiceText("All target PSMS within 1% FDR: " + Parameters.AllPsms.Count(a => a.FdrInfo.QValue <= 0.01 && !a.IsDecoy));
+            Parameters.SearchTaskResults.AddNiceText("All target PSMS within 1% FDR: " + Parameters.BestPsms.Count(a => a.FdrInfo.QValue <= 0.01 && !a.IsDecoy));
             Parameters.SearchTaskResults.AddNiceText("All target peptides within 1% FDR: " + peptides.Count(a => a.FdrInfo.QValue <= 0.01 && !a.IsDecoy));
             if (Parameters.SearchParameters.DoParsimony)
             {
@@ -586,7 +596,7 @@ namespace TaskLayer
                 List<Modification> modificationsToWriteIfInDatabase = new List<Modification>();
                 List<Modification> modificationsToWriteIfObserved = new List<Modification>();
 
-                var confidentPsms = Parameters.AllPsms.Where(b => b.FdrInfo.QValueNotch <= 0.01 && b.FdrInfo.QValue <= 0.01 && !b.IsDecoy && b.BaseSequence != null).ToList();
+                var confidentPsms = Parameters.BestPsms.Where(b => b.FdrInfo.QValueNotch <= 0.01 && b.FdrInfo.QValue <= 0.01 && !b.IsDecoy && b.BaseSequence != null).ToList();
                 var proteinToConfidentBaseSequences = new Dictionary<Protein, List<PeptideWithSetModifications>>();
 
                 // associate all confident PSMs with all possible proteins they could be digest products of (before or after parsimony)
@@ -625,7 +635,7 @@ namespace TaskLayer
                 }
 
                 //generates dictionary of proteins with only localized modifications
-                var ModPsms = Parameters.AllPsms.Where(b => b.FdrInfo.QValueNotch <= 0.01 && b.FdrInfo.QValue <= 0.01 && !b.IsDecoy && b.FullSequence != null).ToList();
+                var ModPsms = Parameters.BestPsms.Where(b => b.FdrInfo.QValueNotch <= 0.01 && b.FdrInfo.QValue <= 0.01 && !b.IsDecoy && b.FullSequence != null).ToList();
                 var proteinToConfidentModifiedSequences = new Dictionary<Protein, List<PeptideWithSetModifications>>();
 
                 foreach (PeptideSpectralMatch psm in ModPsms)
@@ -870,6 +880,159 @@ namespace TaskLayer
             flashLFQResults.WriteResults(peaksPath, null, null, null);
 
             FinishedWritingFile(peaksPath, nestedIds);
+        }
+
+
+        public static List<PeptideSpectralMatch> ResolveFdrCategorySpecificPsms(List<PeptideSpectralMatch>[] AllPsms, int numNotches, string taskId, CommonParameters commonParameters)
+        {
+            //update all psms with peptide info
+            AllPsms.ToList()
+                .Where(psmArray => psmArray != null).ToList()
+                .ForEach(psmArray => psmArray.Where(psm => psm != null).ToList()
+                .ForEach(psm => psm.ResolveAllAmbiguities()));
+
+            foreach (var psmsArray in AllPsms)
+            {
+                if (psmsArray != null)
+                {
+                    var cleanedPsmsArray = psmsArray.Where(b => b != null).OrderByDescending(b => b.Score)
+                       .ThenBy(b => b.PeptideMonisotopicMass.HasValue ? Math.Abs(b.ScanPrecursorMass - b.PeptideMonisotopicMass.Value) : double.MaxValue)
+                       .GroupBy(b => (b.FullFilePath, b.ScanNumber, b.PeptideMonisotopicMass)).Select(b => b.First()).ToList();
+
+                    new FdrAnalysisEngine(cleanedPsmsArray, numNotches, commonParameters, new List<string> { taskId }).Run();
+
+                    for (int i = 0; i < psmsArray.Count; i++)
+                    {
+                        if (psmsArray[i] != null)
+                        {
+                            if (psmsArray[i].FdrInfo == null) //if it was grouped in the cleanedPsmsArray
+                            {
+                                psmsArray[i] = null;
+                            }
+                        }
+                    }
+                }
+            }
+
+            int[] ranking = new int[AllPsms.Length]; //high int is good ranking
+            List<int> indexesOfInterest = new List<int>();
+            for (int i = 0; i < ranking.Length; i++)
+            {
+                if (AllPsms[i] != null)
+                {
+                    ranking[i] = AllPsms[i].Where(x => x != null).Count(x => x.FdrInfo.QValue <= 0.01); //set ranking as number of psms above 1% FDR
+                    indexesOfInterest.Add(i);
+                }
+            }
+
+            //get the index of the category with the highest ranking
+            int majorCategoryIndex = indexesOfInterest[0];
+            for (int i = 1; i < indexesOfInterest.Count; i++)
+            {
+                int currentCategoryIndex = indexesOfInterest[i];
+                if (ranking[currentCategoryIndex] > ranking[majorCategoryIndex])
+                {
+                    majorCategoryIndex = currentCategoryIndex;
+                }
+            }
+
+            //update other category q-values
+            //There's a chance of weird categories getting a random decoy before a random target, but we don't want to give that target a q value of zero.
+            //We can't just take the q of the first decoy, because if the target wasn't random (score = 40), but there are no other targets before the decoy (score = 5), then we're incorrectly dinging the target
+            //The current solution is such that if a minor category has a lower q value than it's corresponding score in the major category, then its q-value is changed to what it would be in the major category
+            List<PeptideSpectralMatch> majorCategoryPsms = AllPsms[majorCategoryIndex].Where(x => x != null).OrderByDescending(x => x.Score).ToList(); //get sorted major category
+            for (int i = 0; i < indexesOfInterest.Count; i++)
+            {
+                int minorCategoryIndex = indexesOfInterest[i];
+                if (minorCategoryIndex != majorCategoryIndex)
+                {
+                    List<PeptideSpectralMatch> minorCategoryPsms = AllPsms[minorCategoryIndex].Where(x => x != null).OrderByDescending(x => x.Score).ToList(); //get sorted minor category
+                    int minorPsmIndex = 0;
+                    int majorPsmIndex = 0;
+                    while (minorPsmIndex < minorCategoryPsms.Count && majorPsmIndex < majorCategoryPsms.Count) //while in the lists
+                    {
+                        var majorPsm = majorCategoryPsms[majorPsmIndex];
+                        var minorPsm = minorCategoryPsms[minorPsmIndex];
+                        //major needs to be a lower score than the minor
+                        if (majorPsm.Score > minorPsm.Score)
+                        {
+                            majorPsmIndex++;
+                        }
+                        else
+                        {
+                            if (majorPsm.FdrInfo.QValue > minorPsm.FdrInfo.QValue)
+                            {
+                                minorPsm.FdrInfo.QValue = majorPsm.FdrInfo.QValue;
+                            }
+                            minorPsmIndex++;
+                        }
+                    }
+                    //wrap up if we hit the end of the major category
+                    while (minorPsmIndex < minorCategoryPsms.Count)
+                    {
+                        var majorPsm = majorCategoryPsms[majorPsmIndex - 1]; //-1 because it's out of index right now
+                        var minorPsm = minorCategoryPsms[minorPsmIndex];
+                        if (majorPsm.FdrInfo.QValue > minorPsm.FdrInfo.QValue)
+                        {
+                            minorPsm.FdrInfo.QValue = majorPsm.FdrInfo.QValue;
+                        }
+                        minorPsmIndex++;
+                    }
+                }
+            }
+
+            int numTotalSpectraWithPrecursors = AllPsms[indexesOfInterest[0]].Count;
+            List<PeptideSpectralMatch> bestPsmsList = new List<PeptideSpectralMatch>();
+            for (int i = 0; i < numTotalSpectraWithPrecursors; i++)
+            {
+                PeptideSpectralMatch bestPsm = null;
+                double lowestQ = double.MaxValue;
+                int bestIndex = -1;
+                foreach (int index in indexesOfInterest) //foreach category
+                {
+                    PeptideSpectralMatch currentPsm = AllPsms[index][i];
+                    if (currentPsm != null)
+                    {
+                        double currentQValue = currentPsm.FdrInfo.QValue;
+                        if (currentQValue < lowestQ //if the new one is better
+                            || (currentQValue == lowestQ && currentPsm.Score > bestPsm.Score))
+                        {
+                            if (bestIndex != -1)
+                            {
+                                //remove the old one so we don't use it for fdr later
+                                AllPsms[bestIndex][i] = null;
+                            }
+                            bestPsm = currentPsm;
+                            lowestQ = currentQValue;
+                            bestIndex = index;
+                        }
+                        else //remove the old one so we don't use it for fdr later
+                        {
+                            AllPsms[index][i] = null;
+                        }
+                    }
+                }
+                if (bestPsm != null)
+                {
+                    bestPsmsList.Add(bestPsm);
+                }
+            }
+
+            //It's probable that psms from some categories were removed by psms from other categories.
+            //however, the fdr is still affected by their presence, since it was calculated before their removal.
+            foreach (var psmsArray in AllPsms)
+            {
+                if (psmsArray != null)
+                {
+                    var cleanedPsmsArray = psmsArray.Where(b => b != null).OrderByDescending(b => b.Score)
+                       .ThenBy(b => b.PeptideMonisotopicMass.HasValue ? Math.Abs(b.ScanPrecursorMass - b.PeptideMonisotopicMass.Value) : double.MaxValue)
+                       .ToList();
+
+                    new FdrAnalysisEngine(cleanedPsmsArray, numNotches, commonParameters, new List<string> { taskId }).Run();
+                }
+            }
+
+            return bestPsmsList.OrderBy(b => b.FdrInfo.QValue).ThenByDescending(b => b.Score).ToList();
         }
     }
 }

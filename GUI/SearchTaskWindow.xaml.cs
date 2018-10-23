@@ -166,6 +166,7 @@ namespace MetaMorpheusGUI
             missedCleavagesTextBox.Text = task.CommonParameters.DigestionParams.MaxMissedCleavages == int.MaxValue ? "" : task.CommonParameters.DigestionParams.MaxMissedCleavages.ToString(CultureInfo.InvariantCulture);
             MinPeptideLengthTextBox.Text = task.CommonParameters.DigestionParams.MinPeptideLength.ToString(CultureInfo.InvariantCulture);
             MaxPeptideLengthTextBox.Text = task.CommonParameters.DigestionParams.MaxPeptideLength == int.MaxValue ? "" : task.CommonParameters.DigestionParams.MaxPeptideLength.ToString(CultureInfo.InvariantCulture);
+            proteaseComboBox.SelectedItem = task.CommonParameters.DigestionParams.SpecificProtease;
             maxModificationIsoformsTextBox.Text = task.CommonParameters.DigestionParams.MaxModificationIsoforms.ToString(CultureInfo.InvariantCulture);
             MaxModNumTextBox.Text = task.CommonParameters.DigestionParams.MaxModsForPeptide.ToString(CultureInfo.InvariantCulture);
             initiatorMethionineBehaviorComboBox.SelectedIndex = (int)task.CommonParameters.DigestionParams.InitiatorMethionineBehavior;
@@ -301,6 +302,8 @@ namespace MetaMorpheusGUI
             }
             //else it's the default of full
 
+            bool classicSemiSpecific = false;
+
             if (searchModeType != CleavageSpecificity.Full)
             {
                 if (((Protease)proteaseComboBox.SelectedItem).Name.Contains("non-specific"))
@@ -337,6 +340,14 @@ namespace MetaMorpheusGUI
                     nTerminalIons.IsChecked = true;
                 }
             }
+            else //it is full
+            {
+                //check if it's classic semi
+                if(checkBoxClassicSemiSpecific.IsChecked.Value)
+                {
+                    classicSemiSpecific = true;
+                }
+            }
 
             if (!GlobalGuiSettings.CheckTaskSettingsValidity(precursorMassToleranceTextBox.Text, productMassToleranceTextBox.Text, missedCleavagesTextBox.Text,
                 maxModificationIsoformsTextBox.Text, MinPeptideLengthTextBox.Text, MaxPeptideLengthTextBox.Text, maxThreadsTextBox.Text, minScoreAllowed.Text,
@@ -347,6 +358,18 @@ namespace MetaMorpheusGUI
             }
 
             Protease protease = (Protease)proteaseComboBox.SelectedItem;
+            if (classicSemiSpecific)
+            {
+                //make a new semi protease
+                string semiName = "semi-" + protease.Name;
+                if (!ProteaseDictionary.Dictionary.Keys.Contains(semiName)) //don't double add if previously added
+                {
+                    ProteaseDictionary.Dictionary[semiName]
+                        = new Protease(semiName, protease.SequencesInducingCleavage, protease.SequencesPreventingCleavage,
+                        CleavageSpecificity.Semi, protease.PsiMsAccessionNumber, protease.PsiMsName, protease.SiteRegexp);
+                }
+                protease = ProteaseDictionary.Dictionary[semiName];
+            }
 
             DissociationType dissociationType = GlobalVariables.AllSupportedDissociationTypes[dissociationTypeComboBox.SelectedItem.ToString()];
             FragmentationTerminus fragmentationTerminus = FragmentationTerminus.Both;
@@ -539,7 +562,6 @@ namespace MetaMorpheusGUI
                 TheTask.SearchParameters.LocalFdrCategories = new List<FdrCategory> { FdrCategory.FullySpecific };
             }
 
-
             // displays warning if classic search is enabled with an open search mode
             if (TheTask.SearchParameters.SearchType == SearchType.Classic &&
                 (TheTask.SearchParameters.MassDiffAcceptorType == MassDiffAcceptorType.ModOpen || TheTask.SearchParameters.MassDiffAcceptorType == MassDiffAcceptorType.Open))
@@ -648,10 +670,14 @@ namespace MetaMorpheusGUI
                     proteaseComboBox.SelectedItem = proteaseComboBox.Items.CurrentItem;
                 }
                 addCompIonCheckBox.IsChecked = true;
+                checkBoxClassicSemiSpecific.IsEnabled = false;
             }
             else
             {
                 addCompIonCheckBox.IsChecked = false;
+
+                checkBoxClassicSemiSpecific.IsEnabled = true;
+                checkBoxClassicSemiSpecific.IsChecked = false;
                 nTerminalIons.IsChecked = true;
                 cTerminalIons.IsChecked = true;
             }
@@ -698,6 +724,8 @@ namespace MetaMorpheusGUI
         private void SemiSpecificUpdate(object sender, RoutedEventArgs e)
         {
             addCompIonCheckBox.IsChecked = semiSpecificSearchRadioButton.IsChecked.Value;
+
+            checkBoxClassicSemiSpecific.IsChecked = semiSpecificSearchRadioButton.IsChecked.Value;
             if (semiSpecificSearchRadioButton.IsChecked.Value)
             {
                 missedCleavagesTextBox.Text = "2";
