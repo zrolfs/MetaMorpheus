@@ -47,6 +47,7 @@ namespace TaskLayer
             }
 
             //update all psms with peptide info
+
             Parameters.AllPsms.ToList()
                 .Where(psmArray=>psmArray!=null).ToList()
                 .ForEach(psmArray => psmArray.Where(psm => psm != null).ToList()
@@ -74,7 +75,6 @@ namespace TaskLayer
                 }
             }
             Parameters.BestPsms = ResolveFdrCategorySpecificPsms(Parameters.AllPsms, Parameters.NumNotches, Parameters.SearchTaskId, CommonParameters);
-
 
             DoMassDifferenceLocalizationAnalysis();
             ProteinAnalysis();
@@ -104,9 +104,10 @@ namespace TaskLayer
             // TODO: because FDR is done before parsimony, if a PSM matches to a target and a decoy protein, there may be conflicts between how it's handled in parsimony and the FDR engine here
             // for example, here it may be treated as a decoy PSM, where as in parsimony it will be determined by the parsimony algorithm which is agnostic of target/decoy assignments
             // this could cause weird PSM FDR issues
-            
+
             Status("Estimating PSM FDR...", Parameters.SearchTaskId);
             int massDiffAcceptorNumNotches = Parameters.NumNotches;
+
             new FdrAnalysisEngine(psmArray, massDiffAcceptorNumNotches, CommonParameters, new List<string> { Parameters.SearchTaskId }).Run();
 
             Status("Done estimating PSM FDR!", Parameters.SearchTaskId);
@@ -460,7 +461,7 @@ namespace TaskLayer
             }
 
             PsmsGroupedByFile = filteredPsmListForOutput.GroupBy(p => p.FullFilePath);
-            
+
             foreach (var file in PsmsGroupedByFile)
             {
                 // write summary text

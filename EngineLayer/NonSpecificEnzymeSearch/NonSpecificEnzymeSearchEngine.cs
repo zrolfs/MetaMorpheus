@@ -1,9 +1,7 @@
 ﻿using Chemistry;
 using EngineLayer.FdrAnalysis;
 using EngineLayer.ModernSearch;
-using MassSpectrometry;
 using Proteomics;
-using Proteomics.AminoAcidPolymer;
 using Proteomics.Fragmentation;
 using Proteomics.ProteolyticDigestion;
 using System;
@@ -96,7 +94,7 @@ namespace EngineLayer.NonSpecificEnzymeSearch
                                 PeptideWithSetModifications peptide = PeptideIndex[id];
                                 List<Product> peptideTheorProducts = peptide.Fragment(commonParameters.DissociationType, commonParameters.DigestionParams.FragmentationTerminus).ToList();
 
-                                List<MatchedFragmentIon> matchedIons = MatchFragmentIons(scan.TheScan.MassSpectrum, peptideTheorProducts, commonParameters, scan.PrecursorMass);
+                                List<MatchedFragmentIon> matchedIons = MatchFragmentIons(scan, peptideTheorProducts, commonParameters);
 
                                 double thisScore = CalculatePeptideScore(scan.TheScan, matchedIons, MaxMassThatFragmentIonScoreIsDoubled);
                                 if (thisScore > commonParameters.ScoreCutoff)
@@ -193,6 +191,158 @@ namespace EngineLayer.NonSpecificEnzymeSearch
                 }
             }
             return new Tuple<int, PeptideWithSetModifications>(-1, null);
+        }
+
+        public static List<PeptideSpectralMatch> ResolveFdrCategorySpecificPsms(List<PeptideSpectralMatch>[] AllPsms, int numNotches, string taskId, CommonParameters commonParameters)
+        {
+            //update all psms with peptide info
+            AllPsms.ToList()
+                .Where(psmArray => psmArray != null).ToList()
+                .ForEach(psmArray => psmArray.Where(psm => psm != null).ToList()
+                .ForEach(psm => psm.ResolveAllAmbiguities()));
+
+            foreach (var psmsArray in AllPsms)
+            {
+                if (psmsArray != null)
+                {
+                    var cleanedPsmsArray = psmsArray.Where(b => b != null).OrderByDescending(b => b.Score)
+                       .ThenBy(b => b.PeptideMonisotopicMass.HasValue ? Math.Abs(b.ScanPrecursorMass - b.PeptideMonisotopicMass.Value) : double.MaxValue)
+                       .GroupBy(b => (b.FullFilePath, b.ScanNumber, b.PeptideMonisotopicMass)).Select(b => b.First()).ToList();
+
+                    new FdrAnalysisEngine(cleanedPsmsArray, numNotches, commonParameters, new List<string> { taskId }).Run();
+
+                    for (int i = 0; i < psmsArray.Count; i++)
+                    {
+                        if (psmsArray[i] != null)
+                        {
+                            if (psmsArray[i].FdrInfo == null) //if it was grouped in the cleanedPsmsArray
+                            {
+                                psmsArray[i] = null;
+                            }
+                        }
+                    }
+                }
+            }
+
+            int[] ranking = new int[AllPsms.Length]; //high int is good ranking
+            List<int> indexesOfInterest = new List<int>();
+            for (int i = 0; i < ranking.Length; i++)
+            {
+                if (AllPsms[i] != null)
+                {
+                    ranking[i] = AllPsms[i].Where(x => x != null).Count(x => x.FdrInfo.QValue <= 0.01); //set ranking as number of psms above 1% FDR
+                    indexesOfInterest.Add(i);
+                }
+            }
+
+            //get the index of the category with the highest ranking
+            int majorCategoryIndex = indexesOfInterest[0];
+            for (int i = 1; i < indexesOfInterest.Count; i++)
+            {
+                int currentCategoryIndex = indexesOfInterest[i];
+                if (ranking[currentCategoryIndex] > ranking[majorCategoryIndex])
+                {
+                    majorCategoryIndex = currentCategoryIndex;
+                }
+            }
+
+            //update other category q-values
+            //There's a chance of weird categories getting a random decoy before a random target, but we don't want to give that target a q value of zero.
+            //We can't just take the q of the first decoy, because if the target wasn't random (score = 40), but there are no other targets before the decoy (score = 5), then we're incorrectly dinging the target
+            //The current solution is such that if a minor category has a lower q value than it's corresponding score in the major category, then its q-value is changed to what it would be in the major category
+            List<PeptideSpectralMatch> majorCategoryPsms = AllPsms[majorCategoryIndex].Where(x => x != null).OrderByDescending(x => x.Score).ToList(); //get sorted major category
+            for (int i = 0; i < indexesOfInterest.Count; i++)
+            {
+                int minorCategoryIndex = indexesOfInterest[i];
+                if (minorCategoryIndex != majorCategoryIndex)
+                {
+                    List<PeptideSpectralMatch> minorCategoryPsms = AllPsms[minorCategoryIndex].Where(x => x != null).OrderByDescending(x => x.Score).ToList(); //get sorted minor category
+                    int minorPsmIndex = 0;
+                    int majorPsmIndex = 0;
+                    while (minorPsmIndex < minorCategoryPsms.Count && majorPsmIndex < majorCategoryPsms.Count) //while in the lists
+                    {
+                        var majorPsm = majorCategoryPsms[majorPsmIndex];
+                        var minorPsm = minorCategoryPsms[minorPsmIndex];
+                        //major needs to be a lower score than the minor
+                        if (majorPsm.Score > minorPsm.Score)
+                        {
+                            majorPsmIndex++;
+                        }
+                        else
+                        {
+                            if (majorPsm.FdrInfo.QValue > minorPsm.FdrInfo.QValue)
+                            {
+                                minorPsm.FdrInfo.QValue = majorPsm.FdrInfo.QValue;
+                            }
+                            minorPsmIndex++;
+                        }
+                    }
+                    //wrap up if we hit the end of the major category
+                    while (minorPsmIndex < minorCategoryPsms.Count)
+                    {
+                        var majorPsm = majorCategoryPsms[majorPsmIndex - 1]; //-1 because it's out of index right now
+                        var minorPsm = minorCategoryPsms[minorPsmIndex];
+                        if (majorPsm.FdrInfo.QValue > minorPsm.FdrInfo.QValue)
+                        {
+                            minorPsm.FdrInfo.QValue = majorPsm.FdrInfo.QValue;
+                        }
+                        minorPsmIndex++;
+                    }
+                }
+            }
+
+            int numTotalSpectraWithPrecursors = AllPsms[indexesOfInterest[0]].Count;
+            List<PeptideSpectralMatch> bestPsmsList = new List<PeptideSpectralMatch>();
+            for (int i = 0; i < numTotalSpectraWithPrecursors; i++)
+            {
+                PeptideSpectralMatch bestPsm = null;
+                double lowestQ = double.MaxValue;
+                int bestIndex = -1;
+                foreach (int index in indexesOfInterest) //foreach category
+                {
+                    PeptideSpectralMatch currentPsm = AllPsms[index][i];
+                    if (currentPsm != null)
+                    {
+                        double currentQValue = currentPsm.FdrInfo.QValue;
+                        if (currentQValue < lowestQ //if the new one is better
+                            || (currentQValue == lowestQ && currentPsm.Score > bestPsm.Score))
+                        {
+                            if (bestIndex != -1)
+                            {
+                                //remove the old one so we don't use it for fdr later
+                                AllPsms[bestIndex][i] = null;
+                            }
+                            bestPsm = currentPsm;
+                            lowestQ = currentQValue;
+                            bestIndex = index;
+                        }
+                        else //remove the old one so we don't use it for fdr later
+                        {
+                            AllPsms[index][i] = null;
+                        }
+                    }
+                }
+                if (bestPsm != null)
+                {
+                    bestPsmsList.Add(bestPsm);
+                }
+            }
+
+            //It's probable that psms from some categories were removed by psms from other categories.
+            //however, the fdr is still affected by their presence, since it was calculated before their removal.
+            foreach (var psmsArray in AllPsms)
+            {
+                if (psmsArray != null)
+                {
+                    var cleanedPsmsArray = psmsArray.Where(b => b != null).OrderByDescending(b => b.Score)
+                       .ThenBy(b => b.PeptideMonisotopicMass.HasValue ? Math.Abs(b.ScanPrecursorMass - b.PeptideMonisotopicMass.Value) : double.MaxValue)
+                       .ToList();
+
+                    new FdrAnalysisEngine(cleanedPsmsArray, numNotches, commonParameters, new List<string> { taskId }).Run();
+                }
+            }
+
+            return bestPsmsList.OrderBy(b => b.FdrInfo.QValue).ThenByDescending(b => b.Score).ToList();
         }
     }
 }

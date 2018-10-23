@@ -23,8 +23,6 @@ namespace EngineLayer.CrosslinkSearch
         private readonly bool QuenchH2O;
         private readonly bool QuenchNH2;
         private readonly bool QuenchTris;
-        private readonly bool Charge_2_3;
-        private readonly bool Charge_2_3_PrimeFragment;
         private MassDiffAcceptor XLPrecusorSearchMode;
         private Modification TrisDeadEnd;
         private Modification H2ODeadEnd;
@@ -34,7 +32,7 @@ namespace EngineLayer.CrosslinkSearch
 
         public CrosslinkSearchEngine(CrosslinkSpectralMatch[] globalCsms, Ms2ScanWithSpecificMass[] listOfSortedms2Scans, List<PeptideWithSetModifications> peptideIndex,
             List<int>[] fragmentIndex, int currentPartition, CommonParameters commonParameters, Crosslinker crosslinker, bool CrosslinkSearchTop, int CrosslinkSearchTopNum,
-            bool quench_H2O, bool quench_NH2, bool quench_Tris, bool charge_2_3, bool charge_2_3_PrimeFragment, List<string> nestedIds)
+            bool quench_H2O, bool quench_NH2, bool quench_Tris, List<string> nestedIds)
             : base(null, listOfSortedms2Scans, peptideIndex, fragmentIndex, currentPartition, commonParameters, new OpenSearchMode(), 0, nestedIds)
         {
             this.GlobalCsms = globalCsms;
@@ -44,8 +42,6 @@ namespace EngineLayer.CrosslinkSearch
             this.QuenchH2O = quench_H2O;
             this.QuenchNH2 = quench_NH2;
             this.QuenchTris = quench_Tris;
-            this.Charge_2_3 = charge_2_3;
-            this.Charge_2_3_PrimeFragment = charge_2_3_PrimeFragment;
             GenerateCrosslinkModifications(crosslinker);
             AllCrosslinkerSites = Crosslinker.CrosslinkerModSites.ToCharArray().Concat(Crosslinker.CrosslinkerModSites2.ToCharArray()).Distinct().ToArray();
 
@@ -96,8 +92,6 @@ namespace EngineLayer.CrosslinkSearch
                     // done with indexed scoring; refine scores and create PSMs
                     if (idsOfPeptidesPossiblyObserved.Any())
                     {
-                        List<int> idsRankedByScore = new List<int>();
-
                         if (CrosslinkSearchTopN)
                         {
                             // take top N hits for this scan
@@ -114,6 +108,11 @@ namespace EngineLayer.CrosslinkSearch
 
                         // combine individual peptide hits with crosslinker mass to find best crosslink PSM hit
                         var csm = FindCrosslinkedPeptide(scan, bestPeptideScoreNotchList, scanIndex);
+
+                        if (csm == null)
+                        {
+                            continue;
+                        }
 
                         // this scan might already have a hit from a different database partition; check to see if the score improves
                         if (GlobalCsms[scanIndex] == null || GlobalCsms[scanIndex].XLTotalScore < csm.XLTotalScore)
@@ -164,7 +163,7 @@ namespace EngineLayer.CrosslinkSearch
                 if (XLPrecusorSearchMode.Accepts(theScan.PrecursorMass, bestPeptide.MonoisotopicMass) >= 0)
                 {
                     List<Product> products = bestPeptide.Fragment(commonParameters.DissociationType, FragmentationTerminus.Both).ToList();
-                    var matchedFragmentIons = MatchFragmentIons(theScan.TheScan.MassSpectrum, products, commonParameters, theScan.PrecursorMass);
+                    var matchedFragmentIons = MatchFragmentIons(theScan, products, commonParameters);
                     double score = CalculatePeptideScore(theScan.TheScan, matchedFragmentIons, 0);
 
                     var psmCrossSingle = new CrosslinkSpectralMatch(bestPeptide, theScanBestPeptide[alphaIndex].BestNotch, score, scanIndex, theScan, commonParameters.DigestionParams, matchedFragmentIons);
@@ -322,7 +321,7 @@ namespace EngineLayer.CrosslinkSearch
                     {
                         foreach (var setOfFragments in fragmentsForEachAlphaLocalizedPossibility.Where(v => v.Item1 == possibleSite))
                         {
-                            var matchedIons = MatchFragmentIons(theScan.TheScan.MassSpectrum, setOfFragments.Item2, commonParameters, theScan.PrecursorMass);
+                            var matchedIons = MatchFragmentIons(theScan, setOfFragments.Item2, commonParameters);
                             double score = CalculatePeptideScore(theScan.TheScan, matchedIons, 0);
 
                             if (score > bestAlphaLocalizedScore)
@@ -343,7 +342,7 @@ namespace EngineLayer.CrosslinkSearch
                     {
                         foreach (var setOfFragments in fragmentsForEachBetaLocalizedPossibility.Where(v => v.Item1 == possibleSite))
                         {
-                            var matchedIons = MatchFragmentIons(theScan.TheScan.MassSpectrum, setOfFragments.Item2, commonParameters, theScan.PrecursorMass);
+                            var matchedIons = MatchFragmentIons(theScan, setOfFragments.Item2, commonParameters);
 
                             // remove any matched beta ions that also matched to the alpha peptide
                             matchedIons.RemoveAll(p => alphaMz.Contains(p.Mz));
@@ -370,7 +369,6 @@ namespace EngineLayer.CrosslinkSearch
 
                     localizedAlpha.XlRank = new List<int> { ind, inx };
                     localizedAlpha.XLTotalScore = localizedAlpha.Score + localizedBeta.Score;
-                    localizedAlpha.XLQvalueTotalScore = Math.Sqrt(localizedAlpha.BestScore) * localizedBeta.BestScore;
                     localizedAlpha.BetaPeptide = localizedBeta;
 
                     if (crosslinker.Cleavable)
@@ -384,8 +382,8 @@ namespace EngineLayer.CrosslinkSearch
 
                     localizedAlpha.CrossType = PsmCrossType.Cross;
                     localizedCrosslinkedSpectralMatch = localizedAlpha;
-                    localizedCrosslinkedSpectralMatch.ModPositions = new List<int> { bestAlphaSite };
-                    localizedCrosslinkedSpectralMatch.BetaPeptide.ModPositions = new List<int> { bestBetaSite };
+                    localizedCrosslinkedSpectralMatch.LinkPositions = new List<int> { bestAlphaSite };
+                    localizedCrosslinkedSpectralMatch.BetaPeptide.LinkPositions = new List<int> { bestBetaSite };
                 }
             }
 
@@ -422,7 +420,7 @@ namespace EngineLayer.CrosslinkSearch
                     originalPeptide.OneBasedEndResidueInProtein, originalPeptide.CleavageSpecificityForFdrCategory, originalPeptide.PeptideDescription, originalPeptide.MissedCleavages, mods, originalPeptide.NumFixedMods);
 
                 var products = localizedPeptide.Fragment(commonParameters.DissociationType, FragmentationTerminus.Both).ToList();
-                var matchedFragmentIons = MatchFragmentIons(theScan.TheScan.MassSpectrum, products, commonParameters, theScan.PrecursorMass);
+                var matchedFragmentIons = MatchFragmentIons(theScan, products, commonParameters);
 
                 double score = CalculatePeptideScore(theScan.TheScan, matchedFragmentIons, 0);
 
@@ -455,7 +453,7 @@ namespace EngineLayer.CrosslinkSearch
                 csm.CrossType = PsmCrossType.DeadEndNH2;
             }
 
-            csm.ModPositions = new List<int> { bestPosition };
+            csm.LinkPositions = new List<int> { bestPosition };
             csm.XlRank = new List<int> { peptideIndex };
 
             return csm;
@@ -474,7 +472,7 @@ namespace EngineLayer.CrosslinkSearch
 
             foreach (var setOfPositions in possibleFragmentSets)
             {
-                var matchedFragmentIons = MatchFragmentIons(theScan.TheScan.MassSpectrum, setOfPositions.Value, commonParameters, theScan.PrecursorMass);
+                var matchedFragmentIons = MatchFragmentIons(theScan, setOfPositions.Value, commonParameters);
 
                 double score = CalculatePeptideScore(theScan.TheScan, matchedFragmentIons, 0);
 
@@ -494,7 +492,7 @@ namespace EngineLayer.CrosslinkSearch
             var csm = new CrosslinkSpectralMatch(originalPeptide, notch, bestScore, scanIndex, theScan, originalPeptide.DigestionParams, bestMatchingFragments);
             csm.CrossType = PsmCrossType.Loop;
             csm.XlRank = new List<int> { peptideIndex };
-            csm.ModPositions = new List<int> { bestModPositionSites.Item1, bestModPositionSites.Item2 };
+            csm.LinkPositions = new List<int> { bestModPositionSites.Item1, bestModPositionSites.Item2 };
 
             return csm;
         }

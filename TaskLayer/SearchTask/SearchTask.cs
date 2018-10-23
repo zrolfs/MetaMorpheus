@@ -94,6 +94,7 @@ namespace TaskLayer
 
             // start the search task
             MyTaskResults = new MyTaskResults(this);
+
             int numFdrCategories = (int)(Enum.GetValues(typeof(FdrCategory)).Cast<FdrCategory>().Last() + 1); //+1 because it starts at zero
             List<PeptideSpectralMatch>[] allPsms = new List<PeptideSpectralMatch>[numFdrCategories];
             foreach (int localFDRCategory in SearchParameters.LocalFdrCategories) //only add if we're using for FDR, else ignore it as null.
@@ -133,9 +134,10 @@ namespace TaskLayer
                 Status("Loading spectra file...", thisId);
                 MsDataFile myMsDataFile = myFileManager.LoadFile(origDataFile, combinedParams.TopNpeaks, combinedParams.MinRatio, combinedParams.TrimMs1Peaks, combinedParams.TrimMsMsPeaks, combinedParams);
                 Status("Getting ms2 scans...", thisId);
-                Ms2ScanWithSpecificMass[] arrayOfMs2ScansSortedByMass = GetMs2Scans(myMsDataFile, origDataFile, combinedParams.DoPrecursorDeconvolution, combinedParams.UseProvidedPrecursorInfo, combinedParams.DeconvolutionIntensityRatio, combinedParams.DeconvolutionMaxAssumedChargeState, combinedParams.DeconvolutionMassTolerance).OrderBy(b => b.PrecursorMass).ToArray();
+                Ms2ScanWithSpecificMass[] arrayOfMs2ScansSortedByMass = GetMs2Scans(myMsDataFile, origDataFile, combinedParams).OrderBy(b => b.PrecursorMass).ToArray();
                 numMs2SpectraPerFile.Add(Path.GetFileNameWithoutExtension(origDataFile), new int[] { myMsDataFile.GetAllScansList().Count(p => p.MsnOrder == 2), arrayOfMs2ScansSortedByMass.Length });
                 myFileManager.DoneWithFile(origDataFile);
+
 
                 PeptideSpectralMatch[][] fileSpecificPsms = new PeptideSpectralMatch[numFdrCategories][]; //generate an array of all possible locals
                 foreach (int localFDRCategory in SearchParameters.LocalFdrCategories) //only add if we're using for FDR, else ignore it as null.
@@ -170,6 +172,12 @@ namespace TaskLayer
                 // nonspecific search
                 else if (SearchParameters.SearchType == SearchType.NonSpecific)
                 {
+                    PeptideSpectralMatch[][] fileSpecificPsmsSeparatedByFdrCategory = new PeptideSpectralMatch[numFdrCategories][]; //generate an array of all possible locals
+                    for (int i = 0; i < numFdrCategories; i++) //only add if we're using for FDR, else ignore it as null.
+                    {
+                        fileSpecificPsmsSeparatedByFdrCategory[i] = new PeptideSpectralMatch[arrayOfMs2ScansSortedByMass.Length];
+                    }
+
                     List<CommonParameters> paramsToUse = new List<CommonParameters> { combinedParams };
                     if (combinedParams.DigestionParams.SearchModeType == CleavageSpecificity.Semi) //if semi, we need to do both N and C to hit everything
                     {
@@ -195,12 +203,22 @@ namespace TaskLayer
                             var indexEngine = new IndexingEngine(proteinListSubset, variableModifications, fixedModifications, currentPartition, SearchParameters.DecoyType, paramToUse, SearchParameters.MaxFragmentSize, true, new List<string> { taskId });
                             lock (indexLock)
                                 GenerateIndexes(indexEngine, dbFilenameList, ref peptideIndex, ref fragmentIndex, ref precursorIndex, proteinList, GlobalVariables.AllModsKnown.ToList(), taskId);
-                            
+
                             Status("Searching files...", taskId);
 
-                            new NonSpecificEnzymeSearchEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, peptideIndex, fragmentIndex, precursorIndex, currentPartition, paramToUse, massDiffAcceptor, SearchParameters.MaximumMassThatFragmentIonScoreIsDoubled, thisId).Run();
+                            new NonSpecificEnzymeSearchEngine(fileSpecificPsmsSeparatedByFdrCategory, arrayOfMs2ScansSortedByMass, peptideIndex, fragmentIndex, precursorIndex, currentPartition, paramToUse, massDiffAcceptor, SearchParameters.MaximumMassThatFragmentIonScoreIsDoubled, thisId).Run();
 
                             ReportProgress(new ProgressEventArgs(100, "Done with search " + (currentPartition + 1) + "/" + paramToUse.TotalPartitions + "!", thisId));
+                        }
+                    }
+                    lock (psmLock)
+                    {
+                        for (int i = 0; i < allCategorySpecificPsms.Length; i++)
+                        {
+                            if (allCategorySpecificPsms[i] != null)
+                            {
+                                allCategorySpecificPsms[i].AddRange(fileSpecificPsmsSeparatedByFdrCategory[i]);
+                            }
                         }
                     }
                 }
@@ -231,6 +249,13 @@ namespace TaskLayer
 
             ReportProgress(new ProgressEventArgs(100, "Done with all searches!", new List<string> { taskId, "Individual Spectra Files" }));
 
+            int numNotches = GetNumNotches(SearchParameters.MassDiffAcceptorType, SearchParameters.CustomMdac);
+            //resolve category specific fdrs (for speedy semi and nonspecific
+            if (SearchParameters.SearchType == SearchType.NonSpecific)
+            {
+                allPsms = NonSpecificEnzymeSearchEngine.ResolveFdrCategorySpecificPsms(allCategorySpecificPsms, numNotches, taskId, CommonParameters);
+            }
+
             PostSearchAnalysisParameters parameters = new PostSearchAnalysisParameters();
             parameters.SearchTaskResults = MyTaskResults;
             parameters.SearchTaskId = taskId;
@@ -242,7 +267,7 @@ namespace TaskLayer
             parameters.ListOfDigestionParams = new HashSet<DigestionParams>(fileSpecificCommonParams.Select(p => p.DigestionParams));
             parameters.CurrentRawFileList = currentRawFileList;
             parameters.MyFileManager = myFileManager;
-            parameters.NumNotches = GetNumNotches(SearchParameters.MassDiffAcceptorType, SearchParameters.CustomMdac);
+            parameters.NumNotches = numNotches;
             parameters.OutputFolder = OutputFolder;
             parameters.IndividualResultsOutputFolder = Path.Combine(OutputFolder, "Individual File Results");
             parameters.FlashLfqResults = flashLfqResults;

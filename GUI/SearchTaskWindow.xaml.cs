@@ -144,6 +144,7 @@ namespace MetaMorpheusGUI
 
         private void UpdateFieldsFromTask(SearchTask task)
         {
+            proteaseComboBox.SelectedItem = task.CommonParameters.DigestionParams.SpecificProtease; //needs to be first, or nonspecific overwrites for missed cleavages/max length
             classicSearchRadioButton.IsChecked = task.SearchParameters.SearchType == SearchType.Classic;
             modernSearchRadioButton.IsChecked = task.SearchParameters.SearchType == SearchType.Modern;
             nonSpecificSearchRadioButton.IsChecked = task.SearchParameters.SearchType == SearchType.NonSpecific && task.CommonParameters.DigestionParams.SearchModeType == CleavageSpecificity.None;
@@ -307,12 +308,9 @@ namespace MetaMorpheusGUI
             {
                 if (((Protease)proteaseComboBox.SelectedItem).Name.Contains("non-specific"))
                 {
-                    if (nTerminalIons.IsChecked.Value)
+                    if (cTerminalIons.IsChecked.Value)
                     {
-                        cTerminalIons.IsChecked = false;
-                        proteaseComboBox.Items.MoveCurrentToFirst();
-                        proteaseComboBox.SelectedItem = proteaseComboBox.Items.CurrentItem;
-                        while (!((Protease)proteaseComboBox.SelectedItem).Name.Equals("singleN"))
+                        while (!((Protease)proteaseComboBox.SelectedItem).Name.Equals("singleC"))
                         {
                             proteaseComboBox.Items.MoveCurrentToNext();
                             proteaseComboBox.SelectedItem = proteaseComboBox.Items.CurrentItem;
@@ -320,8 +318,7 @@ namespace MetaMorpheusGUI
                     }
                     else //we're not allowing no ion types. It must have C if it doesn't have N.
                     {
-                        cTerminalIons.IsChecked = true;
-                        while (!((Protease)proteaseComboBox.SelectedItem).Name.Equals("singleC"))
+                        while (!((Protease)proteaseComboBox.SelectedItem).Name.Equals("singleN"))
                         {
                             proteaseComboBox.Items.MoveCurrentToNext();
                             proteaseComboBox.SelectedItem = proteaseComboBox.Items.CurrentItem;
@@ -476,7 +473,8 @@ namespace MetaMorpheusGUI
                 topNpeaks: TopNpeaks,
                 minRatio: MinRatio,
                 addCompIons: addCompIonCheckBox.IsChecked.Value,
-                qValueOutputFilter: QValueCheckBox.IsChecked.Value ? double.Parse(QValueTextBox.Text, CultureInfo.InvariantCulture) : 1.0);
+                qValueOutputFilter: QValueCheckBox.IsChecked.Value ? double.Parse(QValueTextBox.Text, CultureInfo.InvariantCulture) : 1.0,
+                assumeOrphanPeaksAreZ1Fragments: protease.Name != "top-down");
 
             if (classicSearchRadioButton.IsChecked.Value)
             {
@@ -550,18 +548,19 @@ namespace MetaMorpheusGUI
                 TheTask.SearchParameters.CustomMdac = customkMdacTextBox.Text;
             }
 
-            //determine if semi or nonspecific with a specific protease. Full is already added by default.
+            //determine if semi or nonspecific with a specific protease.
             if(searchModeType == CleavageSpecificity.Semi || protease.CleavageSpecificity==CleavageSpecificity.Semi)
             {
-                TheTask.SearchParameters.LocalFdrCategories.Add(FdrCategory.SemiSpecific);
+                TheTask.SearchParameters.LocalFdrCategories= new List<FdrCategory> { FdrCategory.FullySpecific, FdrCategory.SemiSpecific };
             }
             else if(searchModeType==CleavageSpecificity.None && protease.CleavageSpecificity!=CleavageSpecificity.None)
             {
-                TheTask.SearchParameters.LocalFdrCategories.Add(FdrCategory.SemiSpecific);
-                TheTask.SearchParameters.LocalFdrCategories.Add(FdrCategory.NonSpecific);
+                TheTask.SearchParameters.LocalFdrCategories = new List<FdrCategory> { FdrCategory.FullySpecific, FdrCategory.SemiSpecific, FdrCategory.NonSpecific };
             }
-            // else do nothing
-
+            else
+            {
+                TheTask.SearchParameters.LocalFdrCategories = new List<FdrCategory> { FdrCategory.FullySpecific };
+            }
 
             // displays warning if classic search is enabled with an open search mode
             if (TheTask.SearchParameters.SearchType == SearchType.Classic &&
@@ -676,6 +675,7 @@ namespace MetaMorpheusGUI
             else
             {
                 addCompIonCheckBox.IsChecked = false;
+
                 checkBoxClassicSemiSpecific.IsEnabled = true;
                 checkBoxClassicSemiSpecific.IsChecked = false;
                 nTerminalIons.IsChecked = true;
@@ -724,6 +724,7 @@ namespace MetaMorpheusGUI
         private void SemiSpecificUpdate(object sender, RoutedEventArgs e)
         {
             addCompIonCheckBox.IsChecked = semiSpecificSearchRadioButton.IsChecked.Value;
+
             checkBoxClassicSemiSpecific.IsChecked = semiSpecificSearchRadioButton.IsChecked.Value;
             if (semiSpecificSearchRadioButton.IsChecked.Value)
             {
