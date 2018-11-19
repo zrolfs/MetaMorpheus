@@ -27,7 +27,7 @@ Check out the [wiki page](https://github.com/zrolfs/MetaMorpheus/wiki) for softw
 
 ## Database Requirements
 
-UniProt .XML or .fasta format, may be used in compressed (.gz) format.
+UniProt .XML or .fasta format may be used in compressed (.gz) format.
 
 ## Test Installation
 
