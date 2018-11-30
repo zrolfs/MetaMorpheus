@@ -16,24 +16,22 @@ namespace EngineLayer.DeNovoSequencing
     {
         protected const int FragmentBinsPerDalton = 1000;
         private readonly MassDiffAcceptor SearchMode;
-        private readonly List<Protein> Proteins;
         private readonly List<Modification> FixedModifications;
         private readonly List<Modification> VariableModifications;
         private readonly PeptideSpectralMatch[] PeptideSpectralMatches;
         private readonly Ms2ScanWithSpecificMass[] ArrayOfSortedMS2Scans;
-        private readonly double[] MyScanPrecursorMasses;
-        private static readonly Dictionary<int, string[]> ResidueDictionary;
+        private static readonly Dictionary<char, int> ResidueDictionary;
 
 
         static DeNovoSequencingEngine() //populate residues and masses
         {
             char[] alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
-            ResidueDictionary = new Dictionary<int, char>();
+            ResidueDictionary = new Dictionary<char, int>();
             foreach (char AA in alphabet)
             {
                 if(Residue.TryGetResidue(AA, out Residue residue))
                 {
-                    ResidueDictionary[(int)Math.Round(residue.MonoisotopicMass * FragmentBinsPerDalton)] = AA; //L will overwrite I
+                    ResidueDictionary[AA] = (int)Math.Round(residue.MonoisotopicMass * FragmentBinsPerDalton); 
                 }
             }
         }
@@ -42,16 +40,23 @@ namespace EngineLayer.DeNovoSequencing
         {
             PeptideSpectralMatches = globalPsms;
             ArrayOfSortedMS2Scans = arrayOfSortedMS2Scans;
-            MyScanPrecursorMasses = arrayOfSortedMS2Scans.Select(b => b.PrecursorMass).ToArray();
             VariableModifications = variableModifications;
             FixedModifications = fixedModifications;
-            Proteins = proteinList;
             SearchMode = searchMode;
         }
 
 
         protected override MetaMorpheusEngineResults RunSpecific()
         {
+            Status("Preparing de novo index...");
+            foreach(Modification fixedMod in FixedModifications)
+            {
+                int modificationMass = (int)Math.Round(fixedMod.MonoisotopicMass.Value * FragmentBinsPerDalton);
+                char AA = fixedMod.mot
+            }
+
+
+            Status("Performing de novo sequencing...");
 
             double progress = 0;
             int oldPercentProgress = 0;
@@ -142,5 +147,7 @@ namespace EngineLayer.DeNovoSequencing
 
             return new MetaMorpheusEngineResults(this);
         }
+
+
     }
 }
