@@ -228,18 +228,18 @@ namespace EngineLayer.ModernSearch
 
         protected static int BinarySearchBinForPrecursorIndex(List<int> peptideIdsInThisBin, double peptideMassToLookFor, List<PeptideWithSetModifications> peptideIndex)
         {
-            int m = 0;
-            int l = 0;
-            int r = peptideIdsInThisBin.Count - 1;
+            int m = 0; //middle
+            int l = 0; //left
+            int r = peptideIdsInThisBin.Count - 1; //right
 
             // binary search in the fragment bin for precursor mass
-            while (l <= r)
+            while (l <= r) //while left is less than or equal to right
             {
-                m = l + ((r - l) / 2);
+                m = (r + l) / 2;  //middle is in the middle of left and right (favors left side when odd) 
 
-                if (r - l < 2)
+                if (r - l < 2) //outputs l
                     break;
-                if (peptideIndex[peptideIdsInThisBin[m]].MonoisotopicMass < peptideMassToLookFor)
+                if (peptideIndex[peptideIdsInThisBin[m]].MonoisotopicMass < peptideMassToLookFor) //if the middle is less than desired, increase the lower
                     l = m + 1;
                 else
                     r = m - 1;

@@ -83,9 +83,9 @@ namespace EngineLayer
         {
             get
             {
-                return _bestMatchingPeptides.OrderBy(p => p.Item2.FullSequence)
-                    .ThenBy(p => p.Item2.Protein.Accession)
-                    .ThenBy(p => p.Item2.OneBasedStartResidueInProtein);
+                return _bestMatchingPeptides.OrderBy(p => p.Item2.FullSequence);
+                    //.ThenBy(p => p.Item2.Protein.Accession)
+                    //.ThenBy(p => p.Item2.OneBasedStartResidueInProtein);
             }
         }
 
@@ -186,18 +186,18 @@ namespace EngineLayer
         /// </summary>
         public void ResolveAllAmbiguities()
         {
-            IsDecoy = _bestMatchingPeptides.Any(p => p.Pwsm.Protein.IsDecoy);
-            IsContaminant = _bestMatchingPeptides.Any(p => p.Pwsm.Protein.IsContaminant);
+           // IsDecoy = _bestMatchingPeptides.Any(p => p.Pwsm.Protein.IsDecoy);
+            //IsContaminant = _bestMatchingPeptides.Any(p => p.Pwsm.Protein.IsContaminant);
 
             FullSequence = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.FullSequence)).ResolvedValue;
             BaseSequence = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.BaseSequence)).ResolvedValue;
             PeptideLength = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.Length)).ResolvedValue;
             OneBasedStartResidueInProtein = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.OneBasedStartResidueInProtein)).ResolvedValue;
             OneBasedEndResidueInProtein = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.OneBasedEndResidueInProtein)).ResolvedValue;
-            ProteinLength = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.Protein.Length)).ResolvedValue;
+           // ProteinLength = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.Protein.Length)).ResolvedValue;
             PeptideMonisotopicMass = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.MonoisotopicMass)).ResolvedValue;
-            ProteinAccession = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.Protein.Accession)).ResolvedValue;
-            Organism = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.Protein.Organism)).ResolvedValue;
+          //  ProteinAccession = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.Protein.Accession)).ResolvedValue;
+           // Organism = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.Protein.Organism)).ResolvedValue;
             ModsIdentified = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.AllModsOneIsNterminus)).ResolvedValue;
             ModsChemicalFormula = Resolve(_bestMatchingPeptides.Select(b => b.Pwsm.AllModsOneIsNterminus.Select(c => (c.Value)))).ResolvedValue;
             Notch = Resolve(_bestMatchingPeptides.Select(b => b.Notch)).ResolvedValue;
@@ -453,41 +453,41 @@ namespace EngineLayer
             s["Peptide Monoisotopic Mass"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.MonoisotopicMass)).ResolvedString;
             s["Mass Diff (Da)"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => psm.ScanPrecursorMass - b.MonoisotopicMass)).ResolvedString;
             s["Mass Diff (ppm)"] = pepWithModsIsNull ? " " : ResolveF2(pepsWithMods.Select(b => ((psm.ScanPrecursorMass - b.MonoisotopicMass) / b.MonoisotopicMass * 1e6))).ResolvedString;
-            s["Protein Accession"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.Accession), psm.FullSequence).ResolvedString;
-            s["Protein Name"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.FullName), psm.FullSequence).ResolvedString;
-            s["Gene Name"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.GeneNames.Select(d => $"{d.Item1}:{d.Item2}"))), psm.FullSequence).ResolvedString;
-            s["Intersecting Sequence Variations"] = pepWithModsIsNull ? " " : 
-                Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.AppliedSequenceVariations
-                    .Where(av => IntersectsWithVariation(b, av, false))
-                    .Select(av => SequenceVariantString(b, av))))).ResolvedString;
-            s["Identified Sequence Variations"] = pepWithModsIsNull ? " " :
-                Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.AppliedSequenceVariations
-                    .Where(av => IntersectsWithVariation(b, av, true))
-                    .Select(av => SequenceVariantString(b, av))))).ResolvedString;
-            s["Splice Sites"] = pepWithModsIsNull ? " " :
-                Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.SpliceSites
-                    .Where(d => Includes(b, d))
-                    .Select(d => $"{d.OneBasedBeginPosition.ToString()}-{d.OneBasedEndPosition.ToString()}")))).ResolvedString;
-            s["Organism Name"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.Organism)).Item1;
-            s["Contaminant"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.IsContaminant ? "Y" : "N")).Item1;
-            s["Decoy"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.IsDecoy ? "Y" : "N")).Item1;
-            s["Peptide Description"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.PeptideDescription)).Item1;
-            s["Start and End Residues In Protein"] = pepWithModsIsNull ? " " : 
-                Resolve(pepsWithMods.Select(b => ($"[{b.OneBasedStartResidueInProtein.ToString(CultureInfo.InvariantCulture)} to {b.OneBasedEndResidueInProtein.ToString(CultureInfo.InvariantCulture)}]")), psm.FullSequence).ResolvedString;
-            s["Previous Amino Acid"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.PreviousAminoAcid.ToString())).ResolvedString;
-            s["Next Amino Acid"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.NextAminoAcid.ToString())).ResolvedString;
+            //s["Protein Accession"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.Accession), psm.FullSequence).ResolvedString;
+            //s["Protein Name"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.FullName), psm.FullSequence).ResolvedString;
+            //s["Gene Name"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.GeneNames.Select(d => $"{d.Item1}:{d.Item2}"))), psm.FullSequence).ResolvedString;
+            //s["Intersecting Sequence Variations"] = pepWithModsIsNull ? " " : 
+            //    Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.AppliedSequenceVariations
+            //        .Where(av => IntersectsWithVariation(b, av, false))
+            //        .Select(av => SequenceVariantString(b, av))))).ResolvedString;
+            //s["Identified Sequence Variations"] = pepWithModsIsNull ? " " :
+            //    Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.AppliedSequenceVariations
+            //        .Where(av => IntersectsWithVariation(b, av, true))
+            //        .Select(av => SequenceVariantString(b, av))))).ResolvedString;
+            //s["Splice Sites"] = pepWithModsIsNull ? " " :
+            //    Resolve(pepsWithMods.Select(b => string.Join(", ", b.Protein.SpliceSites
+            //        .Where(d => Includes(b, d))
+            //        .Select(d => $"{d.OneBasedBeginPosition.ToString()}-{d.OneBasedEndPosition.ToString()}")))).ResolvedString;
+            //s["Organism Name"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.Organism)).Item1;
+            //s["Contaminant"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.IsContaminant ? "Y" : "N")).Item1;
+            //s["Decoy"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.Protein.IsDecoy ? "Y" : "N")).Item1;
+            //s["Peptide Description"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.PeptideDescription)).Item1;
+            //s["Start and End Residues In Protein"] = pepWithModsIsNull ? " " : 
+            //    Resolve(pepsWithMods.Select(b => ($"[{b.OneBasedStartResidueInProtein.ToString(CultureInfo.InvariantCulture)} to {b.OneBasedEndResidueInProtein.ToString(CultureInfo.InvariantCulture)}]")), psm.FullSequence).ResolvedString;
+            //s["Previous Amino Acid"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.PreviousAminoAcid.ToString())).ResolvedString;
+            //s["Next Amino Acid"] = pepWithModsIsNull ? " " : Resolve(pepsWithMods.Select(b => b.NextAminoAcid.ToString())).ResolvedString;
 
-            string allScores = " ";
-            string theoreticalsSearched = " ";
-            if (!pepWithModsIsNull && psm.FdrInfo != null && psm.FdrInfo.CalculateEValue)
-            {
-                allScores = string.Join(";", psm.AllScores.Select(p => p.ToString("F2", CultureInfo.InvariantCulture)));
-                theoreticalsSearched = psm.AllScores.Count.ToString();
-            }
+            //string allScores = " ";
+            //string theoreticalsSearched = " ";
+            //if (!pepWithModsIsNull && psm.FdrInfo != null && psm.FdrInfo.CalculateEValue)
+            //{
+            //    allScores = string.Join(";", psm.AllScores.Select(p => p.ToString("F2", CultureInfo.InvariantCulture)));
+            //    theoreticalsSearched = psm.AllScores.Count.ToString();
+            //}
 
-            s["All Scores"] = allScores;
-            s["Theoreticals Searched"] = theoreticalsSearched;
-            s["Decoy/Contaminant/Target"] = pepWithModsIsNull ? " " : psm.IsDecoy ? "D" : psm.IsContaminant ? "C" : "T";
+            //s["All Scores"] = allScores;
+            //s["Theoreticals Searched"] = theoreticalsSearched;
+            //s["Decoy/Contaminant/Target"] = pepWithModsIsNull ? " " : psm.IsDecoy ? "D" : psm.IsContaminant ? "C" : "T";
         }
 
         /// <summary>

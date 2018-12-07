@@ -196,9 +196,9 @@ namespace Test
             foreach (var aok in pepWithSetMods.Fragment(DissociationType.HCD,FragmentationTerminus.Both))
             {
                 mz2.Add(aok.NeutralMass.ToMz(1));
-                mz2.Add((aok.NeutralMass + 1.003).ToMz(1));
+                //mz2.Add((aok.NeutralMass + 1.003).ToMz(1));
                 intensities2.Add(intensity);
-                intensities2.Add(intensity);
+                //intensities2.Add(intensity/10);
             }
             var MassSpectrum2 = new MzSpectrum(mz2.OrderBy(b => b).ToArray(), intensities2.ToArray(), false);
             var scan2 = new MsDataScan(MassSpectrum2, 2, 2, true, Polarity.Positive, rt + 0.01, new MzLibUtil.MzRange(0, 10000), "df", MZAnalyzerType.Orbitrap, 234734, 1, null, "scan=2", pepWithSetMods.MonoisotopicMass.ToMz(2), 2, 1, pepWithSetMods.MonoisotopicMass.ToMz(2), 2, DissociationType.HCD, 1, pepWithSetMods.MonoisotopicMass.ToMz(2));

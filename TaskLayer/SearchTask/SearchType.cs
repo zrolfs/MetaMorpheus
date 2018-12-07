@@ -4,6 +4,7 @@
     {
         Classic,
         Modern,
+        DeNovo,
         NonSpecific
     }
 }

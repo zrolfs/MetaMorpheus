@@ -1,5 +1,6 @@
 ﻿using EngineLayer;
 using EngineLayer.ClassicSearch;
+using EngineLayer.DeNovoSequencing;
 using EngineLayer.Indexing;
 using EngineLayer.ModernSearch;
 using EngineLayer.NonSpecificEnzymeSearch;
@@ -221,12 +222,18 @@ namespace TaskLayer
                         }
                     }
                 }
+                else if(SearchParameters.SearchType==SearchType.DeNovo)
+                {
+                    Status("Starting de novo sequencing...", thisId);
+                    fileSpecificPsms = new PeptideSpectralMatch[fileSpecificPsms.Length * CommonParameters.NumberOfSequencesPerPrecursor];
+                    new DeNovoSequencingEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, variableModifications, fixedModifications, combinedParams, thisId).Run();
+                    ReportProgress(new ProgressEventArgs(100, "Done with de novo!", thisId));
+                }
                 // classic search
                 else
                 {
                     Status("Starting search...", thisId);
                     new ClassicSearchEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, variableModifications, fixedModifications, proteinList, massDiffAcceptor, combinedParams, thisId).Run();
-
                     ReportProgress(new ProgressEventArgs(100, "Done with search!", thisId));
                 }
 
@@ -247,6 +254,45 @@ namespace TaskLayer
             if (SearchParameters.SearchType == SearchType.NonSpecific)
             {
                 allPsms = NonSpecificEnzymeSearchEngine.ResolveFdrCategorySpecificPsms(allCategorySpecificPsms, numNotches, taskId, CommonParameters);
+            }
+            else if (SearchParameters.SearchType == SearchType.DeNovo)
+            {
+                // write PSMs
+                string writtenFile = Path.Combine(OutputFolder, "AllPSMs.psmtsv");
+                allPsms = allPsms.Where(x => x != null).ToList();
+                WritePsmsToTsv(allPsms, writtenFile, SearchParameters.ModsToWriteSelection);
+                FinishedWritingFile(writtenFile, new List<string> { taskId });
+
+                // write best (highest-scoring) PSM per peptide
+                writtenFile = Path.Combine(OutputFolder, "AllPeptides.psmtsv");
+                WritePsmsToTsv(allPsms.GroupBy(b => b.FullSequence).Select(b => b.FirstOrDefault()).ToList(), writtenFile, SearchParameters.ModsToWriteSelection);
+                FinishedWritingFile(writtenFile, new List<string> { taskId });
+
+                var PsmsGroupedByFile = allPsms.GroupBy(p => p.FullFilePath);
+
+                foreach (var file in PsmsGroupedByFile)
+                {
+                    // write summary text
+                    var psmsForThisFile = file.ToList();
+                    string strippedFileName = Path.GetFileNameWithoutExtension(file.First().FullFilePath);
+                    var peptidesForFile = psmsForThisFile.GroupBy(b => b.FullSequence).Select(b => b.FirstOrDefault()).ToList();
+
+
+                    // create individual files subdirectory
+                    string individualResultsOutputFolder = Path.Combine(OutputFolder, "Individual File Results");
+                    Directory.CreateDirectory(individualResultsOutputFolder);
+
+                    // write PSMs
+                    writtenFile = Path.Combine(individualResultsOutputFolder, strippedFileName + "_PSMs.psmtsv");
+                    WritePsmsToTsv(psmsForThisFile, writtenFile, SearchParameters.ModsToWriteSelection);
+                    FinishedWritingFile(writtenFile, new List<string> { taskId, "Individual Spectra Files", file.First().FullFilePath });
+
+                    // write best (highest-scoring) PSM per peptide
+                    writtenFile = Path.Combine(individualResultsOutputFolder, strippedFileName + "_Peptides.psmtsv");
+                    WritePsmsToTsv(peptidesForFile, writtenFile, SearchParameters.ModsToWriteSelection);
+                    FinishedWritingFile(writtenFile, new List<string> { taskId, "Individual Spectra Files", file.First().FullFilePath });
+                }
+                return MyTaskResults;
             }
 
             PostSearchAnalysisParameters parameters = new PostSearchAnalysisParameters();

@@ -136,6 +136,7 @@ namespace MetaMorpheusGUI
             proteaseComboBox.SelectedItem = task.CommonParameters.DigestionParams.SpecificProtease; //needs to be first, so nonspecific can override if necessary
             classicSearchRadioButton.IsChecked = task.SearchParameters.SearchType == SearchType.Classic;
             modernSearchRadioButton.IsChecked = task.SearchParameters.SearchType == SearchType.Modern;
+            deNovoRadioButton.IsChecked = task.SearchParameters.SearchType == SearchType.DeNovo;
             //do these in if statements so as not to trigger the change
             if (task.SearchParameters.SearchType == SearchType.NonSpecific && task.CommonParameters.DigestionParams.SearchModeType == CleavageSpecificity.None)
             {
@@ -308,7 +309,7 @@ namespace MetaMorpheusGUI
             }
             //else it's the default of full
 
-            if (searchModeType != CleavageSpecificity.Full)
+            if (searchModeType != CleavageSpecificity.Full || deNovoRadioButton.IsChecked.Value)
             {
                 if (((Protease)proteaseComboBox.SelectedItem).Name.Contains("non-specific"))
                 {
@@ -466,6 +467,10 @@ namespace MetaMorpheusGUI
             else if (modernSearchRadioButton.IsChecked.Value)
             {
                 TheTask.SearchParameters.SearchType = SearchType.Modern;
+            }
+            else if(deNovoRadioButton.IsChecked.Value)
+            {
+                TheTask.SearchParameters.SearchType = SearchType.DeNovo;
             }
             else //both semi and nonspecific are termed "nonspecific", because they both contain at least one nonspecific cleavage and they share the same algorithm
             {
@@ -704,6 +709,11 @@ namespace MetaMorpheusGUI
             {
                 MaxPeptideLengthTextBox.Text = maxLength.ToString();
             }
+        }
+
+        private void DeNovoUpdate(object sender, RoutedEventArgs e)
+        {
+            addCompIonCheckBox.IsChecked = deNovoRadioButton.IsChecked.Value;
         }
 
         private void SemiSpecificUpdate(object sender, RoutedEventArgs e)

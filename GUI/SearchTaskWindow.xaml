@@ -163,6 +163,7 @@
                                                     <ColumnDefinition Width="1*"/>
                                                     <ColumnDefinition Width="1*"/>
                                                     <ColumnDefinition Width="1*"/>
+                                                    <ColumnDefinition Width="1*"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0">
                                                     <RadioButton x:Name="classicSearchRadioButton" Content="Classic Search" GroupName="SearchType" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500">
@@ -191,6 +192,15 @@
                                                     </RadioButton>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2">
+                                                    <RadioButton x:Name="deNovoRadioButton" Content="De Novo Sequencing" GroupName="SearchType" ToolTipService.ShowDuration="999999" Checked="DeNovoUpdate" ToolTipService.InitialShowDelay="500">
+                                                        <RadioButton.ToolTip>
+                                                            <TextBlock>
+                                                                Auto de novo sequencing designed for high resolution data.
+                                                            </TextBlock>
+                                                        </RadioButton.ToolTip>
+                                                    </RadioButton>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3">
                                                     <RadioButton x:Name="semiSpecificSearchRadioButton" Content="Semi-Specific Search" GroupName="SearchType" ToolTipService.ShowDuration="999999" Checked="SemiSpecificUpdate" Unchecked="SemiSpecificUpdate" ToolTipService.InitialShowDelay="500">
                                                         <RadioButton.ToolTip>
                                                             <TextBlock>
@@ -201,7 +211,7 @@
                                                         </RadioButton.ToolTip>
                                                     </RadioButton>
                                                 </StackPanel>
-                                                <StackPanel Grid.Column="3">
+                                                <StackPanel Grid.Column="4">
                                                     <RadioButton x:Name="nonSpecificSearchRadioButton" Content="Non-Specific Search" GroupName="SearchType" ToolTipService.ShowDuration="999999" ToolTipService.InitialShowDelay="500" Checked="NonSpecificUsingNonSpecific" Unchecked="NonSpecificUsingNonSpecific">
                                                         <RadioButton.ToolTip>
                                                             <TextBlock>

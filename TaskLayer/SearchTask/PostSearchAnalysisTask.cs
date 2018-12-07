@@ -409,7 +409,7 @@ namespace TaskLayer
             }
         }
 
-        private void WritePsmResults()
+        public void WritePsmResults()
         {
             Status("Writing results...", Parameters.SearchTaskId);
             List<PeptideSpectralMatch> filteredPsmListForOutput = Parameters.AllPsms
