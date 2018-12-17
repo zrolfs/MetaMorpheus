@@ -22,7 +22,7 @@ namespace EngineLayer
             bool addCompIons = false, int totalPartitions = 1, double scoreCutoff = 5, int topNpeaks = 200, double minRatio = 0.01, bool trimMs1Peaks = false,
             bool trimMsMsPeaks = true, bool useDeltaScore = false, bool calculateEValue = false, Tolerance productMassTolerance = null, Tolerance precursorMassTolerance = null, Tolerance deconvolutionMassTolerance = null,
             int maxThreadsToUsePerFile = -1, DigestionParams digestionParams = null, IEnumerable<(string, string)> listOfModsVariable = null, IEnumerable<(string, string)> listOfModsFixed = null, double qValueOutputFilter = 1.0,
-            bool assumeOrphanPeaksAreZ1Fragments = true, int maxHeterozygousVariants = 4, int minVariantDepth = 1, int numSequencesPerPrecursor = 5)
+            bool assumeOrphanPeaksAreZ1Fragments = true, int maxHeterozygousVariants = 4, int minVariantDepth = 1, int numSequencesPerPrecursor = 50)
         {
             TaskDescriptor = taskDescriptor;
             DoPrecursorDeconvolution = doPrecursorDeconvolution;
@@ -62,6 +62,8 @@ namespace EngineLayer
         //    the null setting will not be written to a toml
         //    and the default will override (so it's okay ONLY if the default is null)
         // 2) All setters should be private unless necessary
+        // 3) Each property needs to be added to SetAllFileSpecificCommonParams() in MetaMorpheusTask.cs
+        //    or it will be overwritten
 
         public string TaskDescriptor { get; private set; }
         public int MaxThreadsToUsePerFile { get; private set; }

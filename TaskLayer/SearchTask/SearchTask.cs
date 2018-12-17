@@ -225,7 +225,7 @@ namespace TaskLayer
                 else if(SearchParameters.SearchType==SearchType.DeNovo)
                 {
                     Status("Starting de novo sequencing...", thisId);
-                    fileSpecificPsms = new PeptideSpectralMatch[fileSpecificPsms.Length * CommonParameters.NumberOfSequencesPerPrecursor];
+                    fileSpecificPsms = new PeptideSpectralMatch[fileSpecificPsms.Length * combinedParams.NumberOfSequencesPerPrecursor];
                     new DeNovoSequencingEngine(fileSpecificPsms, arrayOfMs2ScansSortedByMass, variableModifications, fixedModifications, combinedParams, thisId).Run();
                     ReportProgress(new ProgressEventArgs(100, "Done with de novo!", thisId));
                 }
@@ -257,6 +257,8 @@ namespace TaskLayer
             }
             else if (SearchParameters.SearchType == SearchType.DeNovo)
             {
+                Status("Writing results...", taskId);
+
                 // write PSMs
                 string writtenFile = Path.Combine(OutputFolder, "AllPSMs.psmtsv");
                 allPsms = allPsms.Where(x => x != null).ToList();

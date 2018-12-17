@@ -1,4 +1,5 @@
 ﻿using Chemistry;
+using MassSpectrometry;
 using MzLibUtil;
 using Proteomics;
 using Proteomics.AminoAcidPolymer;
@@ -16,7 +17,7 @@ namespace EngineLayer.DeNovoSequencing
     {
         protected const int FragmentBinsPerDalton = 1000;
         private const int MaximumMassDifference = 500 * FragmentBinsPerDalton;
-        private const int MaxNodesAtOnce = 100;
+        private const int MaxNodesAtOnce = 1000;
         private int MinimumMassDifference = 0;
         private readonly List<Modification> FixedModifications;
         private readonly List<Modification> VariableModifications;
@@ -44,7 +45,8 @@ namespace EngineLayer.DeNovoSequencing
             AminoAcidCombinationDictionary = new List<string>[MaximumMassDifference + 1];
 
             //DEBUG
-            char[] alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+            char[] alphabet = "ABCDEFGHJKLMNOPQRSTUVWXYZ".ToCharArray();
+            //char[] alphabet = "DKLPTVY".ToCharArray();
             List<Residue> allResidues = new List<Residue>();
             foreach (char AA in alphabet)
             {
@@ -72,7 +74,8 @@ namespace EngineLayer.DeNovoSequencing
             allResidues = allResidues.OrderBy(x => x.MonoisotopicMass).ToList();
             char[] aminoAcids = allResidues.Select(x => x.Letter).ToArray();
             //get masses
-            int[] masses = allResidues.Select(x => (int)Math.Round(x.MonoisotopicMass * FragmentBinsPerDalton)).ToArray();
+            //int[] masses = allResidues.Select(x => (int)Math.Round(x.MonoisotopicMass * FragmentBinsPerDalton)).ToArray();
+            double[] masses = allResidues.Select(x => x.MonoisotopicMass * FragmentBinsPerDalton).ToArray();
 
             //record the minimum mass difference to search for
             MinimumMassDifference = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(masses[0]));
@@ -81,36 +84,31 @@ namespace EngineLayer.DeNovoSequencing
             List<int> indexList = new List<int>(); //indexes for each "amino acid" in the current combination
             string sequenceTag = ""; //the string of combined residues for the current combination
             int lastAminoAcidIndex = aminoAcids.Length - 1; //get the last index for combinatorics
-            int smallestMass = masses[0]; //smallest mass, which is different from the smallest mass difference by some small ppm
-            int mass = 0; //total mass
-
-            HashSet<string> sequencesAddedDEBUG = new HashSet<string>();
+            int smallestMass = (int)Math.Floor(masses[0]); //smallest mass, which is different from the smallest mass difference by some small ppm
+            double mass = 0; //total mass
+            int massInt = 0;
 
             do
             {
                 //Determine the longest length possible for the current indexes
-                int changingMass = smallestMass; //need to reset here as we try to add on the smallest mass
+                double changingMass = masses[0]; //need to reset here as we try to add on the smallest mass
                 mass += changingMass;
-                while (mass < MaximumMassDifference)
+                massInt = (int)Math.Round(mass);
+                while (massInt < MaximumMassDifference)
                 {
                     sequenceTag += aminoAcids[0];
                     indexList.Add(0);
-                    int minMass = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(mass));
-                    int maxMass = Math.Min((int)Math.Ceiling(commonParameters.ProductMassTolerance.GetMaximumValue(mass)), MaximumMassDifference);
 
-                    sequencesAddedDEBUG.Add(sequenceTag);
-                    for (int currentMass = minMass; currentMass <= maxMass; currentMass++)
+                    if (AminoAcidCombinationDictionary[massInt] == null)
                     {
-                        if (AminoAcidCombinationDictionary[currentMass] == null)
-                        {
-                            AminoAcidCombinationDictionary[currentMass] = new List<string> { sequenceTag };
-                        }
-                        else
-                        {
-                            AminoAcidCombinationDictionary[currentMass].Add(sequenceTag);
-                        }
+                        AminoAcidCombinationDictionary[massInt] = new List<string> { sequenceTag };
+                    }
+                    else
+                    {
+                        AminoAcidCombinationDictionary[massInt].Add(sequenceTag);
                     }
                     mass += changingMass;
+                    massInt = (int)Math.Round(mass);
                 }
 
                 //Wrap up the leftovers from the while loop
@@ -127,23 +125,19 @@ namespace EngineLayer.DeNovoSequencing
                     currentLastIndex++;
                     changingMass = masses[currentLastIndex];
                     mass += changingMass;
-                    if (mass < MaximumMassDifference) //if the mass is lower than the maximum cutoff
+                    massInt = (int)Math.Round(mass);
+
+                    if (massInt < MaximumMassDifference) //if the mass is lower than the maximum cutoff
                     {
                         sequenceTag += aminoAcids[currentLastIndex];
 
-                        int minMass = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(mass));
-                        int maxMass = Math.Min((int)Math.Ceiling(commonParameters.ProductMassTolerance.GetMaximumValue(mass)), MaximumMassDifference);
-
-                        for (int currentMass = minMass; currentMass <= maxMass; currentMass++)
+                        if (AminoAcidCombinationDictionary[massInt] == null)
                         {
-                            if (AminoAcidCombinationDictionary[currentMass] == null)
-                            {
-                                AminoAcidCombinationDictionary[currentMass] = new List<string> { sequenceTag };
-                            }
-                            else
-                            {
-                                AminoAcidCombinationDictionary[currentMass].Add(sequenceTag);
-                            }
+                            AminoAcidCombinationDictionary[massInt] = new List<string> { sequenceTag };
+                        }
+                        else
+                        {
+                            AminoAcidCombinationDictionary[massInt].Add(sequenceTag);
                         }
                         sequenceTag = sequenceTag.Substring(0, sequenceTag.Length - 1); //clip off the c-terminal amino acid so we can add a different one
                     }
@@ -172,23 +166,20 @@ namespace EngineLayer.DeNovoSequencing
                     indexList[indexList.Count - 1]++;
                     int index = indexList[indexList.Count - 1];
                     mass += masses[index];
+                    massInt = (int)Math.Round(mass);
+
                     //check if we're at a valid mass
-                    if (mass < MaximumMassDifference)
+                    if (massInt < MaximumMassDifference)
                     {
                         sequenceTag += aminoAcids[index];
-                        int minMass = (int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(mass));
-                        int maxMass = Math.Min((int)Math.Ceiling(commonParameters.ProductMassTolerance.GetMaximumValue(mass)), MaximumMassDifference);
-                        sequencesAddedDEBUG.Add(sequenceTag);
-                        for (int currentMass = minMass; currentMass <= maxMass; currentMass++)
+
+                        if (AminoAcidCombinationDictionary[massInt] == null)
                         {
-                            if (AminoAcidCombinationDictionary[currentMass] == null)
-                            {
-                                AminoAcidCombinationDictionary[currentMass] = new List<string> { sequenceTag };
-                            }
-                            else
-                            {
-                                AminoAcidCombinationDictionary[currentMass].Add(sequenceTag);
-                            }
+                            AminoAcidCombinationDictionary[massInt] = new List<string> { sequenceTag };
+                        }
+                        else
+                        {
+                            AminoAcidCombinationDictionary[massInt].Add(sequenceTag);
                         }
                     }
                     else
@@ -226,65 +217,123 @@ namespace EngineLayer.DeNovoSequencing
                         return;
                     }
 
+                    //1. PREPARE THE EXPERIMENTAL SPECTRA
+
                     //Get spectrum
                     Ms2ScanWithSpecificMass spectrum = ArrayOfSortedMS2Scans[i];
-                    //get masses
-                    int precursorMass = (int)Math.Round(spectrum.PrecursorMass * FragmentBinsPerDalton);
-                    int[] experimentalMasses = spectrum.ExperimentalFragments.Select(x => (int)Math.Round(x.monoisotopicMass * FragmentBinsPerDalton)).Where(x=>x<precursorMass-productShift).ToArray();
 
-                    List<int> complimentaryMasses = experimentalMasses.ToList();
-                    //addCompIons
+                    //get masses
+                    //int precursorMass = (int)Math.Round(spectrum.PrecursorMass * FragmentBinsPerDalton);
+                    //int[] experimentalMasses = spectrum.ExperimentalFragments.Select(x => (int)Math.Round(x.monoisotopicMass * FragmentBinsPerDalton)).Where(x => x < precursorMass - productShift).ToArray();
+                    //int[] experimentalIntensities = spectrum.ExperimentalFragments.Select(x=>x.totalIntensity)
+                    //List<int> complimentaryMasses = experimentalMasses.ToList();
+                    ////addCompIons
+                    //if (complementaryIonConversionDictionary.TryGetValue(commonParameters.DissociationType, out double protonMassShift)) //TODO: this is broken for EThcD because that method needs two conversions
+                    //{
+                    //    int shift = precursorMass + (int)Math.Round(Chemistry.ClassExtensions.ToMass(protonMassShift, 1) * FragmentBinsPerDalton);
+                    //    for (int index = 0; index < experimentalMasses.Length; index++)
+                    //    {
+                    //        complimentaryMasses.Add(shift - experimentalMasses[index]);
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    throw new NotImplementedException();
+                    //}
+                    //experimentalMasses = complimentaryMasses.Select(x => x - productShift).OrderBy(x => x).ToArray(); //subtract the product mass to search for and sort.
+
+                    int precursorMass = (int)Math.Round(spectrum.PrecursorMass * FragmentBinsPerDalton);
+                    int[] experimentalMasses = spectrum.ExperimentalFragments.Select(x => (int)Math.Round(x.monoisotopicMass * FragmentBinsPerDalton)).Where(x => x < precursorMass - productShift).ToArray();
+                    double[] experimentalIntensities = spectrum.ExperimentalFragments.Where(x => x.monoisotopicMass * FragmentBinsPerDalton < precursorMass - productShift).Select(x => x.totalIntensity).ToArray();
+
+                    List<MzPeak> complementaryPeaks = new List<MzPeak>();
+
                     if (complementaryIonConversionDictionary.TryGetValue(commonParameters.DissociationType, out double protonMassShift)) //TODO: this is broken for EThcD because that method needs two conversions
                     {
-                        int shift = precursorMass + (int)Math.Round(Chemistry.ClassExtensions.ToMass(protonMassShift, 1) * FragmentBinsPerDalton);
+                        double shift = precursorMass + (int)Math.Round(Chemistry.ClassExtensions.ToMass(protonMassShift, 1) * FragmentBinsPerDalton);
                         for (int index = 0; index < experimentalMasses.Length; index++)
                         {
-                            complimentaryMasses.Add(shift - experimentalMasses[index]);
+                            int experimentalMass = experimentalMasses[index];
+                            double experimentalIntensity = experimentalIntensities[index];
+                            complementaryPeaks.Add(new MzPeak(experimentalMass, experimentalIntensity));
+                            if (experimentalMass > 200 * FragmentBinsPerDalton) //limit the mass range so that immonium ions don't get doubled. Issue with K if K isn't on the terminus
+                            {
+                                complementaryPeaks.Add(new MzPeak(shift - experimentalMass, experimentalIntensity));
+                            }
                         }
                     }
                     else
                     {
                         throw new NotImplementedException();
                     }
-                    experimentalMasses = complimentaryMasses.Select(x => x - productShift).OrderBy(x => x).ToArray(); //subtract the product mass to search for and sort.
+                    complementaryPeaks = complementaryPeaks.OrderBy(x => x.Mz).ToList();
+                    experimentalMasses = complementaryPeaks.Select(x => (int)x.Mz - productShift).ToArray();
+                    experimentalIntensities = complementaryPeaks.Select(x => x.Intensity).ToArray();
+
+
+                    //2. IDENTIFY THE POSSIBLE BEGINNINGS OF EACH SEQUENCE
 
                     //we need to identify "seed" masses, or we're screwed from the beginning.
-                    List<DeNovoTree> temporaryNodeTrees = new List<DeNovoTree>();
-                    int maxSeedIndex = BinarySearchBin(experimentalMasses, MaximumMassDifference, false);
+                    List<DeNovoTree> temporaryNodeTrees = new List<DeNovoTree>(); //save the seeds
+                    int maxSeedIndex = BinarySearchBin(experimentalMasses, MaximumMassDifference, false); //get the index of the largest experimental mass to look for
 
-                    for (int index = 0; index <= maxSeedIndex; index++)
+                    int lowestMassSeen = 0; //record the lowest mass used to prevent double counting of the same mass shift (happens when multiple experimental peaks are close in mass)
+                    for (int index = 0; index <= maxSeedIndex; index++) //for all masses in the range of interest
                     {
                         int experimentalMass = experimentalMasses[index];
-                        List<string> combinations = AminoAcidCombinationDictionary[experimentalMass];
-                        if (combinations != null)
+
+                        //get the range of theoretical bins for this mass
+                        int minMass = Math.Max((int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(experimentalMass)), lowestMassSeen);
+                        int maxMass = Math.Min((int)Math.Ceiling(commonParameters.ProductMassTolerance.GetMaximumValue(experimentalMass)), MaximumMassDifference);
+
+                        //get combinations with the exact same mass
+                        for (; minMass <= maxMass; minMass++)
                         {
-                            //nodeTrees.Add(new DeNovoTree(combinations, experimentalMass + productShift, productShift));
-                            temporaryNodeTrees.Add(new DeNovoTree(combinations, experimentalMass));
+                            List<string> combinations = AminoAcidCombinationDictionary[minMass];
+                            if (combinations != null)
+                            {
+                                temporaryNodeTrees.Add(new DeNovoTree(combinations, minMass, experimentalIntensities[index])); //save the theoretical mass, since that is what we claim is there
+                            }
                         }
+                        lowestMassSeen = maxMass;
                     }
 
+
+                    //3. EXPAND THE SEQUENCE NETWORKS TO OBTAIN THE PRECURSOR MASS
+
                     //We now, hopefully, have lots of seed masses to build off of. But which are correct? We scream, for we do not know.
-                    //Grow off of each seed in a tree structure. If we can't complete the tree to obtain the precursor mass, chop the tree down.
-                    bool doneGrowing = true;
+                    //Grow off of each seed in a tree structure. If we can't complete the tree to obtain the precursor mass, remove it.
                     List<DeNovoTree> finalForest = new List<DeNovoTree>();
+
+                    //get the range of theoretical bins for this mass
+                    int minPrecursorMass = (int)Math.Floor(commonParameters.PrecursorMassTolerance.GetMinimumValue(precursorMass));
+                    int maxPrecursorMass = (int)Math.Ceiling(commonParameters.PrecursorMassTolerance.GetMaximumValue(precursorMass));
+
                     do
                     {
-                        doneGrowing = true;
                         List<DeNovoTree> nextForest = new List<DeNovoTree>();
                         foreach (DeNovoTree tree in temporaryNodeTrees)
                         {
-                            //check we actually haven't...
+                            //check to see if we can complete the tree by reaching the precursor mass
                             int currentMass = tree.CurrentMass;
+
+                            //get the range of theoretical bins for this mass
+                            int minMass = minPrecursorMass - productShift - currentMass;
+                            int maxMass = Math.Min(maxPrecursorMass - productShift - currentMass, MaximumMassDifference);
+
                             //subtract precursor from current
-                            int finalMassDifference = precursorMass - productShift - currentMass;
-                            if (finalMassDifference < MaximumMassDifference)
+                            if (minMass < MaximumMassDifference)
                             {
                                 bool deadEnd = true; //check if the mass difference is even worth looking for new nodes
-                                List<string> combinations = AminoAcidCombinationDictionary[finalMassDifference];
-                                if (combinations != null)
+
+                                for (; minMass <= maxMass; minMass++)
                                 {
-                                    finalForest.Add(new DeNovoTree(tree.Nodes, combinations, finalMassDifference, precursorMass));
-                                    deadEnd = false;
+                                    List<string> combinations = AminoAcidCombinationDictionary[minMass];
+                                    if (combinations != null)
+                                    {
+                                        finalForest.Add(new DeNovoTree(tree.Nodes, combinations, 0, tree.NumberOfPossibleSequences * combinations.Count, tree.IntensitySum)); //current mass "0" doesn't matter anymore
+                                        deadEnd = false;
+                                    }
                                 }
                                 if (deadEnd) //we can't hit the precursor, so no reason to keep looking at this tree
                                 {
@@ -292,29 +341,66 @@ namespace EngineLayer.DeNovoSequencing
                                 }
                             }
 
+                            //get indexes for experimental peaks
                             int minIndex = BinarySearchBin(experimentalMasses, MinimumMassDifference + currentMass, true);
                             int maxIndex = BinarySearchBin(experimentalMasses, MaximumMassDifference + currentMass, false);
+
+                            lowestMassSeen = 0; //reset for the new tree
+
                             for (; minIndex <= maxIndex; minIndex++)
                             {
                                 int experimentalMass = experimentalMasses[minIndex];
-                                int experimentalMassDifference = experimentalMass - currentMass;
-                                List<string> combinations = AminoAcidCombinationDictionary[experimentalMassDifference];
-                                if (combinations != null)
-                                {
-                                    nextForest.Add(new DeNovoTree(tree.Nodes, combinations, experimentalMassDifference, experimentalMass));
-                                    doneGrowing = false;
-                                }
-                            }
 
-                            //Just need to keep it efficient. All the good ones are near the beginning anyway...
-                            if (nextForest.Count > MaxNodesAtOnce)
-                            {
-                                break;
+                                minMass = Math.Max((int)Math.Floor(commonParameters.ProductMassTolerance.GetMinimumValue(experimentalMass)) - currentMass, lowestMassSeen);
+                                maxMass = Math.Min((int)Math.Ceiling(commonParameters.ProductMassTolerance.GetMaximumValue(experimentalMass)) - currentMass, MaximumMassDifference);
+
+                                for (; minMass <= maxMass; minMass++)
+                                {
+                                    List<string> combinations = AminoAcidCombinationDictionary[minMass];
+                                    if (combinations != null)
+                                    {
+                                        double debugInt = experimentalIntensities[minIndex];
+                                        nextForest.Add(new DeNovoTree(tree.Nodes, combinations, currentMass + minMass, tree.NumberOfPossibleSequences * combinations.Count, tree.IntensitySum + experimentalIntensities[minIndex]));
+                                    }
+                                }
+                                lowestMassSeen = maxMass;
                             }
                         }
                         temporaryNodeTrees.Clear();
-                        temporaryNodeTrees = nextForest;
-                    } while (!doneGrowing);
+
+                        //save the list of trees for the next iteration
+                        //often, there are too many combinations generated to effectively interrgate each. We need to crop the list to reduce computational demand
+                        if (nextForest.Count > MaxNodesAtOnce) //if there are too many combinations
+                        {
+                            //nextForest = nextForest.OrderBy(x => x.NumberOfPossibleSequences).ToList();
+                            nextForest = nextForest.OrderBy(x => x.CurrentMass).ToList();
+                            for (int treeIndex = 0; treeIndex < MaxNodesAtOnce; treeIndex++)
+                            {
+                                temporaryNodeTrees.Add(nextForest[treeIndex]);
+                            }
+                        }
+                        else
+                        {
+                            temporaryNodeTrees = nextForest;
+                        }
+                    } while (temporaryNodeTrees.Count != 0);
+
+
+                    //4. SCORE THE NETWORKS AND SAVE THE HIGHEST SCORING SEQUENCES
+
+                    //need to consider if it matters that the nodes themselves are unambiguous if there's another tree with the same number of nodes. 
+                    //Isn't number of nodes more important?
+                    //But the number of combinations is important for the actual probability
+                    //...Isn't it?
+                    //Need to relate score with probability, and the relaion is unlikely to be linear.
+
+                    //Nodes should always triumph
+                    //After that, it's a toss up between all of the things
+                    //Could do the number of (nodes^3) * the number of combinations for each divided by the sum of all of these?
+                    //everything with the same number of nodes within a single scan will have the same score
+
+                    //e-value could be useful?
+
 
                     //if we found anything at all
                     if (finalForest.Count != 0)
@@ -322,22 +408,14 @@ namespace EngineLayer.DeNovoSequencing
                         HashSet<string> deNovoSequences = new HashSet<string>();
                         List<double> deNovoScores = new List<double>();
 
-                        //we need to figure out the probabilities for these trees.
-                        foreach (DeNovoTree tree in finalForest)
-                        {
-                            tree.CalculateNumberOfPossibleSequences();
-                        }
+                        //score each tree
+                        AssignDeNovoScores(finalForest, spectrum.TotalIonCurrent);
 
-                        finalForest = finalForest.OrderBy(x => x.NumberOfPossibleSequences).ToList(); //we now have the number of possible sequences for each tree
-
-                        //Start with 100% probability
-                        //Divide by the number of trees (three trees each have 33% probability)
-                        //Divide the remaining probability (33%) within each tree based on the amount of ambiguity in said tree
+                        //sort by score
+                        finalForest = finalForest.OrderByDescending(x => x.Score).ToList();
 
                         int currentTreeIndex = 0;
                         DeNovoTree currentTree = finalForest[currentTreeIndex];
-                        double score = (100d) / (finalForest.Count * currentTree.NumberOfPossibleSequences); //THIS IS THE SCORE
-
 
                         //grab the nodes from the highest scoring tree to determine the sequences
                         int[] maxCombinationIndexes = new int[currentTree.Nodes.Count];
@@ -349,8 +427,8 @@ namespace EngineLayer.DeNovoSequencing
                         int[] currentCombinationIndexes = new int[maxCombinationIndexes.Length];
 
                         int currentNodeIteration = 0;
-                        int psmIndex = i * 5;
-                        //get as many sequences as desired, prioritizing the highest scoring sequences
+                        int psmIndex = i * commonParameters.NumberOfSequencesPerPrecursor; //use to figure out where to place the psm in the psm array
+                                                                                           //get as many sequences as desired, prioritizing the highest scoring sequences
                         for (int psmNumber = 0; psmNumber < commonParameters.NumberOfSequencesPerPrecursor; psmNumber++)
                         {
                             //check if we already recorded all of the combinations from the previous tree
@@ -360,9 +438,8 @@ namespace EngineLayer.DeNovoSequencing
                                 currentTreeIndex++;
                                 if (currentTreeIndex != finalForest.Count) //if there are still trees left to explore
                                 {
-                                    currentNodeIteration=0; //reset
+                                    currentNodeIteration = 0; //reset
                                     currentTree = finalForest[currentTreeIndex];
-                                    score = (100d) / (finalForest.Count * currentTree.NumberOfPossibleSequences); //THIS IS THE SCORE
 
                                     maxCombinationIndexes = new int[currentTree.Nodes.Count];
                                     for (int index = 0; index < maxCombinationIndexes.Length; index++)
@@ -381,7 +458,7 @@ namespace EngineLayer.DeNovoSequencing
                             //get nodes and combinations, changing the last available combination each time
                             string sequence = "";
                             bool updateNeeded = true;
-                            
+
                             for (int index = 0; index < currentCombinationIndexes.Length; index++)
                             {
                                 //get the current index
@@ -412,19 +489,19 @@ namespace EngineLayer.DeNovoSequencing
                             }
 
                             //if it's already been added, ignore it
-                            if (deNovoSequences.Contains(sequence)) 
+                            if (deNovoSequences.Contains(sequence))
                             {
                                 psmNumber--;
                             }
                             else
                             {
-                                if (score > 0)
+                                if (currentTree.Score > 0)
                                 {
                                     PeptideWithSetModifications peptide = new PeptideWithSetModifications(sequence, new Dictionary<string, Modification>(), digestionParams: commonParameters.DigestionParams);
 
                                     List<Product> peptideTheorProducts = peptide.Fragment(commonParameters.DissociationType, commonParameters.DigestionParams.FragmentationTerminus).ToList();
                                     List<MatchedFragmentIon> matchedIons = MatchFragmentIons(spectrum, peptideTheorProducts, commonParameters);
-                                    PeptideSpectralMatch psm = new PeptideSpectralMatch(peptide, 0, score, i, spectrum, commonParameters.DigestionParams, matchedIons);
+                                    PeptideSpectralMatch psm = new PeptideSpectralMatch(peptide, 0, currentTree.Score, i, spectrum, commonParameters.DigestionParams, matchedIons);
                                     PeptideSpectralMatches[psmIndex + psmNumber] = psm;
                                     deNovoSequences.Add(sequence);
                                 }
@@ -453,14 +530,7 @@ namespace EngineLayer.DeNovoSequencing
 
             foreach (PeptideSpectralMatch psm in PeptideSpectralMatches.Where(p => p != null))
             {
-                try
-                {
-                    psm.ResolveAllAmbiguities();
-                }
-                catch
-                {
-
-                }
+                psm.ResolveAllAmbiguities();
             }
 
             return new MetaMorpheusEngineResults(this);
@@ -495,7 +565,7 @@ namespace EngineLayer.DeNovoSequencing
                 {
                     m--;
                 }
-                while (experimentalMasses[m] < massOfInterest && m != experimentalMasses.Length - 1)
+                while (m != experimentalMasses.Length && experimentalMasses[m] < massOfInterest) //out of index is an option to be output, since it is inclusive
                 {
                     m++;
                 }
@@ -512,6 +582,35 @@ namespace EngineLayer.DeNovoSequencing
                 }
             }
             return m;
+        }
+
+        private void AssignDeNovoScores(List<DeNovoTree> forest, double TIC)
+        {
+            int maxNodes = forest.Max(x => x.Nodes.Count);
+            int minNodes = forest.Min(x => x.Nodes.Count);
+
+            long[] combinationTotalsPerNodeCount = new long[maxNodes + 1];
+            for (int node = minNodes; node <= maxNodes; node++)
+            {
+                List<DeNovoTree> treesAtThisNodeCount = forest.Where(x => x.Nodes.Count == node).ToList();
+                long sum = 0;
+                foreach (DeNovoTree tree in treesAtThisNodeCount)
+                {
+                    sum += tree.NumberOfPossibleSequences;
+                }
+                combinationTotalsPerNodeCount[node] = sum;
+            }
+
+            long totalProbabilitySum = 0;
+            for (int node = minNodes; node <= maxNodes; node++)
+            {
+                totalProbabilitySum += (int)Math.Floor(Math.Pow(1d * node / maxNodes, 2) * combinationTotalsPerNodeCount[node]);
+            }
+
+            foreach (DeNovoTree tree in forest)
+            {
+                tree.SetDeNovoScore(totalProbabilitySum, TIC, maxNodes);
+            }
         }
     }
 }
