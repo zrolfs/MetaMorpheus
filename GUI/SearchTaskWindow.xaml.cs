@@ -1,5 +1,8 @@
 ﻿using EngineLayer;
+using MassSpectrometry;
 using MzLibUtil;
+using Proteomics.Fragmentation;
+using Proteomics.ProteolyticDigestion;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,9 +14,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using TaskLayer;
 using UsefulProteomicsDatabases;
-using Proteomics.Fragmentation;
-using Proteomics.ProteolyticDigestion;
-using MassSpectrometry;
 
 namespace MetaMorpheusGUI
 {
@@ -40,7 +40,7 @@ namespace MetaMorpheusGUI
             TheTask = task ?? new SearchTask();
             PopulateChoices();
             UpdateFieldsFromTask(TheTask);
-            
+
             if (task == null)
             {
                 this.saveButton.Content = "Add the Search Task";
@@ -54,6 +54,7 @@ namespace MetaMorpheusGUI
             };
             this.DataContext = DataContextForSearchTaskWindow;
             SearchModifications.Timer.Tick += new EventHandler(TextChangeTimerHandler);
+            base.Closing += this.OnClosing;
         }
 
         internal SearchTask TheTask { get; private set; }
@@ -193,8 +194,13 @@ namespace MetaMorpheusGUI
             deltaScoreCheckBox.IsChecked = task.CommonParameters.UseDeltaScore;
             trimMs1.IsChecked = task.CommonParameters.TrimMs1Peaks;
             trimMsMs.IsChecked = task.CommonParameters.TrimMsMsPeaks;
-            TopNPeaksTextBox.Text = task.CommonParameters.TopNpeaks == int.MaxValue ? "" : task.CommonParameters.TopNpeaks.ToString(CultureInfo.InvariantCulture);
-            MinRatioTextBox.Text = task.CommonParameters.MinRatio.ToString(CultureInfo.InvariantCulture);
+
+            NumberOfPeaksToKeepPerWindowTextBox.Text = task.CommonParameters.NumberOfPeaksToKeepPerWindow == int.MaxValue || !task.CommonParameters.NumberOfPeaksToKeepPerWindow.HasValue ? "" : task.CommonParameters.NumberOfPeaksToKeepPerWindow.Value.ToString(CultureInfo.InvariantCulture);
+            MinimumAllowedIntensityRatioToBasePeakTexBox.Text = task.CommonParameters.MinimumAllowedIntensityRatioToBasePeak == double.MaxValue || !task.CommonParameters.MinimumAllowedIntensityRatioToBasePeak.HasValue ? "" : task.CommonParameters.MinimumAllowedIntensityRatioToBasePeak.Value.ToString(CultureInfo.InvariantCulture);
+            WindowWidthThomsonsTextBox.Text = task.CommonParameters.WindowWidthThomsons == double.MaxValue || !task.CommonParameters.WindowWidthThomsons.HasValue ? "" : task.CommonParameters.WindowWidthThomsons.Value.ToString(CultureInfo.InvariantCulture);
+            NumberOfWindowsTextBox.Text = task.CommonParameters.NumberOfWindows == int.MaxValue || !task.CommonParameters.NumberOfWindows.HasValue ? "" : task.CommonParameters.NumberOfWindows.Value.ToString(CultureInfo.InvariantCulture);
+            normalizePeaksInWindowCheckBox.IsChecked = task.CommonParameters.NormalizePeaksAccrossAllWindows;
+
             maxThreadsTextBox.Text = task.CommonParameters.MaxThreadsToUsePerFile.ToString(CultureInfo.InvariantCulture);
             MinVariantDepthTextBox.Text = task.CommonParameters.MinVariantDepth.ToString(CultureInfo.InvariantCulture);
             MaxHeterozygousVariantsTextBox.Text = task.CommonParameters.MaxHeterozygousVariants.ToString(CultureInfo.InvariantCulture);
@@ -212,7 +218,6 @@ namespace MetaMorpheusGUI
             }
 
             OutputFileNameTextBox.Text = task.CommonParameters.TaskDescriptor;
-            //ckbPepXML.IsChecked = task.SearchParameters.OutPepXML;
             ckbMzId.IsChecked = task.SearchParameters.WriteMzId;
             writeDecoyCheckBox.IsChecked = task.SearchParameters.WriteDecoys;
             writeContaminantCheckBox.IsChecked = task.SearchParameters.WriteContaminants;
@@ -345,14 +350,14 @@ namespace MetaMorpheusGUI
 
             if (!GlobalGuiSettings.CheckTaskSettingsValidity(precursorMassToleranceTextBox.Text, productMassToleranceTextBox.Text, missedCleavagesTextBox.Text,
                 maxModificationIsoformsTextBox.Text, MinPeptideLengthTextBox.Text, MaxPeptideLengthTextBox.Text, maxThreadsTextBox.Text, minScoreAllowed.Text,
-                peakFindingToleranceTextBox.Text, histogramBinWidthTextBox.Text, DeconvolutionMaxAssumedChargeStateTextBox.Text, TopNPeaksTextBox.Text,
-                MinRatioTextBox.Text, numberOfDatabaseSearchesTextBox.Text, MaxModNumTextBox.Text, MaxFragmentMassTextBox.Text, QValueTextBox.Text))
+                peakFindingToleranceTextBox.Text, histogramBinWidthTextBox.Text, DeconvolutionMaxAssumedChargeStateTextBox.Text, NumberOfPeaksToKeepPerWindowTextBox.Text,
+                MinimumAllowedIntensityRatioToBasePeakTexBox.Text, WindowWidthThomsonsTextBox.Text, NumberOfWindowsTextBox.Text, numberOfDatabaseSearchesTextBox.Text, MaxModNumTextBox.Text, MaxFragmentMassTextBox.Text, QValueTextBox.Text))
             {
                 return;
             }
 
             Protease protease = (Protease)proteaseComboBox.SelectedItem;
-            
+
             DissociationType dissociationType = GlobalVariables.AllSupportedDissociationTypes[dissociationTypeComboBox.SelectedItem.ToString()];
             CustomFragmentationWindow.Close();
 
@@ -432,8 +437,32 @@ namespace MetaMorpheusGUI
 
             bool TrimMs1Peaks = trimMs1.IsChecked.Value;
             bool TrimMsMsPeaks = trimMsMs.IsChecked.Value;
-            int TopNpeaks = int.Parse(TopNPeaksTextBox.Text);
-            double MinRatio = double.Parse(MinRatioTextBox.Text, CultureInfo.InvariantCulture);
+
+            int? numPeaksToKeep = null;
+            if (int.TryParse(NumberOfPeaksToKeepPerWindowTextBox.Text, out int numberOfPeaksToKeeep))
+            {
+                numPeaksToKeep = numberOfPeaksToKeeep;
+            }
+
+            double? minimumAllowedIntensityRatioToBasePeak = null;
+            if (double.TryParse(MinimumAllowedIntensityRatioToBasePeakTexBox.Text, out double minimumAllowedIntensityRatio))
+            {
+                minimumAllowedIntensityRatioToBasePeak = minimumAllowedIntensityRatio;
+            }
+
+            double? windowWidthThompsons = null;
+            if (double.TryParse(WindowWidthThomsonsTextBox.Text, out double windowWidth))
+            {
+                windowWidthThompsons = windowWidth;
+            }
+
+            int? numberOfWindows = null;
+            if (int.TryParse(NumberOfWindowsTextBox.Text, out int numWindows))
+            {
+                numberOfWindows = numWindows;
+            }
+
+            bool normalizePeaksAccrossAllWindows = normalizePeaksInWindowCheckBox.IsChecked.Value;
 
             bool parseMaxThreadsPerFile = !maxThreadsTextBox.Text.Equals("") && (int.Parse(maxThreadsTextBox.Text) <= Environment.ProcessorCount && int.Parse(maxThreadsTextBox.Text) > 0);
 
@@ -456,8 +485,11 @@ namespace MetaMorpheusGUI
                 digestionParams: digestionParamsToSave,
                 trimMs1Peaks: TrimMs1Peaks,
                 trimMsMsPeaks: TrimMsMsPeaks,
-                topNpeaks: TopNpeaks,
-                minRatio: MinRatio,
+                numberOfPeaksToKeepPerWindow: numPeaksToKeep,
+                minimumAllowedIntensityRatioToBasePeak: minimumAllowedIntensityRatioToBasePeak,
+                windowWidthThomsons: windowWidthThompsons,
+                numberOfWindows: numberOfWindows,//maybe change this some day
+                normalizePeaksAccrossAllWindows: normalizePeaksAccrossAllWindows,//maybe change this some day
                 addCompIons: addCompIonCheckBox.IsChecked.Value,
                 qValueOutputFilter: QValueCheckBox.IsChecked.Value ? double.Parse(QValueTextBox.Text, CultureInfo.InvariantCulture) : 1.0,
                 assumeOrphanPeaksAreZ1Fragments: protease.Name != "top-down",
@@ -541,7 +573,7 @@ namespace MetaMorpheusGUI
                     MessageBox.Show("Could not parse custom mass difference acceptor: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
-                
+
                 TheTask.SearchParameters.MassDiffAcceptorType = MassDiffAcceptorType.Custom;
                 TheTask.SearchParameters.CustomMdac = customkMdacTextBox.Text;
             }
@@ -559,7 +591,6 @@ namespace MetaMorpheusGUI
             {
                 TheTask.SearchParameters.LocalFdrCategories = new List<FdrCategory> { FdrCategory.FullySpecific };
             }
-
 
             // displays warning if classic search is enabled with an open search mode
             if (TheTask.SearchParameters.SearchType == SearchType.Classic &&
@@ -749,7 +780,7 @@ namespace MetaMorpheusGUI
             SearchModifications.SetTimer();
             SearchModifications.VariableSearch = true;
         }
-        
+
         private void TextChangeTimerHandler(object sender, EventArgs e)
         {
             if (SearchModifications.FixedSearch)
@@ -764,13 +795,18 @@ namespace MetaMorpheusGUI
                 SearchModifications.VariableSearch = false;
             }
         }
-      
+
         private void CustomFragmentationHandler(object sender, EventArgs e)
         {
             if (dissociationTypeComboBox.SelectedItem.ToString().Equals(DissociationType.Custom.ToString()))
             {
                 CustomFragmentationWindow.Show();
             }
+        }
+
+        private void OnClosing(object sender, CancelEventArgs e)
+        {
+            CustomFragmentationWindow.Close();
         }
     }
 
