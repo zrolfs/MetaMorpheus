@@ -86,6 +86,10 @@ namespace TaskLayer
         public CommonParameters CommonParameters { get; set; }
 
         public const string IndexFolderName = "DatabaseIndex";
+        public const string IndexEngineParamsFileName = "indexEngine.params";
+        public const string PeptideIndexFileName = "peptideIndex.ind";
+        public const string FragmentIndexFileName = "fragmentIndex.ind";
+        public const string PrecursorIndexFileName = "precursorIndex.ind";
 
         public static IEnumerable<Ms2ScanWithSpecificMass> GetMs2Scans(MsDataFile myMSDataFile, string fullFilePath, CommonParameters commonParameters)
         {
@@ -596,26 +600,221 @@ namespace TaskLayer
             return false;
         }
 
-        private static void WritePeptideIndex(List<PeptideWithSetModifications> peptideIndex, string peptideIndexFile)
+        //Don't write proteins, just get them from the database since it's already been read.
+        //Don't write digestion params; all digestion params are the same for an index.
+        private static void WritePeptideIndex(List<PeptideWithSetModifications> peptideIndex, string peptideIndexFile, int maxThreads)
         {
-            var messageTypes = GetSubclassesAndItself(typeof(List<PeptideWithSetModifications>));
-            var ser = new NetSerializer.Serializer(messageTypes);
-
-            using (var file = File.Create(peptideIndexFile))
+            //peptide output
             {
-                ser.Serialize(file, peptideIndex);
+                List<string>[] linesToWrite = new List<string>[maxThreads];
+                int[] threads = Enumerable.Range(0, maxThreads).ToArray();
+                int peptidesPerThread = peptideIndex.Count / maxThreads + 1; //+1 more equitably distributes the remainder so the last thread doesn't do heavier lifting
+                Parallel.ForEach(threads, (thread) =>
+                {
+                    int i = thread * peptidesPerThread;
+                    int endIndex = thread == maxThreads - 1 ?
+                        peptideIndex.Count :
+                        (thread + 1) * peptidesPerThread;
+
+                    List<string> localLines = new List<string>();
+                    for (; i < endIndex; i++)
+                    {
+                        PeptideWithSetModifications peptide = peptideIndex[i];
+
+                        //get the modifications
+                        string modificationString = "";
+                        foreach (KeyValuePair<int, Modification> kvp in peptide.AllModsOneIsNterminus)
+                        {
+                            modificationString += kvp.Key + "-" + kvp.Value.IdWithMotif + "_";
+                        }
+
+                        //get the full string
+                        localLines.Add(
+                                    peptide.Protein.Accession+","
+                                    + peptide.OneBasedStartResidueInProtein + ","
+                                    + peptide.OneBasedEndResidueInProtein + ","
+                                    + Convert.ToInt16(peptide.CleavageSpecificityForFdrCategory) + ","
+                                    + peptide.PeptideDescription + ","
+                                    + peptide.MissedCleavages + ","
+                                    + modificationString + ","
+                                    + peptide.NumFixedMods);
+                    }
+                    linesToWrite[thread] = localLines;
+                });
+                using (System.IO.StreamWriter file = new System.IO.StreamWriter(peptideIndexFile))
+                {
+                    foreach (List<string> threadList in linesToWrite)
+                    {
+                        for (int i = 0; i < threadList.Count; i++)
+                        {
+                            file.WriteLine(threadList[i]);
+                        }
+                    }
+                }
             }
         }
 
-        private static void WriteFragmentIndexNetSerializer(List<int>[] fragmentIndex, string fragmentIndexFile)
+        private static List<PeptideWithSetModifications> ReadPeptideIndex(string peptideIndexFile, Dictionary<string, Protein> proteinDictionary, CommonParameters commonParameters)
         {
-            var messageTypes = GetSubclassesAndItself(typeof(List<int>[]));
-            var ser = new NetSerializer.Serializer(messageTypes);
-
-            using (var file = File.Create(fragmentIndexFile))
+            DigestionParams digestionParams = commonParameters.DigestionParams;
+            int maxThreads = commonParameters.MaxThreadsToUsePerFile;
+            string[] lines = File.ReadAllLines(peptideIndexFile);
+            List<PeptideWithSetModifications>[] completedIndexes = new List<PeptideWithSetModifications>[maxThreads];
+            int[] threads = Enumerable.Range(0, maxThreads).ToArray();
+            int peptidesPerThread = lines.Length / maxThreads + 1; //+1 more equitably distributes the remainder so the last thread doesn't do heavier lifting
+            Parallel.ForEach(threads, (thread) =>
             {
-                ser.Serialize(file, fragmentIndex);
+                int i = thread * peptidesPerThread;
+                int endIndex = thread == maxThreads - 1 ?
+                    lines.Length :
+                    (thread + 1) * peptidesPerThread;
+
+                List<PeptideWithSetModifications> localIndex = new List<PeptideWithSetModifications>();
+                for (; i < endIndex; i++)
+                {
+                    string[] lineItems = lines[i].Split(',');
+
+                    Dictionary<int, Modification> localModificationDictionary = new Dictionary<int, Modification>();
+                    if (lineItems[6].Length != 0)
+                    {
+                        string[] mods = lineItems[6].Split('_');
+                        for (int j = 0; j < mods.Length - 1; j++) //minus one because we left a terminal "_"
+                        {
+                            string[] mod = mods[j].Split('-');
+                            localModificationDictionary.Add(CustomStringToInt(mod[0]), GlobalVariables.AllModsKnownDictionary[mod[1]]);
+                        }
+                    }
+
+                    localIndex.Add(new PeptideWithSetModifications(
+                        proteinDictionary[lineItems[0]],
+                        digestionParams,
+                        CustomStringToInt(lineItems[1]),
+                        CustomStringToInt(lineItems[2]),
+                        (CleavageSpecificity)CustomStringToInt(lineItems[3]),
+                        lineItems[4],
+                        CustomStringToInt(lineItems[5]),
+                        localModificationDictionary,
+                        CustomStringToInt(lineItems[7])
+                        ));
+                }
+                completedIndexes[thread] = localIndex;
+            });
+
+            //ensure fidelity of order (don't use SelectMany!)
+            List<PeptideWithSetModifications> peptidesToReturn = new List<PeptideWithSetModifications>();
+            for (int i = 0; i < completedIndexes.Length; i++)
+            {
+                peptidesToReturn.AddRange(completedIndexes[i]);
             }
+            return peptidesToReturn;
+        }
+
+
+        private static void WriteFragmentIndex(List<int>[] fragmentIndex, string fragmentIndexFile, int maxThreads)
+        {
+            List<string>[] completedLines = new List<string>[maxThreads];
+            int[] threads = Enumerable.Range(0, maxThreads).ToArray();
+            int peptidesPerThread = fragmentIndex.Length / maxThreads + 1; //+1 more equitably distributes the remainder so the last thread doesn't do heavier lifting
+            Parallel.ForEach(threads, (thread) =>
+            {
+                int i = thread * peptidesPerThread;
+                int endIndex = thread == maxThreads - 1 ?
+                    fragmentIndex.Length :
+                    (thread + 1) * peptidesPerThread;
+
+                List<string> localLines = new List<string>();
+                StringBuilder currentLine = new StringBuilder();
+                for (; i < endIndex; i++)
+                {
+                    List<int> fragments = fragmentIndex[i];
+                    if (fragments != null)
+                    {
+                        currentLine.Append(i).Append(";").Append(fragments[0]); //put the index first
+
+                        for (int j = 1; j < fragments.Count; j++)
+                        {
+                            currentLine.Append(",").Append(fragments[j]);
+                        }
+                        localLines.Add(currentLine.ToString());
+                        currentLine.Clear();
+                    }
+                }
+                completedLines[thread] = localLines;
+            });
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(fragmentIndexFile))
+            {
+                foreach (List<string> lines in completedLines)
+                {
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        file.WriteLine(lines[i]);
+                    }
+                }
+            }
+        }
+
+        private static List<int>[] ReadFragmentIndex(string fragmentIndexFile, int maxThreads)
+        {
+            //read in the csv
+            string[] lines = File.ReadAllLines(fragmentIndexFile);
+
+            //determine the index length
+            string[] lastLineValues = lines[lines.Length - 1].Split(';');
+            List<int>[] fragmentIndexToReturn = new List<int>[CustomStringToInt(lastLineValues[0]) + 1];
+
+            //convert the csv into the index
+            int[] threads = Enumerable.Range(0, maxThreads).ToArray();
+            int linesPerThread = lines.Length / maxThreads + 1; //+1 more equitably distributes the remainder so the last thread doesn't do heavier lifting
+            Parallel.ForEach(threads, (thread) =>
+            {
+                int i = thread * linesPerThread;
+                int endIndex = thread == maxThreads - 1 ?
+                    lines.Length : 
+                    (thread + 1) * linesPerThread;
+
+                for (; i < endIndex; i++)
+                {
+                    string[] lineValues = lines[i].Split(';');
+                    fragmentIndexToReturn[CustomStringToInt(lineValues[0])] = CustomCsvLineToInts(lineValues[1]);
+                }
+            });
+            return fragmentIndexToReturn;
+        }
+
+        //faster than int.parse or Convert.ToInt32
+        //http://cc.davelozinski.com/c-sharp/fastest-way-to-convert-a-string-to-an-int
+        private static int CustomStringToInt(string input)
+        {
+            int output = 0;
+            for (int i = 0; i < input.Length; i++)
+            {
+                output = output * 10 + (input[i] - '0');
+            }
+            return output;
+        }
+
+        //use specifically for fragment index reading
+        private static List<int> CustomCsvLineToInts(string line)
+        {
+            List<int> output = new List<int>();
+            int i = 0;
+            foreach (char c in line)
+            {
+                if (c == ',')
+                {
+                    output.Add(i);
+                    i = 0;
+                }
+                else
+                {
+                    i = i * 10 + (c - '0');
+                }
+            }
+
+            //add the last one
+            output.Add(i);
+
+            return output;
         }
 
         private static string GetExistingFolderWithIndices(IndexingEngine indexEngine, List<DbForTask> dbFilenameList)
@@ -650,11 +849,11 @@ namespace TaskLayer
 
         private static string CheckFiles(IndexingEngine indexEngine, DirectoryInfo folder)
         {
-            if (File.Exists(Path.Combine(folder.FullName, "indexEngine.params")) &&
-                File.Exists(Path.Combine(folder.FullName, "peptideIndex.ind")) &&
-                File.Exists(Path.Combine(folder.FullName, "fragmentIndex.ind")) &&
-                (File.Exists(Path.Combine(folder.FullName, "precursorIndex.ind")) || !indexEngine.GeneratePrecursorIndex) &&
-                SameSettings(Path.Combine(folder.FullName, "indexEngine.params"), indexEngine))
+            if (File.Exists(Path.Combine(folder.FullName, IndexEngineParamsFileName)) &&
+                File.Exists(Path.Combine(folder.FullName, PeptideIndexFileName)) &&
+                File.Exists(Path.Combine(folder.FullName, FragmentIndexFileName)) &&
+                (File.Exists(Path.Combine(folder.FullName, PrecursorIndexFileName)) || !indexEngine.GeneratePrecursorIndex) &&
+                SameSettings(Path.Combine(folder.FullName, IndexEngineParamsFileName), indexEngine))
             {
                 return folder.FullName;
             }
@@ -681,14 +880,14 @@ namespace TaskLayer
             return folder;
         }
 
-        public void GenerateIndexes(IndexingEngine indexEngine, List<DbForTask> dbFilenameList, ref List<PeptideWithSetModifications> peptideIndex, ref List<int>[] fragmentIndex, ref List<int>[] precursorIndex, List<Protein> allKnownProteins, List<Modification> allKnownModifications, string taskId)
+        public void GenerateIndexes(IndexingEngine indexEngine, List<DbForTask> dbFilenameList, ref List<PeptideWithSetModifications> peptideIndex, ref List<int>[] fragmentIndex, ref List<int>[] precursorIndex, List<Protein> allKnownProteins, string taskId, CommonParameters commonParameters)
         {
             string pathToFolderWithIndices = GetExistingFolderWithIndices(indexEngine, dbFilenameList);
             if (pathToFolderWithIndices == null)
             {
                 var output_folderForIndices = GenerateOutputFolderForIndices(dbFilenameList);
                 Status("Writing params...", new List<string> { taskId });
-                var paramsFile = Path.Combine(output_folderForIndices, "indexEngine.params");
+                var paramsFile = Path.Combine(output_folderForIndices, IndexEngineParamsFileName);
                 WriteIndexEngineParams(indexEngine, paramsFile);
                 FinishedWritingFile(paramsFile, new List<string> { taskId });
 
@@ -699,33 +898,25 @@ namespace TaskLayer
                 precursorIndex = indexResults.PrecursorIndex;
 
                 Status("Writing peptide index...", new List<string> { taskId });
-                var peptideIndexFile = Path.Combine(output_folderForIndices, "peptideIndex.ind");
-                WritePeptideIndex(peptideIndex, peptideIndexFile);
+                var peptideIndexFile = Path.Combine(output_folderForIndices, PeptideIndexFileName);
+                WritePeptideIndex(peptideIndex, peptideIndexFile, commonParameters.MaxThreadsToUsePerFile);
                 FinishedWritingFile(peptideIndexFile, new List<string> { taskId });
 
                 Status("Writing fragment index...", new List<string> { taskId });
-                var fragmentIndexFile = Path.Combine(output_folderForIndices, "fragmentIndex.ind");
-                WriteFragmentIndexNetSerializer(fragmentIndex, fragmentIndexFile);
+                var fragmentIndexFile = Path.Combine(output_folderForIndices, FragmentIndexFileName);
+                WriteFragmentIndex(fragmentIndex, fragmentIndexFile, commonParameters.MaxThreadsToUsePerFile);
                 FinishedWritingFile(fragmentIndexFile, new List<string> { taskId });
 
                 if (indexEngine.GeneratePrecursorIndex)
                 {
                     Status("Writing precursor index...", new List<string> { taskId });
-                    var precursorIndexFile = Path.Combine(output_folderForIndices, "precursorIndex.ind");
-                    WriteFragmentIndexNetSerializer(precursorIndex, precursorIndexFile);
+                    var precursorIndexFile = Path.Combine(output_folderForIndices, PrecursorIndexFileName);
+                    WriteFragmentIndex(precursorIndex, precursorIndexFile, commonParameters.MaxThreadsToUsePerFile);
                     FinishedWritingFile(precursorIndexFile, new List<string> { taskId });
                 }
             }
             else
-            {
-                Status("Reading peptide index...", new List<string> { taskId });
-                var messageTypes = GetSubclassesAndItself(typeof(List<PeptideWithSetModifications>));
-                var ser = new NetSerializer.Serializer(messageTypes);
-                using (var file = File.OpenRead(Path.Combine(pathToFolderWithIndices, "peptideIndex.ind")))
-                {
-                    peptideIndex = (List<PeptideWithSetModifications>)ser.Deserialize(file);
-                }
-
+            {                
                 // populate dictionaries of known proteins for deserialization
                 Dictionary<string, Protein> proteinDictionary = new Dictionary<string, Protein>();
 
@@ -741,29 +932,16 @@ namespace TaskLayer
                     }
                 }
 
-                // get non-serialized information for the peptides (proteins, mod info)
-                foreach (var peptide in peptideIndex)
-                {
-                    peptide.SetNonSerializedPeptideInfo(GlobalVariables.AllModsKnownDictionary, proteinDictionary);
-                }
+                Status("Reading peptide index...", new List<string> { taskId });
+                peptideIndex = ReadPeptideIndex(Path.Combine(pathToFolderWithIndices, PeptideIndexFileName), proteinDictionary, commonParameters);
 
                 Status("Reading fragment index...", new List<string> { taskId });
-                messageTypes = GetSubclassesAndItself(typeof(List<int>[]));
-                ser = new NetSerializer.Serializer(messageTypes);
-                using (var file = File.OpenRead(Path.Combine(pathToFolderWithIndices, "fragmentIndex.ind")))
-                {
-                    fragmentIndex = (List<int>[])ser.Deserialize(file);
-                }
+                fragmentIndex = ReadFragmentIndex(Path.Combine(pathToFolderWithIndices, FragmentIndexFileName), commonParameters.MaxThreadsToUsePerFile);
 
                 if (indexEngine.GeneratePrecursorIndex)
                 {
                     Status("Reading precursor index...", new List<string> { taskId });
-                    messageTypes = GetSubclassesAndItself(typeof(List<int>[]));
-                    ser = new NetSerializer.Serializer(messageTypes);
-                    using (var file = File.OpenRead(Path.Combine(pathToFolderWithIndices, "precursorIndex.ind")))
-                    {
-                        precursorIndex = (List<int>[])ser.Deserialize(file);
-                    }
+                    precursorIndex = ReadFragmentIndex(Path.Combine(pathToFolderWithIndices, PrecursorIndexFileName), commonParameters.MaxThreadsToUsePerFile);
                 }
             }
         }
