@@ -104,7 +104,7 @@ namespace TaskLayer
             LoadModifications(taskId, out var variableModifications, out var fixedModifications, out var localizeableModificationTypes);
 
             // load proteins
-            List<Protein> proteinList = LoadProteins(taskId, dbFilenameList, SearchParameters.SearchTarget, SearchParameters.DecoyType, localizeableModificationTypes, CommonParameters);
+            List<Protein> proteinList = LoadProteins(taskId, dbFilenameList, SearchParameters.SearchTarget, SearchParameters.DecoyType, localizeableModificationTypes, CommonParameters).OrderBy(x => x.Accession).ToList();
 
             // write prose settings
             ProseCreatedWhileRunning.Append("The following search settings were used: ");
