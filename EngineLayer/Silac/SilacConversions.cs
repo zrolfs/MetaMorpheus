@@ -370,17 +370,19 @@ namespace EngineLayer
             //UPDATE PROTEIN GROUPS
             //remove the heavy protein groups so that there are only light ones
             //add the intensities of the heavy groups into the newly created heavy SpectraFileInfos
-            HashSet<SpectraFileInfo> lightFilesToRemove = new HashSet<SpectraFileInfo>(); //this is only used when there user specified no unlabeled proteins
+            HashSet<SpectraFileInfo> lightFilesToRemove = new HashSet<SpectraFileInfo>(); //this is only used when the user specified no unlabeled proteins
             if (ProteinGroups != null) //if we did parsimony
             {
                 List<EngineLayer.ProteinGroup> silacProteinGroups = new List<EngineLayer.ProteinGroup>();
+                
                 //The light/unlabeled peptides/proteins were not searched if specified, but they were still quantified to keep track of the labels
                 //we need to remove these unlabeled peptides/proteins before output
                 //foreach protein group (which has its own quant for each file)
                 foreach (EngineLayer.ProteinGroup proteinGroup in ProteinGroups)
                 {
                     proteinGroup.FilesForQuantification = silacSpectraFileInfo; //update fileinfo for the group
-                                                                                //grab the light groups. Using these light groups, find their heavy group pair(s), add them to the light group quant info, and then remove the heavy groups
+                    
+                    //grab the light groups. Using these light groups, find their heavy group pair(s), add them to the light group quant info, and then remove the heavy groups
                     if (silacProteinGroupMatcher.TryGetValue(proteinGroup.ProteinGroupName, out List<string> silacSubGroupNames)) //try to find the light protein groups. If it's not light, ignore it
                     {
                         //the out variable contains all the other heavy protein groups that were generated for this light protein group
@@ -479,6 +481,7 @@ namespace EngineLayer
                     for (int i = 0; i < peaks.Count; i++)
                     {
                         var peak = peaks[i];
+
                         List<Identification> identifications = new List<Identification>();
                         //check if we're removing light peaks and if it's a light peak
                         if (!outputLightIntensities && !peak.Identifications.Any(x => GetRelevantLabelFromBaseSequence(x.BaseSequence, silacLabels) != null)) //if no ids have any labels, remove them
