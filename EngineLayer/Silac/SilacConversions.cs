@@ -627,25 +627,78 @@ namespace EngineLayer
                     for(int i=0; i<halfOfFiles; i++)
                     {
                         SpectraFileInfo lightInfo = silacSpectraFileInfo[i];
-                        SpectraFileInfo heavyInfo = silacSpectraFileInfo[i + quarterOfFiles];
+                        SpectraFileInfo heavyInfo = silacSpectraFileInfo[i + quarterOfFiles]; //HACKY
                         double lightIntensity = currentPeptide.GetIntensity(lightInfo);
                         double heavyIntensity = currentPeptide.GetIntensity(heavyInfo);
                         ChromatographicPeak lightPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(lightIntensity)).First();
                         ChromatographicPeak heavyPeak = lfqPeaks[heavyInfo].Where(x => x.Intensity.Equals(heavyIntensity)).First();
                         List<IsotopicEnvelope> lightEnvelopes = lightPeak.IsotopicEnvelopes;
                         List<IsotopicEnvelope> heavyEnvelopes = heavyPeak.IsotopicEnvelopes;
-                        CreateAveragedRatiosAndUpdateIntensities(currentPeptide,)
-
+                        CreateAveragedRatiosAndUpdateIntensities(currentPeptide, silacSpectraFileInfo, lightEnvelopes, heavyEnvelopes, i);
                     }
                 }
             }
         }
 
-        private static void CreateAveragedRatiosAndUpdateIntensities(FlashLFQ.Peptide peptide, List<SpectraFileInfo> allFiles)
+        private static void CreateAveragedRatiosAndUpdateIntensities(FlashLFQ.Peptide peptide, List<SpectraFileInfo> allFiles,
+            List<IsotopicEnvelope> lightEnvelopes, List<IsotopicEnvelope> heavyEnvelopes, int startIndex)
         {
             int halfOfFiles = allFiles.Count / 2;
+            SpectraFileInfo lightRatioInfo = allFiles[halfOfFiles + startIndex];
+            SpectraFileInfo heavyRatioInfo = allFiles[halfOfFiles + startIndex + 1];
 
-            peptide.g
+            //assume they elute at the same time
+            int lightIndex = 0;
+            int heavyIndex = 0;
+            List<double> lightIntensities = new List<double>();
+            List<double> heavyIntensities = new List<double>();
+
+            while (lightIndex < lightEnvelopes.Count && heavyIndex<heavyEnvelopes.Count)
+            {
+                IsotopicEnvelope lightEnvelope = lightEnvelopes[lightIndex];
+                IsotopicEnvelope heavyEnvelope = heavyEnvelopes[heavyIndex];
+                if(lightEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex == heavyEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex)
+                {
+                    lightIntensities.Add(lightEnvelope.Intensity);
+                    heavyIntensities.Add(heavyEnvelope.Intensity);
+                    heavyIndex++;
+                    lightIndex++;
+                }
+                else if(lightEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex > heavyEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex)
+                {
+                    heavyIndex++;
+                }
+                else
+                {
+                    lightIndex++;
+                }
+            }
+
+            double apexLightIntensity = peptide.GetIntensity(allFiles[startIndex]);
+            double apexHeavyIntensity = peptide.GetIntensity(allFiles[startIndex+1]);
+            //if there's any overlap
+            if (lightIntensities.Count!=0)
+            {
+                double averageApex = (apexLightIntensity + apexHeavyIntensity) / 2;
+                //how in the world to handle this when it's 3+ plex? Require all to overlap? Just some and then normalize?
+                for (int i = 0; i < lightIntensities.Count; i++)
+                {
+                    double lightIntensity = lightIntensities[i];
+                    double heavyIntensity = heavyIntensities[i];
+                    double average = (lightIntensity + heavyIntensity) / 2;
+                    double multiplicativeFactor = averageApex / average;
+                    lightIntensities[i] = lightIntensity * multiplicativeFactor;
+                    heavyIntensities[i] = heavyIntensity * multiplicativeFactor;
+                }
+                peptide.SetIntensity(lightRatioInfo, lightIntensities.Average());
+                peptide.SetIntensity(heavyRatioInfo, heavyIntensities.Average());
+
+            }
+            else
+            {
+                peptide.SetIntensity(lightRatioInfo, apexLightIntensity);
+                peptide.SetIntensity(heavyRatioInfo, apexHeavyIntensity);
+            }
         }
     }
 }
