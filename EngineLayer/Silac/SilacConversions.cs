@@ -344,7 +344,6 @@ namespace EngineLayer
         {
             bool outputLightIntensities = ListOfDigestionParams.Any(x => x.GeneratehUnlabeledProteinsForSilac);
 
-
             //MAKE NEW RAW FILES
             //update number of spectra files to include a new file for each label*condition
             Dictionary<SpectraFileInfo, string> fileToLabelDictionary = new Dictionary<SpectraFileInfo, string>(); //figure out which file is which label, since some files will be only light and others only heavy. Key is file, value is the label string (label.MassDifference)
@@ -360,6 +359,27 @@ namespace EngineLayer
                 foreach (SilacLabel label in silacLabels)
                 {
                     SpectraFileInfo silacFile = GetHeavyFileInfo(originalFile, label);
+                    silacSpectraFileInfo.Add(silacFile);
+                    fileToLabelDictionary[silacFile] = label.MassDifference;
+                    labeledToUnlabeledFile[silacFile] = originalFile;
+
+                    //DEBUG
+                    string lightFileName = originalFile.FilenameWithoutExtension + "RATIO." + originalFile.FullFilePathWithExtension.Split('.').Last();
+                    silacFile= new SpectraFileInfo(lightFileName, originalFile.Condition, originalFile.BiologicalReplicate, originalFile.TechnicalReplicate, originalFile.Fraction);
+                    silacSpectraFileInfo.Add(silacFile);
+                    fileToLabelDictionary[silacFile] = label.MassDifference;
+                    labeledToUnlabeledFile[silacFile] = originalFile;
+                    //DEBUG
+                    string heavyFileName = originalFile.FilenameWithoutExtension + "(" + label.OriginalAminoAcid + label.MassDifference;
+                    if (label.AdditionalLabels != null)
+                    {
+                        foreach (SilacLabel additionaLabel in label.AdditionalLabels)
+                        {
+                            heavyFileName += LABEL_DELIMITER + additionaLabel.OriginalAminoAcid + additionaLabel.MassDifference;
+                        }
+                    }
+                    heavyFileName += ")RATIO." + originalFile.FullFilePathWithExtension.Split('.').Last(); //add extension
+                    silacFile = new SpectraFileInfo(heavyFileName, originalFile.Condition, originalFile.BiologicalReplicate, originalFile.TechnicalReplicate, originalFile.Fraction);
                     silacSpectraFileInfo.Add(silacFile);
                     fileToLabelDictionary[silacFile] = label.MassDifference;
                     labeledToUnlabeledFile[silacFile] = originalFile;
@@ -434,7 +454,8 @@ namespace EngineLayer
                 if (FlashLfqResults != null) //can be null if nothing was quantified (all peptides are ambiguous)
                 {
                     Dictionary<string, FlashLFQ.ProteinGroup> flashLfqProteins = FlashLfqResults.ProteinGroups; //dictionary of protein group names to protein groups
-                                                                                                                //if the protein group is a heavy protein group, get rid of it. We already accounted for it above.
+                    
+                    //if the protein group is a heavy protein group, get rid of it. We already accounted for it above.
                     var keys = flashLfqProteins.Keys.ToList();
                     foreach (string key in keys)
                     {
@@ -470,7 +491,7 @@ namespace EngineLayer
             }
 
             //Convert all lfqpeaks from heavy (a) to light (K+8.014) for output
-            if (FlashLfqResults != null) //can be null if nothing was quantified (all peptides are ambiguous)
+            if (FlashLfqResults != null) //can be null if nothing was quantified (nothing at 1% FDR or all peptides are ambiguous)
             {
                 var lfqPeaks = FlashLfqResults.Peaks;
                 List<SpectraFileInfo> peakKeys = lfqPeaks.Keys.ToList();
@@ -481,15 +502,15 @@ namespace EngineLayer
                     for (int i = 0; i < peaks.Count; i++)
                     {
                         var peak = peaks[i];
-
                         List<Identification> identifications = new List<Identification>();
+
                         //check if we're removing light peaks and if it's a light peak
                         if (!outputLightIntensities && !peak.Identifications.Any(x => GetRelevantLabelFromBaseSequence(x.BaseSequence, silacLabels) != null)) //if no ids have any labels, remove them
                         {
                             peaks.RemoveAt(i);
                             i--;
                         }
-                        else
+                        else //save if light, modify and save if heavy
                         {
                             foreach (var id in peak.Identifications)
                             {
@@ -550,7 +571,7 @@ namespace EngineLayer
                     if (label != null) //if it's a heavy peptide
                     {
                         lfqPwsms.Remove(key); //get rid of it
-                                              //update the light version
+                        //update the light version
                         string lightSequence = GetSilacLightFullSequence(currentPeptide.Sequence, label, false); //get the light sequence
                         List<SpectraFileInfo> heavyFiles = silacSpectraFileInfo.Where(x => x.FilenameWithoutExtension.Contains(label.MassDifference)).ToList(); //these are the heavy raw file names
 
@@ -595,7 +616,36 @@ namespace EngineLayer
                         }
                     }
                 }
+
+                //DEBUG
+                pwsmKeys = lfqPwsms.Keys.ToList();
+                int halfOfFiles = silacSpectraFileInfo.Count / 2;
+                int quarterOfFiles = silacSpectraFileInfo.Count / 4;
+                foreach (string key in pwsmKeys)
+                {
+                    FlashLFQ.Peptide currentPeptide = lfqPwsms[key];
+                    for(int i=0; i<halfOfFiles; i++)
+                    {
+                        SpectraFileInfo lightInfo = silacSpectraFileInfo[i];
+                        SpectraFileInfo heavyInfo = silacSpectraFileInfo[i + quarterOfFiles];
+                        double lightIntensity = currentPeptide.GetIntensity(lightInfo);
+                        double heavyIntensity = currentPeptide.GetIntensity(heavyInfo);
+                        ChromatographicPeak lightPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(lightIntensity)).First();
+                        ChromatographicPeak heavyPeak = lfqPeaks[heavyInfo].Where(x => x.Intensity.Equals(heavyIntensity)).First();
+                        List<IsotopicEnvelope> lightEnvelopes = lightPeak.IsotopicEnvelopes;
+                        List<IsotopicEnvelope> heavyEnvelopes = heavyPeak.IsotopicEnvelopes;
+                        CreateAveragedRatiosAndUpdateIntensities(currentPeptide,)
+
+                    }
+                }
             }
+        }
+
+        private static void CreateAveragedRatiosAndUpdateIntensities(FlashLFQ.Peptide peptide, List<SpectraFileInfo> allFiles)
+        {
+            int halfOfFiles = allFiles.Count / 2;
+
+            peptide.g
         }
     }
 }
