@@ -624,14 +624,14 @@ namespace EngineLayer
                 foreach (string key in pwsmKeys)
                 {
                     FlashLFQ.Peptide currentPeptide = lfqPwsms[key];
-                    for(int i=0; i<halfOfFiles; i++)
+                    for(int i=0; i< quarterOfFiles; i++)
                     {
                         SpectraFileInfo lightInfo = silacSpectraFileInfo[i];
                         SpectraFileInfo heavyInfo = silacSpectraFileInfo[i + quarterOfFiles]; //HACKY
                         double lightIntensity = currentPeptide.GetIntensity(lightInfo);
                         double heavyIntensity = currentPeptide.GetIntensity(heavyInfo);
-                        ChromatographicPeak lightPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(lightIntensity)).First();
-                        ChromatographicPeak heavyPeak = lfqPeaks[heavyInfo].Where(x => x.Intensity.Equals(heavyIntensity)).First();
+                        ChromatographicPeak lightPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(lightIntensity)).First(); //HACKY
+                        ChromatographicPeak heavyPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(heavyIntensity)).First(); //HACKY
                         List<IsotopicEnvelope> lightEnvelopes = lightPeak.IsotopicEnvelopes;
                         List<IsotopicEnvelope> heavyEnvelopes = heavyPeak.IsotopicEnvelopes;
                         CreateAveragedRatiosAndUpdateIntensities(currentPeptide, silacSpectraFileInfo, lightEnvelopes, heavyEnvelopes, i);
