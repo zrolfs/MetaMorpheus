@@ -362,27 +362,6 @@ namespace EngineLayer
                     silacSpectraFileInfo.Add(silacFile);
                     fileToLabelDictionary[silacFile] = label.MassDifference;
                     labeledToUnlabeledFile[silacFile] = originalFile;
-
-                    //DEBUG
-                    string lightFileName = originalFile.FilenameWithoutExtension + "RATIO." + originalFile.FullFilePathWithExtension.Split('.').Last();
-                    silacFile= new SpectraFileInfo(lightFileName, originalFile.Condition, originalFile.BiologicalReplicate, originalFile.TechnicalReplicate, originalFile.Fraction);
-                    silacSpectraFileInfo.Add(silacFile);
-                    fileToLabelDictionary[silacFile] = label.MassDifference;
-                    labeledToUnlabeledFile[silacFile] = originalFile;
-                    //DEBUG
-                    string heavyFileName = originalFile.FilenameWithoutExtension + "(" + label.OriginalAminoAcid + label.MassDifference;
-                    if (label.AdditionalLabels != null)
-                    {
-                        foreach (SilacLabel additionaLabel in label.AdditionalLabels)
-                        {
-                            heavyFileName += LABEL_DELIMITER + additionaLabel.OriginalAminoAcid + additionaLabel.MassDifference;
-                        }
-                    }
-                    heavyFileName += ")RATIO." + originalFile.FullFilePathWithExtension.Split('.').Last(); //add extension
-                    silacFile = new SpectraFileInfo(heavyFileName, originalFile.Condition, originalFile.BiologicalReplicate, originalFile.TechnicalReplicate, originalFile.Fraction);
-                    silacSpectraFileInfo.Add(silacFile);
-                    fileToLabelDictionary[silacFile] = label.MassDifference;
-                    labeledToUnlabeledFile[silacFile] = originalFile;
                 }
             }
 
@@ -394,14 +373,14 @@ namespace EngineLayer
             if (ProteinGroups != null) //if we did parsimony
             {
                 List<EngineLayer.ProteinGroup> silacProteinGroups = new List<EngineLayer.ProteinGroup>();
-                
+
                 //The light/unlabeled peptides/proteins were not searched if specified, but they were still quantified to keep track of the labels
                 //we need to remove these unlabeled peptides/proteins before output
                 //foreach protein group (which has its own quant for each file)
                 foreach (EngineLayer.ProteinGroup proteinGroup in ProteinGroups)
                 {
                     proteinGroup.FilesForQuantification = silacSpectraFileInfo; //update fileinfo for the group
-                    
+
                     //grab the light groups. Using these light groups, find their heavy group pair(s), add them to the light group quant info, and then remove the heavy groups
                     if (silacProteinGroupMatcher.TryGetValue(proteinGroup.ProteinGroupName, out List<string> silacSubGroupNames)) //try to find the light protein groups. If it's not light, ignore it
                     {
@@ -454,7 +433,7 @@ namespace EngineLayer
                 if (FlashLfqResults != null) //can be null if nothing was quantified (all peptides are ambiguous)
                 {
                     Dictionary<string, FlashLFQ.ProteinGroup> flashLfqProteins = FlashLfqResults.ProteinGroups; //dictionary of protein group names to protein groups
-                    
+
                     //if the protein group is a heavy protein group, get rid of it. We already accounted for it above.
                     var keys = flashLfqProteins.Keys.ToList();
                     foreach (string key in keys)
@@ -617,24 +596,24 @@ namespace EngineLayer
                     }
                 }
 
-                //DEBUG
                 pwsmKeys = lfqPwsms.Keys.ToList();
                 int halfOfFiles = silacSpectraFileInfo.Count / 2;
-                int quarterOfFiles = silacSpectraFileInfo.Count / 4;
                 foreach (string key in pwsmKeys)
                 {
                     FlashLFQ.Peptide currentPeptide = lfqPwsms[key];
-                    for(int i=0; i< quarterOfFiles; i++)
+                    for (int i = 0; i < halfOfFiles; i++)
                     {
                         SpectraFileInfo lightInfo = silacSpectraFileInfo[i];
-                        SpectraFileInfo heavyInfo = silacSpectraFileInfo[i + quarterOfFiles]; //HACKY
+                        SpectraFileInfo heavyInfo = silacSpectraFileInfo[i + halfOfFiles]; //HACKY
                         double lightIntensity = currentPeptide.GetIntensity(lightInfo);
                         double heavyIntensity = currentPeptide.GetIntensity(heavyInfo);
-                        ChromatographicPeak lightPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(lightIntensity)).First(); //HACKY
-                        ChromatographicPeak heavyPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(heavyIntensity)).First(); //HACKY
-                        List<IsotopicEnvelope> lightEnvelopes = lightPeak.IsotopicEnvelopes;
-                        List<IsotopicEnvelope> heavyEnvelopes = heavyPeak.IsotopicEnvelopes;
-                        CreateAveragedRatiosAndUpdateIntensities(currentPeptide, silacSpectraFileInfo, lightEnvelopes, heavyEnvelopes, i);
+                        ChromatographicPeak lightPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(lightIntensity)).FirstOrDefault(); //HACKY
+                        ChromatographicPeak heavyPeak = lfqPeaks[lightInfo].Where(x => x.Intensity.Equals(heavyIntensity)).FirstOrDefault(); //HACKY
+                        if (lightPeak != null && heavyPeak != null)
+                        {
+                            CreateAveragedRatiosAndUpdateIntensities(currentPeptide, silacSpectraFileInfo, lightPeak.IsotopicEnvelopes, heavyPeak.IsotopicEnvelopes, i);
+                        }
+                        //else keep the intensity values at the apex
                     }
                 }
             }
@@ -643,9 +622,12 @@ namespace EngineLayer
         private static void CreateAveragedRatiosAndUpdateIntensities(FlashLFQ.Peptide peptide, List<SpectraFileInfo> allFiles,
             List<IsotopicEnvelope> lightEnvelopes, List<IsotopicEnvelope> heavyEnvelopes, int startIndex)
         {
-            int halfOfFiles = allFiles.Count / 2;
-            SpectraFileInfo lightRatioInfo = allFiles[halfOfFiles + startIndex];
-            SpectraFileInfo heavyRatioInfo = allFiles[halfOfFiles + startIndex + 1];
+            SpectraFileInfo lightRatioInfo = allFiles[startIndex];
+            SpectraFileInfo heavyRatioInfo = allFiles[allFiles.Count / 2 + startIndex];
+
+            //sort
+            lightEnvelopes = lightEnvelopes.OrderBy(x => x.ChargeState).ThenBy(x => x.IndexedPeak.ZeroBasedMs1ScanIndex).ToList();
+            heavyEnvelopes = heavyEnvelopes.OrderBy(x => x.ChargeState).ThenBy(x => x.IndexedPeak.ZeroBasedMs1ScanIndex).ToList();
 
             //assume they elute at the same time
             int lightIndex = 0;
@@ -653,52 +635,48 @@ namespace EngineLayer
             List<double> lightIntensities = new List<double>();
             List<double> heavyIntensities = new List<double>();
 
-            while (lightIndex < lightEnvelopes.Count && heavyIndex<heavyEnvelopes.Count)
+            while (lightIndex < lightEnvelopes.Count && heavyIndex < heavyEnvelopes.Count)
             {
                 IsotopicEnvelope lightEnvelope = lightEnvelopes[lightIndex];
                 IsotopicEnvelope heavyEnvelope = heavyEnvelopes[heavyIndex];
-                if(lightEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex == heavyEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex)
+                if (lightEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex == heavyEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex && lightEnvelope.ChargeState == heavyEnvelope.ChargeState)
                 {
                     lightIntensities.Add(lightEnvelope.Intensity);
                     heavyIntensities.Add(heavyEnvelope.Intensity);
                     heavyIndex++;
                     lightIndex++;
                 }
-                else if(lightEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex > heavyEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex)
+                else if (lightEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex > heavyEnvelope.IndexedPeak.ZeroBasedMs1ScanIndex)
                 {
-                    heavyIndex++;
+                    if (lightEnvelope.ChargeState >= heavyEnvelope.ChargeState)
+                    {
+                        heavyIndex++;
+                    }
+                    else
+                    {
+                        lightIndex++;
+                    }
                 }
                 else
                 {
-                    lightIndex++;
+                    if (heavyEnvelope.ChargeState >= lightEnvelope.ChargeState)
+                    {
+                        lightIndex++;
+                    }
+                    else
+                    {
+                        heavyIndex++;
+                    }
                 }
             }
 
-            double apexLightIntensity = peptide.GetIntensity(allFiles[startIndex]);
-            double apexHeavyIntensity = peptide.GetIntensity(allFiles[startIndex+1]);
             //if there's any overlap
-            if (lightIntensities.Count!=0)
+            if (lightIntensities.Count != 0)
             {
-                double averageApex = (apexLightIntensity + apexHeavyIntensity) / 2;
-                //how in the world to handle this when it's 3+ plex? Require all to overlap? Just some and then normalize?
-                for (int i = 0; i < lightIntensities.Count; i++)
-                {
-                    double lightIntensity = lightIntensities[i];
-                    double heavyIntensity = heavyIntensities[i];
-                    double average = (lightIntensity + heavyIntensity) / 2;
-                    double multiplicativeFactor = averageApex / average;
-                    lightIntensities[i] = lightIntensity * multiplicativeFactor;
-                    heavyIntensities[i] = heavyIntensity * multiplicativeFactor;
-                }
                 peptide.SetIntensity(lightRatioInfo, lightIntensities.Average());
                 peptide.SetIntensity(heavyRatioInfo, heavyIntensities.Average());
-
             }
-            else
-            {
-                peptide.SetIntensity(lightRatioInfo, apexLightIntensity);
-                peptide.SetIntensity(heavyRatioInfo, apexHeavyIntensity);
-            }
+            //else keep the apex intensities
         }
     }
 }
