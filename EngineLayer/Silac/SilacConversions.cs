@@ -409,15 +409,16 @@ namespace EngineLayer
                 }
                 else //multiplex
                 {
-                    //foreach original file
-                    foreach (SpectraFileInfo info in spectraFileInfo)
+                    foreach (var kvp in unlabeledToPeptidesDictionary)
                     {
-                        foreach (var kvp in unlabeledToPeptidesDictionary)
+                        string unlabeledSequence = kvp.Key;
+                        List<FlashLFQ.Peptide> peptides = kvp.Value;
+                        FlashLFQ.Peptide representativePeptide = peptides[0];
+                        FlashLFQ.Peptide updatedPeptide = new FlashLFQ.Peptide(unlabeledSequence, unlabeledSequence, representativePeptide.UseForProteinQuant, CleanPastProteinQuant(representativePeptide.ProteinGroups)); //needed to keep protein info.
+
+                        //foreach original file
+                        foreach (SpectraFileInfo info in spectraFileInfo)
                         {
-                            string unlabeledSequence = kvp.Key;
-                            List<FlashLFQ.Peptide> peptides = kvp.Value;
-                            FlashLFQ.Peptide representativePeptide = peptides[0];
-                            FlashLFQ.Peptide updatedPeptide = new FlashLFQ.Peptide(unlabeledSequence, unlabeledSequence, representativePeptide.UseForProteinQuant, CleanPastProteinQuant(representativePeptide.ProteinGroups)); //needed to keep protein info.
                             List<SpectraFileInfo> filesForThisFile = originalToLabeledFileInfoDictionary[info];
                             for (int i = 0; i < peptides.Count; i++) //the files and the peptides can use the same index, because there should be a distinct file for each label/peptide
                             {
@@ -426,10 +427,11 @@ namespace EngineLayer
                                 updatedPeptide.SetIntensity(currentInfo, currentPeptide.GetIntensity(info));
                                 updatedPeptide.SetDetectionType(currentInfo, currentPeptide.GetDetectionType(info));
                             }
-                            updatedPeptides.Add(updatedPeptide);
                         }
+                        updatedPeptides.Add(updatedPeptide);
                     }
                 }
+
                 //Update peptides
                 var peptideResults = flashLfqResults.PeptideModifiedSequences;
                 peptideResults.Clear();
