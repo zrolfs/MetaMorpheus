@@ -755,7 +755,8 @@ namespace EngineLayer
                     }
                     //add the values from this peptide to the file-specific-values of all peptides
                     double[] totalValues = fileToRecycleDictionary[info];
-                    for (int i = 0; i < values.Count; i++)
+
+                    for (int i = 0; i < 3; i++)
                     {
                         totalValues[i] += values[i];
                     }
@@ -780,7 +781,7 @@ namespace EngineLayer
                     values[i] = values[i] / sum;
                 }
                 double ph = Math.Sqrt(values[2] / (1 - values[0] + Math.Pow(values[1], 2) / (4 * values[2]))); //calculate probability
-                if (ph == 0) //happens when if heavy values are found
+                if (ph == 0 || ph.Equals(double.NaN)) //happens when missing values for HH or HH and HL
                 {
                     ph = 1; //we can't calculate a ph without heavy values. Revert to traditional code, where we assume 100% probability of heavy incorporation
                 }
