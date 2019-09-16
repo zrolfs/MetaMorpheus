@@ -413,19 +413,23 @@ namespace EngineLayer
                     {
                         string unlabeledSequence = kvp.Key;
                         List<FlashLFQ.Peptide> peptides = kvp.Value;
+
                         FlashLFQ.Peptide representativePeptide = peptides[0];
                         FlashLFQ.Peptide updatedPeptide = new FlashLFQ.Peptide(unlabeledSequence, unlabeledSequence, representativePeptide.UseForProteinQuant, CleanPastProteinQuant(representativePeptide.ProteinGroups)); //needed to keep protein info.
 
-                        //foreach original file
-                        foreach (SpectraFileInfo info in spectraFileInfo)
+                        if (peptides.Count != 1) //sometimes it's one if there is no label site on the peptide (e.g. label K, peptide is PEPTIDER)
                         {
-                            List<SpectraFileInfo> filesForThisFile = originalToLabeledFileInfoDictionary[info];
-                            for (int i = 0; i < peptides.Count; i++) //the files and the peptides can use the same index, because there should be a distinct file for each label/peptide
+                            //foreach original file
+                            foreach (SpectraFileInfo info in spectraFileInfo)
                             {
-                                SpectraFileInfo currentInfo = filesForThisFile[i];
-                                FlashLFQ.Peptide currentPeptide = peptides[i];
-                                updatedPeptide.SetIntensity(currentInfo, currentPeptide.GetIntensity(info));
-                                updatedPeptide.SetDetectionType(currentInfo, currentPeptide.GetDetectionType(info));
+                                List<SpectraFileInfo> filesForThisFile = originalToLabeledFileInfoDictionary[info];
+                                for (int i = 0; i < peptides.Count; i++) //the files and the peptides can use the same index, because there should be a distinct file for each label/peptide
+                                {
+                                    SpectraFileInfo currentInfo = filesForThisFile[i];
+                                    FlashLFQ.Peptide currentPeptide = peptides[i];
+                                    updatedPeptide.SetIntensity(currentInfo, currentPeptide.GetIntensity(info));
+                                    updatedPeptide.SetDetectionType(currentInfo, currentPeptide.GetDetectionType(info));
+                                }
                             }
                         }
                         updatedPeptides.Add(updatedPeptide);

@@ -364,6 +364,62 @@ namespace Test
         }
 
         [Test]
+        public static void TestSilacNoLabelPeptide()
+        {
+            //make heavy residue and add to search task
+            Residue heavyLysine = new Residue("a", 'a', "a", Chemistry.ChemicalFormula.ParseFormula("C{13}6H12N{15}2O"), ModificationSites.All); //+8 lysine
+            Residue.AddNewResiduesToDictionary(new List<Residue> { heavyLysine });
+            Residue lightLysine = Residue.GetResidue('K');
+
+            SearchTask turnoverTask = new SearchTask
+            {
+                SearchParameters = new SearchParameters
+                {
+                    EndTurnoverLabel = new SilacLabel(lightLysine.Letter, heavyLysine.Letter, heavyLysine.ThisChemicalFormula.Formula, heavyLysine.MonoisotopicMass - lightLysine.MonoisotopicMass),
+                }
+            };
+            SearchTask multiplexTask = new SearchTask
+            {
+                SearchParameters = new SearchParameters
+                {
+                    SilacLabels = new List<SilacLabel> { new SilacLabel(lightLysine.Letter, heavyLysine.Letter, heavyLysine.ThisChemicalFormula.Formula, heavyLysine.MonoisotopicMass - lightLysine.MonoisotopicMass) }
+                }
+            };
+
+            List<PeptideWithSetModifications> mixedPeptide = new List<PeptideWithSetModifications> { new PeptideWithSetModifications("PEPTIDE", new Dictionary<string, Modification>()) }; //has the additional, but not the original
+
+            MsDataFile myMsDataFile1 = new TestDataFile(mixedPeptide);
+            string mzmlName = @"silac.mzML";
+            IO.MzML.MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(myMsDataFile1, mzmlName, false);
+
+            string xmlName = "SilacDb.xml";
+            Protein theProtein = new Protein("PEPTKIDEKPEPTIDE", "accession1");
+            ProteinDbWriter.WriteXmlDatabase(new Dictionary<string, HashSet<Tuple<int, Modification>>>(), new List<Protein> { theProtein }, xmlName);
+
+            string outputFolder = Path.Combine(TestContext.CurrentContext.TestDirectory, @"TestSilac");
+            Directory.CreateDirectory(outputFolder);
+
+            List<SearchTask> tasklist = new List<SearchTask> {  multiplexTask, turnoverTask };
+            foreach (SearchTask task in tasklist)
+            {
+                task.RunTask(outputFolder, new List<DbForTask> { new DbForTask(xmlName, false) }, new List<string> { mzmlName }, "taskId1").ToString();
+
+                string[] output = File.ReadAllLines(TestContext.CurrentContext.TestDirectory + @"/TestSilac/AllQuantifiedPeptides.tsv");
+                Assert.IsTrue(output[1].Contains("PEPTIDE\t")); //test the unlabeled is present
+                Assert.IsTrue(output[1].Contains("\t0\t0\t")); //test intensities
+                output = File.ReadAllLines(TestContext.CurrentContext.TestDirectory + @"/TestSilac/AllQuantifiedPeaks.tsv");
+                Assert.IsTrue(output[1].Contains("PEPTIDE\t")); //test the unlabeled is present
+                Assert.IsTrue(output[1].Contains("\t0.875\t0\t")); //test intensities            
+                output = File.ReadAllLines(TestContext.CurrentContext.TestDirectory + @"/TestSilac/AllProteinGroups.tsv");
+                Assert.IsTrue(output[1].Contains("\t0\t0\t")); //test intensities
+            }
+            //delete files
+            Directory.Delete(outputFolder, true);
+            File.Delete(xmlName);
+            File.Delete(mzmlName);
+        }
+
+        [Test]
         public static void TestSilacTurnover()
         {
             //make heavy residue and add to search task
