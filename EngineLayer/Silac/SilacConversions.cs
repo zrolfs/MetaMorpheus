@@ -718,9 +718,11 @@ namespace EngineLayer
         private static Dictionary<SpectraFileInfo, double> CalculateProbabilityOfNewAminoAcidIncorporation(List<SpectraFileInfo> spectraFileInfo, Dictionary<string, List<FlashLFQ.Peptide>> unlabeledToPeptidesDictionary)
         {
             Dictionary<SpectraFileInfo, double[]> fileToRecycleDictionary = new Dictionary<SpectraFileInfo, double[]>();
+            Dictionary<SpectraFileInfo, int> numberOfPointsPerFile = new Dictionary<SpectraFileInfo, int>();
             foreach (SpectraFileInfo info in spectraFileInfo)
             {
                 fileToRecycleDictionary[info] = new double[3];
+                numberOfPointsPerFile[info] = 0;
             }
 
             //go through each peptide that has more than one label but fewer than 7 (just gets unusable around/before that point)
@@ -759,11 +761,35 @@ namespace EngineLayer
                     }
                     //add the values from this peptide to the file-specific-values of all peptides
                     double[] totalValues = fileToRecycleDictionary[info];
+                    //TODO: try two different methods, take everything, or only take if all 3 were quantified
 
+                    //Take everything
+                    bool valueFound = false;
                     for (int i = 0; i < 3; i++)
                     {
-                        totalValues[i] += values[i];
+                        double value = values[i];
+                        if (value != 0)
+                        {
+                            valueFound = true;
+                        }
+                        totalValues[i] += value;
                     }
+                    if (valueFound)
+                    {
+                        numberOfPointsPerFile[info]++;
+                    }
+
+                    //Take only if all 3 have values
+                    //double valueLL = values[0];
+                    //double valueLH = values[1];
+                    //double valueHH = values[2];
+                    //if(valueLL!=0 && valueLH!=0 &&valueHH!=0)
+                    //{
+                    //    numberOfPointsPerFile[info]++;
+                    //    totalValues[0] += valueLL;
+                    //    totalValues[1] += valueLH;
+                    //    totalValues[2] += valueHH;
+                    //}
                 }
             }
 
@@ -851,12 +877,13 @@ namespace EngineLayer
                 double numContradictingValues = contradictingValues[2]; //int, but the array is double
                 if (numContradictingValues != 0) //check that there were contradicting values
                 {
+                    int numQuantifiedPeptidesWithMultipleLabels = numberOfPointsPerFile[info];
                     double originalPh = fileToHeavyProbabilityDictionary[info];
                     double contradictingPh = contradictingValues[1] / (contradictingValues[0] + contradictingValues[1]);
-                    double weightedOriginal = originalPh * peptidesWithMultipleLabels.Count;
+                    double weightedOriginal = originalPh * numQuantifiedPeptidesWithMultipleLabels;
                     double weightedContradicting = contradictingPh * numContradictingValues;
                     //the updated Ph is guarenteed to be higher than the Ph informed only by the missed cleavage peptides
-                    double updatedPh = (weightedOriginal + weightedContradicting) / (peptidesWithMultipleLabels.Count + numContradictingValues);
+                    double updatedPh = (weightedOriginal + weightedContradicting) / (numQuantifiedPeptidesWithMultipleLabels + numContradictingValues);
                     fileToHeavyProbabilityDictionary[info] = updatedPh;
                 }
             }
