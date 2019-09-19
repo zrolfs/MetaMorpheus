@@ -391,7 +391,7 @@ namespace EngineLayer
                                 //Ph helps out here. The correction factor is Pl*Qh/Ph, or (1-Ph)*Qh/Ph.
                                 //it's possible that we obtain a negative value for the start, which doesn't make sense.
                                 //This occurs when Qh>Ph. In these cases, set the light to zero and the heavy to light+heavy.
-                                double correction = Math.Min((1 - Ph) * heavy / Ph, light);
+                                double correction = Math.Max((Math.Min((((1 - Ph) * (heavy + mixed / 2) / Ph) - (mixed / 2)), light)), 0);
 
                                 updatedPeptide.SetIntensity(startInfo, light - correction); //assign the corrected light intensity
                                 updatedPeptide.SetDetectionType(startInfo, lightPeptide.GetDetectionType(info));

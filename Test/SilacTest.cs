@@ -543,7 +543,7 @@ namespace Test
             Assert.IsTrue(output[2].Contains("PEPTKIDEK\t")); //test the unlabeled is present
             Assert.IsTrue(output[0].Contains("\tIntensity_silac_Original\tIntensity_silac_NewlySynthesized\tDetection Type_silac_Original\tDetection Type_silac_NewlySynthesized\t")); //test filename changes
             Assert.IsTrue(output[1].Contains("\t0\t8750000\t")); //test the light intensity is not negative.
-            Assert.IsTrue(output[2].Contains("\t6125000\t9625000\t")); //test intensities. The observation is 9/6/3. If Ph = 0.5, the results will be 6/12. If Ph = 0.6, the results will be 7/11.
+            Assert.IsTrue(output[2].Contains("\t7000000\t8750000\t")); //test intensities. The observation is 9/6/3. If Ph = 0.5, the results will be 6/12. If Ph = 0.6, the results will be 7/11.
 
             output = File.ReadAllLines(TestContext.CurrentContext.TestDirectory + @"/TestSilac/AllProteinGroups.tsv");
             //test sequence coverage and output worked from multiple labels
