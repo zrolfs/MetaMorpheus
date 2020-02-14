@@ -105,7 +105,7 @@
                         HorizontalAlignment="Stretch"
                         Background="Silver"
                         Height="5" />
-                <GroupBox Header="Mass Spectra Files" Grid.Row="2"  Name="datafilesGroupBox">
+                <GroupBox Header="Mass Spectra Files (0)" Grid.Row="2"  Name="datafilesGroupBox">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*" />
@@ -115,6 +115,7 @@
                             <DataGrid.Resources>
                                 <ResourceDictionary>
                                     <Style x:Key="{x:Type DataGridCell}" TargetType="{x:Type DataGridCell}">
+                                        <EventSetter Event="PreviewMouseDown" Handler="SpectraMouseClick"/>
                                         <EventSetter Event="MouseDoubleClick" Handler="Row_DoubleClick" />
                                         <Setter Property="Background" Value="Transparent" />
                                         <Setter Property="BorderBrush" Value="Transparent" />

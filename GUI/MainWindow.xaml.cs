@@ -165,7 +165,7 @@ namespace MetaMorpheusGUI
                 }
             }
 
-            this.KeyDown += new KeyEventHandler(Window_KeyDown);
+            KeyDown += new KeyEventHandler(Window_KeyDown);
 
             // hide the "InProgress" column
             dataGridProteinDatabases.Columns.Where(p => p.Header.Equals(nameof(ProteinDbForDataGrid.InProgress))).First().Visibility = Visibility.Hidden;
@@ -351,6 +351,7 @@ namespace MetaMorpheusGUI
         {
             SpectraFilesObservableCollection.Clear();
             UpdateOutputFolderTextbox();
+            UpdateSpectraFileGuiStuff();
         }
 
         private void OpenOutputFolder_Click(object sender, RoutedEventArgs e)
@@ -457,7 +458,7 @@ namespace MetaMorpheusGUI
                         dataGridProteinDatabases.CommitEdit(DataGridEditingUnit.Row, true);
                         dataGridSpectraFiles.Items.Refresh();
                         dataGridProteinDatabases.Items.Refresh();
-                    }
+                   }
                 }
                 UpdateTaskGuiStuff();
             }
@@ -599,6 +600,37 @@ namespace MetaMorpheusGUI
             }
         }
 
+        // This event handler manually raises the CellValueChanged event
+        // by calling the CommitEdit method.
+        void dataGridView1_CurrentCellDirtyStateChanged(object sender,
+            EventArgs e)
+        {
+            if (dataGridView1.IsCurrentCellDirty)
+            {
+                dataGridView1.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        // If a check box cell is clicked, this event handler disables  
+        // or enables the button in the same row as the clicked cell.
+        public void dataGridView1_CellValueChanged(object sender,
+            DataGridViewCellEventArgs e)
+        {
+            if (dataGridView1.Columns[e.ColumnIndex].Name == "CheckBoxes")
+            {
+                DataGridViewDisableButtonCell buttonCell =
+                    (DataGridViewDisableButtonCell)dataGridView1.
+                    Rows[e.RowIndex].Cells["Buttons"];
+
+                DataGridViewCheckBoxCell checkCell =
+                    (DataGridViewCheckBoxCell)dataGridView1.
+                    Rows[e.RowIndex].Cells["CheckBoxes"];
+                buttonCell.Enabled = !(Boolean)checkCell.Value;
+
+                dataGridView1.Invalidate();
+            }
+        }
+
         private void AddTaskToCollection(MetaMorpheusTask ye)
         {
             PreRunTask te = new PreRunTask(ye);
@@ -630,6 +662,12 @@ namespace MetaMorpheusGUI
             }
         }
 
+        //updates number of spectra when use is clicked
+        private void SpectraMouseClick(object sender, MouseButtonEventArgs e)
+        {
+            dataGridSpectraFiles.CommitEdit(DataGridEditingUnit.Row, true);
+            datafilesGroupBox.Header = "Mass Spectra Files (" + SpectraFilesObservableCollection.Count(x => x.Use) + ")";
+        }
         private void RunAllTasks_Click(object sender, RoutedEventArgs e)
         {
             GlobalVariables.StopLoops = false;
@@ -813,6 +851,7 @@ namespace MetaMorpheusGUI
         private void UpdateSpectraFileGuiStuff()
         {
             ChangeFileParameters.IsEnabled = SelectedRawFiles.Count > 0 && LoadTaskButton.IsEnabled;
+            datafilesGroupBox.Header = "Mass Spectra Files (" + SpectraFilesObservableCollection.Count(x=>x.Use) + ")";
         }
 
         private void AddSearchTaskButton_Click(object sender, RoutedEventArgs e)
@@ -1302,6 +1341,7 @@ namespace MetaMorpheusGUI
                 }
             }
             UpdateSpectraFileGuiStuff();
+            dataGridSpectraFiles.CommitEdit(DataGridEditingUnit.Row, true);
             dataGridSpectraFiles.Items.Refresh();
         }
 
@@ -1331,6 +1371,7 @@ namespace MetaMorpheusGUI
                 }
             }
             UpdateSpectraFileGuiStuff();
+            dataGridSpectraFiles.CommitEdit(DataGridEditingUnit.Row, true);
             dataGridSpectraFiles.Items.Refresh();
         }
 
@@ -1340,7 +1381,6 @@ namespace MetaMorpheusGUI
 
             RawDataForDataGrid ok = (RawDataForDataGrid)obj.DataContext;
             SelectedRawFiles.Add(ok);
-            UpdateSpectraFileGuiStuff();
         }
 
         private void RemoveSelectedSpectra(object sender, RoutedEventArgs e)
@@ -1348,7 +1388,6 @@ namespace MetaMorpheusGUI
             DataGridRow obj = (DataGridRow)sender;
             RawDataForDataGrid ok = (RawDataForDataGrid)obj.DataContext;
             SelectedRawFiles.Remove(ok);
-            UpdateSpectraFileGuiStuff();
         }
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
