@@ -17,7 +17,7 @@ namespace EngineLayer.Neo
 
         #region Public Methods
 
-        public static void ExportAll(List<NeoPsm> psms, Ms2ScanWithSpecificMass[] spectra, string databaseFileName)
+        public static void ExportAll(List<NeoPsm> psms, Ms2ScanWithSpecificMass[] spectra, string databaseFileName, string rawFileName)
         {
             folder = DateTime.Now.ToString("yyyy-MM-dd_hh-mm-ss");
             path = "";
@@ -26,16 +26,16 @@ namespace EngineLayer.Neo
                 path += temp[i] + '\\';
 
             Directory.CreateDirectory(path + folder);
-            ExportCandidates(psms, spectra, path);
+            ExportCandidates(psms, spectra, path, rawFileName);
             // ExportFullFASTA(psms, databaseFileName, path);
-            ExportFASTAAppendix(psms, databaseFileName, path);
+            ExportFASTAAppendix(psms, databaseFileName, path, rawFileName);
 
             //  ExportFilteredFusionPeptideAppendix(psms, databaseFileName, path);
         }
 
-        public static void ExportCandidates(List<NeoPsm> psms, Ms2ScanWithSpecificMass[] spectra, string path)
+        public static void ExportCandidates(List<NeoPsm> psms, Ms2ScanWithSpecificMass[] spectra, string path, string rawFileName)
         {
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "ExportedFusionCandidatesAll.txt"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder +"_"+ rawFileName+ "_ExportedFusionCandidatesAll.txt"))
             {
                 file.WriteLine("Scan" + '\t' + "ExperimentalMass" + '\t' + "OriginalNSequence" + '\t' + "OriginalNScore" + '\t' + "OriginalCSequence" + '\t' + "OriginalCScore" + '\t' + "SampleSequence" + '\t' + "Ambiguity" + '\t' + "ProbableType" + '\t' + "MostProbableSequenceJunctions" + '\t' + "MostProbableSequence(s)" + '\t' + "MostProbableParents" + '\t' + "AllPossibleSequenceJunctions" + '\t' + "AllPossibleSequence(s)" + '\t' + "AllPossibleParent(s)" + '\t' + "NumberOfPossibleSequences" + '\t' + "PotentialFalsePositives" + '\t' + "TotalScore");
 
@@ -193,7 +193,7 @@ namespace EngineLayer.Neo
                 });
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "ExportedFusionCandidatesTL.txt"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_"+ rawFileName+ "_ExportedFusionCandidatesTL.txt"))
             {
                 file.WriteLine("Scan" + '\t' + "ExperimentalMass" + '\t' + "OriginalNSequence" + '\t' + "OriginalNScore" + '\t' + "OriginalCSequence" + '\t' + "OriginalCScore" + '\t' + "SampleSequence" + '\t' + "Ambiguity" + '\t' + "ProbableType" + '\t' + "MostProbableSequenceJunctions" + '\t' + "MostProbableSequence(s)" + '\t' + "MostProbableParents" + '\t' + "AllPossibleSequenceJunctions" + '\t' + "AllPossibleSequence(s)" + '\t' + "AllPossibleParent(s)" + '\t' + "NumberOfPossibleSequences" + '\t' + "PotentialFalsePositives" + '\t' + "TotalScore");
 
@@ -601,7 +601,7 @@ namespace EngineLayer.Neo
                     {
                         file.WriteLine(">sp|" + scan + fusionCandidate.fusionType.ToString() + fusNum + "|" + scan + "_" + fusNum + " From " + fusionCandidate.accession + "_" + fusionCandidate.nStart + "-" + fusionCandidate.nStop + "_" + fusionCandidate.cStart + "-" + fusionCandidate.cStop + " Proposed " + fusionCandidate.fusionType.ToString() + " fusion peptide OS=" + fusionCandidate.organism + " GN=FUS PE=1 SV=1");
                         string seq = fusionCandidate.seq;
-                        for (int i = 0; i < seq.Count(); i += 60) //60 used as number of AAs per line in a FASTA file. It is unliekly to observe something this large currently, but is here as a precaution.
+                        for (int i = 0; i < seq.Count(); i += 60) //60 used as number of AAs per line in a FASTA file. It is unlikely to observe something this large currently, but is here as a precaution.
                         {
                             if ((i + 60) < seq.Count())
                                 file.WriteLine(seq.Substring(i, 60));

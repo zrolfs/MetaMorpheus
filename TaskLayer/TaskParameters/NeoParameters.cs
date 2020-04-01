@@ -1,4 +1,6 @@
-﻿namespace TaskLayer
+﻿using System.Collections.Generic;
+
+namespace TaskLayer
 {
     public class NeoParameters
     {
@@ -18,6 +20,10 @@
             MaxDistanceAllowed = 25;
             NormalCis = true;
             ReverseCis = true;
+            TargetFilePath = new List<string>();
+            DecoyFilePath = new List<string>();
+            NFilePath = new List<string>();
+            CFilePath = new List<string>();
         }
 
         #endregion Public Constructors
@@ -29,14 +35,14 @@
         public double? ProductTolerancePPM { get; set; }
         public bool GPTMD { get; set; }
         public bool TargetSearch { get; set; }
-        public string TargetFilePath { get; set; }
+        public List<string> TargetFilePath { get; set; }
         public bool DecoySearch { get; set; }
-        public string DecoyFilePath { get; set; }
+        public List<string> DecoyFilePath { get; set; }
 
         public bool SearchNTerminus { get; set; }
-        public string NFilePath { get; set; }
+        public List<string> NFilePath { get; set; }
         public bool SearchCTerminus { get; set; }
-        public string CFilePath { get; set; }
+        public List<string> CFilePath { get; set; }
 
         public int MaxMissedConsecutiveFragments { get; set; }
         //public int MaxMissedTotalFragments { get; set; }

@@ -48,10 +48,13 @@ namespace EngineLayer.Neo
 
         #region Public Methods
 
-        public static void FindAmbiguity(List<NeoPsm> candidates, List<Protein> theoreticalProteins, Ms2ScanWithSpecificMass[] spectra, string databaseFileName)
+        public static void FindAmbiguity(List<NeoPsm> candidates, List<Protein> theoreticalProteins, Ms2ScanWithSpecificMass[] spectra, List<string> proteinDatabases)
         {
             NeoFindAmbiguity.theoreticalProteins = theoreticalProteins;
-            PopulateSequenceLookUpDictionaries(databaseFileName, theoreticalProteins);
+            foreach (string databaseFileName in proteinDatabases)
+            {
+                PopulateSequenceLookUpDictionaries(databaseFileName, theoreticalProteins);
+            }
 
             for (int i = 0; i < candidates.Count(); i++) //must be mutable while iterating
             {
@@ -592,7 +595,7 @@ namespace EngineLayer.Neo
                                         else
                                         {
                                             //it's cis!
-                                             FusionCandidate tempCandidate = new FusionCandidate(fc)
+                                            FusionCandidate tempCandidate = new FusionCandidate(fc)
                                             {
                                                 fusionType = FusionCandidate.FusionType.TS, //change if allowed!
                                                 accession = prot.Accession,
@@ -663,7 +666,7 @@ namespace EngineLayer.Neo
                                             int difference = otherIndexes[c] - (indexes[n] + i);
                                             if (difference > numInterveningResidues)
                                                 n++;
-                                            else if (difference < -1*numInterveningResidues - fc.Length)
+                                            else if (difference < -1 * numInterveningResidues - fc.Length)
                                                 c++;
                                             else if (difference <= 0 && difference > -fc.Length)
                                             {
@@ -1101,7 +1104,9 @@ namespace EngineLayer.Neo
             {
                 Dictionary<string, Protein> idToSequence = new Dictionary<string, Protein>();
                 foreach (Protein prot in proteins)
+                {
                     idToSequence.Add(prot.Accession, prot);
+                }
                 //Load existing index
                 string[] index = File.ReadAllLines(filename);
                 Parallel.ForEach(index, s =>
@@ -1113,12 +1118,15 @@ namespace EngineLayer.Neo
                     if (nList.Count > 1 || nList[0].Length != 0)
                     {
                         for (int i = 0; i < nList.Count; i++)
+                        {
                             nList[i] = key + nList[i];
-
+                        }
                         List<Protein> prots = new List<Protein>();
                         string[] accessions = line[3].Split('|').ToArray();
                         for (int i = 0; i < accessions.Length - 1; i++)
+                        {
                             prots.Add(idToSequence[accessions[i]]);
+                        }
                         lock (protDictionary)
                         {
                             protDictionary.Add(line[0], prots);
@@ -1129,9 +1137,13 @@ namespace EngineLayer.Neo
                     {
                         string cKey = key[3] + key.Substring(0, 3);
                         for (int i = 0; i < cList.Count; i++)
+                        {
                             cList[i] = cList[i] + cKey;
+                        }
                         lock (cTermDictionary)
+                        {
                             cTermDictionary.Add(cKey, cList);
+                        }
                     }
                 });
             }
@@ -1142,7 +1154,9 @@ namespace EngineLayer.Neo
                 using (StreamWriter file = new StreamWriter(filename))
                 {
                     foreach (char aa1 in AANames)
+                    {
                         foreach (char aa2 in AANames)
+                        {
                             foreach (char aa3 in AANames)
                             {
                                 string threeMer = aa1.ToString() + aa2.ToString() + aa3.ToString();
@@ -1191,6 +1205,8 @@ namespace EngineLayer.Neo
                                     file.WriteLine(";");
                                 }
                             }
+                        }
+                    }
                 }
             }
         }
