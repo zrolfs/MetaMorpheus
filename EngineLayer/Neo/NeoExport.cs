@@ -587,9 +587,9 @@ namespace EngineLayer.Neo
             }
         }
 
-        private static void ExportFASTAAppendix(List<NeoPsm> psms, string databaseFileName, string path)
+        private static void ExportFASTAAppendix(List<NeoPsm> psms, string databaseFileName, string path, string rawFileName)
         {
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "FusionDatabaseAppendixAll.fasta"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_"+rawFileName+"_FusionDatabaseAppendixAll.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -613,7 +613,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "FusionDatabaseAppendixTL.fasta"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixTL.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -641,7 +641,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "FusionDatabaseAppendixNC.fasta"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixNC.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -667,7 +667,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "FusionDatabaseAppendixTS.fasta"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixTS.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -693,7 +693,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "FusionDatabaseAppendixTop.fasta"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixTop.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {

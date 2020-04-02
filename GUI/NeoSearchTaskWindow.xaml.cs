@@ -138,13 +138,13 @@ namespace MetaMorpheusGUI
             calibrate.IsChecked = task.NeoParameters.Calibrate;
             gptmd.IsChecked = task.NeoParameters.GPTMD;
             searchTarget.IsChecked = task.NeoParameters.TargetSearch;
-            targetPath.Text = task.NeoParameters.TargetFilePath != null ? task.NeoParameters.TargetFilePath : "";
+            targetPath.Text = task.NeoParameters.TargetFilePath != null && task.NeoParameters.TargetFilePath.Count!=0 ? task.NeoParameters.TargetFilePath[0] : "";
             searchDecoy.IsChecked = task.NeoParameters.DecoySearch;
-            decoyPath.Text = task.NeoParameters.TargetFilePath != null ? task.NeoParameters.DecoyFilePath : "";
+            decoyPath.Text = task.NeoParameters.DecoyFilePath != null && task.NeoParameters.DecoyFilePath.Count != 0 ? task.NeoParameters.DecoyFilePath[0] : "";
             searchN.IsChecked = task.NeoParameters.SearchNTerminus;
-            NPath.Text = task.NeoParameters.NFilePath != null ? task.NeoParameters.NFilePath : "";
+            NPath.Text = task.NeoParameters.NFilePath != null && task.NeoParameters.NFilePath.Count != 0 ? task.NeoParameters.NFilePath[0] : "";
             searchC.IsChecked = task.NeoParameters.SearchCTerminus;
-            CPath.Text = task.NeoParameters.CFilePath != null ? task.NeoParameters.CFilePath : "";
+            CPath.Text = task.NeoParameters.CFilePath != null && task.NeoParameters.CFilePath.Count != 0 ? task.NeoParameters.CFilePath[0] : "";
             maxMissedConsecutiveTextBox.Text = task.NeoParameters.MaxMissedConsecutiveFragments.ToString();
             maxCandidatesPerSpectrumTextBox.Text = task.NeoParameters.MaxCandidatesPerSpectrum.ToString();
             maxCisLengthTextBox.Text = task.NeoParameters.MaxDistanceAllowed.ToString();
@@ -297,13 +297,13 @@ namespace MetaMorpheusGUI
             neoParameters.NormalCis = searchNormalCis.IsChecked.Value;
             neoParameters.ReverseCis = searchReverseCis.IsChecked.Value;
             if (!searchTarget.IsChecked.Value)
-                neoParameters.TargetFilePath = targetPath.Text;
+                neoParameters.TargetFilePath.Add(targetPath.Text);
             if (!searchDecoy.IsChecked.Value)
-                neoParameters.DecoyFilePath = decoyPath.Text;
+                neoParameters.DecoyFilePath.Add(decoyPath.Text);
             if (!searchN.IsChecked.Value)
-                neoParameters.NFilePath = NPath.Text;
+                neoParameters.NFilePath.Add(NPath.Text);
             if (!searchC.IsChecked.Value)
-                neoParameters.CFilePath = CPath.Text;
+                neoParameters.CFilePath.Add(CPath.Text);
 
             DigestionParams digestionParamsToSave = new DigestionParams();
             digestionParamsToSave.MaxMissedCleavages = int.Parse(missedCleavagesTextBox.Text, CultureInfo.InvariantCulture);

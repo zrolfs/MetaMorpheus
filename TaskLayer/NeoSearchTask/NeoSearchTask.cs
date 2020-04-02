@@ -201,13 +201,12 @@ namespace TaskLayer
 
                     var proteinList = dbFilenameList.SelectMany(b => LoadProteinDb(b.FilePath, true, DecoyType.None, localizeableModificationTypes, b.IsContaminant, out Dictionary<string, Modification> unknownModifications)).ToList();
 
-                    //Read N and C files
-                    string nPath = NeoParameters.NFilePath[spectraFileIndex];
-                    string cPath = NeoParameters.CFilePath[spectraFileIndex];
                     //if termini input
 
                     if (NeoParameters.SearchNTerminus || NeoParameters.SearchCTerminus)
                     {
+                        string nPath = "";
+                        string cPath = "";
                         //if no termini input
                         string taskHeader = "Task";
                         string[] pathArray = OutputFolder.Split('\\');
@@ -236,10 +235,22 @@ namespace TaskLayer
                         string fileName = Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_PSMs.psmtsv";
                         nPath += "\\" + fileName;
                         cPath += "\\" + fileName;
+
+                        //Read N and C files
+                        lock(NeoParameters.NFilePath)
+                        {
+                            while(NeoParameters.NFilePath.Count<=spectraFileIndex)
+                            {
+                                NeoParameters.NFilePath.Add("");
+                                NeoParameters.CFilePath.Add("");
+                            }
+                            NeoParameters.NFilePath[spectraFileIndex] = nPath;
+                            NeoParameters.CFilePath[spectraFileIndex] = cPath;
+                        } 
                     }
 
                     Status("Importing Search Results...", taskId);
-                    List<NeoPsm> psms = ImportPsmtsv.ImportNeoPsms(nPath, cPath);
+                    List<NeoPsm> psms = ImportPsmtsv.ImportNeoPsms(NeoParameters.NFilePath[spectraFileIndex], NeoParameters.CFilePath[spectraFileIndex]);
 
                     //Splice
                     Status("Splicing Fragments...", taskId);
