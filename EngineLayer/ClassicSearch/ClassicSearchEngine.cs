@@ -75,10 +75,11 @@ namespace EngineLayer.ClassicSearch
             int old_progress = 0;
             TerminusType terminusType = ProductTypeMethod.IdentifyTerminusType(lp);
             Status("Starting classic search loop...");
-            Parallel.ForEach(Partitioner.Create(0, totalProteins), partitionRange =>
+            //Parallel.ForEach(Partitioner.Create(0, totalProteins), partitionRange =>
             {
                 var psms = new Psm[arrayOfSortedMS2Scans.Length];
-                for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
+               // for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
+               for(int i=0; i<totalProteins; i++)
                 {
                     var protein = proteinList[i];
                     var digestedList = protein.Digest(commonParameters.DigestionParams, fixedModifications, variableModifications).ToList();
@@ -120,7 +121,7 @@ namespace EngineLayer.ClassicSearch
                         }
                     }
                 }
-                lock (lockObject)
+                //lock (lockObject)
                 {
                     for (int i = 0; i < globalPsms.Length; i++)
                         if (psms[i] != null)
@@ -134,7 +135,7 @@ namespace EngineLayer.ClassicSearch
                                 globalPsms[i].AddOrReplace(psms[i], commonParameters.ReportAllAmbiguity);
                             }
                         }
-                    proteinsSeen += partitionRange.Item2 - partitionRange.Item1;
+                    //proteinsSeen += partitionRange.Item2 - partitionRange.Item1;
                     var new_progress = (int)((double)proteinsSeen / (totalProteins) * 100);
                     if (new_progress > old_progress)
                     {
@@ -142,7 +143,7 @@ namespace EngineLayer.ClassicSearch
                         old_progress = new_progress;
                     }
                 }
-            });
+            }//);
             if (commonParameters.CalculateEValue)
                 Parallel.ForEach(Partitioner.Create(0, globalPsms.Length), partitionRange =>
                  {

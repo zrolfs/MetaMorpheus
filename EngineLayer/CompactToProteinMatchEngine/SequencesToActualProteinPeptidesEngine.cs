@@ -75,10 +75,11 @@ namespace EngineLayer
             int old_progress = 0;
             var obj = new object();
             //Status("Adding possible sources to peptide dictionary...", new List<string> { taskId });
-            Parallel.ForEach(Partitioner.Create(0, totalProteins), fff =>
+            //Parallel.ForEach(Partitioner.Create(0, totalProteins), fff =>
             {
                 Dictionary<CompactPeptideBase, HashSet<PeptideWithSetModifications>> local = compactPeptideToProteinPeptideMatching.ToDictionary(b => b.Key, b => new HashSet<PeptideWithSetModifications>());
-                for (int i = fff.Item1; i < fff.Item2; i++)
+                for(int i=0; i<totalProteins; i++)
+                //for (int i = fff.Item1; i < fff.Item2; i++)
                     foreach (var digestionParam in collectionOfDigestionParams)
                         foreach (var peptideWithSetModifications in proteinList[i].Digest(digestionParam, fixedModifications, variableModifications).ToList())
                             if (local.TryGetValue(new CompactPeptide(peptideWithSetModifications, terminusType), out HashSet<PeptideWithSetModifications> v))
@@ -91,7 +92,7 @@ namespace EngineLayer
                             foreach (var huh in ye.Value)
                                 v.Add(huh);
                     }
-                    proteinsSeen += fff.Item2 - fff.Item1;
+                   // proteinsSeen += fff.Item2 - fff.Item1;
                     var new_progress = (int)((double)proteinsSeen / (totalProteins) * 100);
                     if (new_progress > old_progress)
                     {
@@ -99,7 +100,7 @@ namespace EngineLayer
                         old_progress = new_progress;
                     }
                 }
-            });
+            }//);
 
             #endregion Match Sequences to PeptideWithSetModifications
 

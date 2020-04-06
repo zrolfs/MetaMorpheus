@@ -209,7 +209,7 @@ namespace TaskLayer
             #endregion write TOML
 
             MetaMorpheusEngine.FinishedSingleEngineHandler += SingleEngineHandlerInTask;
-            try
+            //try
             {
                 var stopWatch = new Stopwatch();
                 stopWatch.Start();
@@ -239,23 +239,23 @@ namespace TaskLayer
                 SucessfullyFinishedWritingFile(resultsFileName, new List<string> { displayName });
                 FinishedSingleTask(displayName);
             }
-            catch (Exception e)
-            {
-                MetaMorpheusEngine.FinishedSingleEngineHandler -= SingleEngineHandlerInTask;
-                var resultsFileName = Path.Combine(output_folder, "results.txt");
-                using (StreamWriter file = new StreamWriter(resultsFileName))
-                {
-                    file.WriteLine("Neo-Fusion");
-                    file.WriteLine(SystemInfo.CompleteSystemInfo()); //OS, OS Version, .Net Version, RAM, processor count, MSFileReader .dll versions X3
-                    file.Write("e: " + e);
-                    file.Write("e.Message: " + e.Message);
-                    file.Write("e.InnerException: " + e.InnerException);
-                    file.Write("e.Source: " + e.Source);
-                    file.Write("e.StackTrace: " + e.StackTrace);
-                    file.Write("e.TargetSite: " + e.TargetSite);
-                }
-                throw;
-            }
+            //catch (Exception e)
+            //{
+            //    MetaMorpheusEngine.FinishedSingleEngineHandler -= SingleEngineHandlerInTask;
+            //    var resultsFileName = Path.Combine(output_folder, "results.txt");
+            //    using (StreamWriter file = new StreamWriter(resultsFileName))
+            //    {
+            //        file.WriteLine("Neo-Fusion");
+            //        file.WriteLine(SystemInfo.CompleteSystemInfo()); //OS, OS Version, .Net Version, RAM, processor count, MSFileReader .dll versions X3
+            //        file.Write("e: " + e);
+            //        file.Write("e.Message: " + e.Message);
+            //        file.Write("e.InnerException: " + e.InnerException);
+            //        file.Write("e.Source: " + e.Source);
+            //        file.Write("e.StackTrace: " + e.StackTrace);
+            //        file.Write("e.TargetSite: " + e.TargetSite);
+            //    }
+            //    throw;
+            //}
 
             #region Write prose
 

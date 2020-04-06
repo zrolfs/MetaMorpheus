@@ -11,8 +11,8 @@ namespace EngineLayer.Neo
 
         public static void Combine(string primaryFilePath, string secondaryFilePath, string outputFilePath)
         {
-            string[] primaryLines = (System.IO.File.ReadAllLines(@primaryFilePath));
-            string[] secondaryLines = (System.IO.File.ReadAllLines(@secondaryFilePath));
+            string[] primaryLines = File.Exists(@primaryFilePath) ? (File.ReadAllLines(@primaryFilePath)): new string[] { "" };
+            string[] secondaryLines = File.Exists(@secondaryFilePath) ? (File.ReadAllLines(@secondaryFilePath)): new string[] { "" };
             List<PsmTsvLine> aggregatedLines = AggregateDifferentDatabaseSearches(primaryLines, secondaryLines);
             aggregatedLines = CalculateFDR(aggregatedLines);
 
@@ -34,9 +34,9 @@ namespace EngineLayer.Neo
 
         public static void Combine(string primaryFilePath, string secondaryFilePath, string outputFilePath, string translatedFilePath)
         {
-            string[] primaryLines = (System.IO.File.ReadAllLines(@primaryFilePath));
-            string[] secondaryLines = (System.IO.File.ReadAllLines(@secondaryFilePath));
-            string[] translatedLines = (System.IO.File.ReadAllLines(@translatedFilePath));
+            string[] primaryLines = File.Exists(@primaryFilePath) ? (File.ReadAllLines(@primaryFilePath)) : new string[] { "" };
+            string[] secondaryLines = File.Exists(@secondaryFilePath) ? (File.ReadAllLines(@secondaryFilePath)) : new string[] { "" };
+            string[] translatedLines = File.Exists(@translatedFilePath) ? File.ReadAllLines(@translatedFilePath): new string[] { ""};
             List<PsmTsvLine> targetLines = AggregateDifferentDatabaseSearches(primaryLines, translatedLines);
             List<string> targetList = targetLines.Select(x => x.ToString()).ToList();
             targetList.Insert(0, primaryLines[0]); //header
@@ -71,8 +71,8 @@ namespace EngineLayer.Neo
             const int minimumScoreDifference = 1;
             const int maxmimumScoreDifference = 5;
 
-            string[] primaryLines = (System.IO.File.ReadAllLines(@standardFilePath));
-            string[] secondaryLines = (System.IO.File.ReadAllLines(@neoResultFilePath));
+            string[] primaryLines = (File.ReadAllLines(@standardFilePath)); //this one is written by a Neo-Task and should never be missing
+            string[] secondaryLines = File.Exists(@neoResultFilePath) ? (File.ReadAllLines(@neoResultFilePath)) : new string[] { "" };
             List<PsmTsvLine> primaryPsms = ImportPsmtsv.ImportLinesToAggregate(primaryLines);
             primaryPsms.ForEach(x => x.neoType = PsmTsvLine.NeoType.Normal);
             List<PsmTsvLine> secondaryPsms = ImportPsmtsv.ImportLinesToAggregate(secondaryLines);
@@ -169,7 +169,7 @@ namespace EngineLayer.Neo
         {
             //get minimum score of qThreshold
             List<PsmTsvLine> primaryAtQ = primaryPsms.Where(x => Convert.ToDouble(x.q) + 0.000001 > qThreshold && Convert.ToDouble(x.q) - 0.000001 < qThreshold).ToList();
-            double minScoreAllowed = primaryAtQ.Min(x => x.score);
+            double minScoreAllowed = primaryAtQ.Count == 0 ? 0:primaryAtQ.Min(x => x.score);
 
             List<PsmTsvLine> aggregatedLines = new List<PsmTsvLine>();
             int p = 0;
@@ -320,12 +320,12 @@ namespace EngineLayer.Neo
             int target = 0;
             int decoy = 0;
             double qMax = 0;
-            PsmTsvLine decoyLine = secondaryPsms[s];
+            double decoyScore = secondaryPsms.Count != 0 ? secondaryPsms[s].score : 0;
 
             while (p < primaryPsms.Count)
             {
                 PsmTsvLine targetLine = primaryPsms[p];
-                if (targetLine.score > decoyLine.score || s == secondaryPsms.Count - 1)
+                if (targetLine.score > decoyScore || s == secondaryPsms.Count - 1)
                 {
                     target++;
                     targetLine.target = target.ToString();
@@ -339,7 +339,7 @@ namespace EngineLayer.Neo
                 {
                     decoy++;
                     s++;
-                    decoyLine = secondaryPsms[s];
+                    decoyScore = secondaryPsms[s].score;
                 }
             }
             return primaryPsms;

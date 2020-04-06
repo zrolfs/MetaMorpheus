@@ -1105,7 +1105,10 @@ namespace EngineLayer.Neo
                 Dictionary<string, Protein> idToSequence = new Dictionary<string, Protein>();
                 foreach (Protein prot in proteins)
                 {
-                    idToSequence.Add(prot.Accession, prot);
+                    if (!idToSequence.ContainsKey(prot.Accession))
+                    {
+                        idToSequence.Add(prot.Accession, prot);
+                    }
                 }
                 //Load existing index
                 string[] index = File.ReadAllLines(filename);
