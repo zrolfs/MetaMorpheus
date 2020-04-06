@@ -211,8 +211,8 @@ namespace Test
             // Generate data for files
             Protein ParentProtein = new Protein("MPEPTIDEKANTHE", "accession1");
             Protein DecoyProtein = new Protein("MEHTNAK", "accessiond");
-            Protein CisSpliceProtein = new Protein("PEPTIANTHE", "spliced");
-            Protein TransSpliceProtein = new Protein("AACNNPEPTIDE", "spliced");
+            Protein CisSpliceProtein = new Protein("PEPTIANTHE", "spliced1");
+            Protein TransSpliceProtein = new Protein("AACNNPEPTIDE", "spliced2");
             var digestedList = ParentProtein.Digest(taskList[0].CommonParameters.DigestionParams, fixedModifications, variableModifications).ToList();
             PeptideWithSetModifications decoyPep = DecoyProtein.Digest(taskList[0].CommonParameters.DigestionParams, fixedModifications, variableModifications).ToList()[0];
             PeptideWithSetModifications cissplicePep = CisSpliceProtein.Digest(taskList[0].CommonParameters.DigestionParams, fixedModifications, variableModifications).ToList()[0];
@@ -237,10 +237,10 @@ namespace Test
             IO.MzML.MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(myMsDataFile, mzmlName2, false);
             string xmlName = "okk.xml";
             ProteinDbWriter.WriteXmlDatabase(new Dictionary<string, HashSet<Tuple<int, Modification>>>(), new List<Protein> { ParentProtein, proteinWithChain }, xmlName);
-            string xmlName2 = "okk2.xml";
+            string xmlName2 = "splicedDb.xml";
             ProteinDbWriter.WriteXmlDatabase(new Dictionary<string, HashSet<Tuple<int, Modification>>>(), new List<Protein> { CisSpliceProtein, TransSpliceProtein }, xmlName2);
             DbForTask db = new DbForTask(xmlName, false); 
-            DbForTask db2 = new DbForTask(xmlName2, false);
+            DbForTask db2 = new DbForTask(xmlName2, true);
             #endregion Write the files
 
             List<(string, MetaMorpheusTask)> taskList2 = new List<(string, MetaMorpheusTask)>();

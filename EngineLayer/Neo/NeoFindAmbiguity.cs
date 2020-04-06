@@ -48,14 +48,8 @@ namespace EngineLayer.Neo
 
         #region Public Methods
 
-        public static void FindAmbiguity(List<NeoPsm> candidates, List<Protein> theoreticalProteins, Ms2ScanWithSpecificMass[] spectra, List<string> proteinDatabases)
+        public static void FindAmbiguity(List<NeoPsm> candidates, Ms2ScanWithSpecificMass[] spectra)
         {
-            NeoFindAmbiguity.theoreticalProteins = theoreticalProteins;
-            foreach (string databaseFileName in proteinDatabases)
-            {
-                PopulateSequenceLookUpDictionaries(databaseFileName, theoreticalProteins);
-            }
-
             for (int i = 0; i < candidates.Count(); i++) //must be mutable while iterating
             {
                 NeoPsm psm = candidates[i];
@@ -1094,8 +1088,13 @@ namespace EngineLayer.Neo
             }
         }
 
-        private static void PopulateSequenceLookUpDictionaries(string databaseFileName, List<Protein> proteins)
+        public static void PopulateSequenceLookUpDictionaries(string databaseFileName)
         {
+            //clear dictionaries
+            protDictionary = new Dictionary<string, List<Protein>>();
+            nTermDictionary = new Dictionary<string, List<string>>();
+            cTermDictionary = new Dictionary<string, List<string>>();
+
             string[] array = databaseFileName.Split('\\');
             string filename = databaseFileName + "_NeoIndex\\NeoIndex_" + array[array.Length - 1] + ".txt";
             //index is ; separated with subsequence;Nsequence;Csequence;protaccession with internal delimited by _
@@ -1103,7 +1102,7 @@ namespace EngineLayer.Neo
             if (File.Exists(filename))
             {
                 Dictionary<string, Protein> idToSequence = new Dictionary<string, Protein>();
-                foreach (Protein prot in proteins)
+                foreach (Protein prot in theoreticalProteins)
                 {
                     if (!idToSequence.ContainsKey(prot.Accession))
                     {
@@ -1166,7 +1165,7 @@ namespace EngineLayer.Neo
                                 List<string> nEntry = new List<string>();
                                 List<string> cEntry = new List<string>();
                                 List<Protein> protEntry = new List<Protein>();
-                                Parallel.ForEach(proteins, protein =>
+                                Parallel.ForEach(theoreticalProteins, protein =>
                                 {
                                     List<string> localNEntry = new List<string>();
                                     List<string> localCEntry = new List<string>();

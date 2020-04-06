@@ -166,8 +166,34 @@ namespace TaskLayer
                 MyFileManager myFileManager = new MyFileManager(true);
                 myTaskResults.newDatabases = new List<DbForTask>();
 
+                //Import Database
+                Status("Loading modifications...", taskId);
+
+                #region Load modifications
+
+                List<ModificationWithMass> variableModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsVariable.Contains((b.modificationType, b.id))).ToList();
+                List<ModificationWithMass> fixedModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsFixed.Contains((b.modificationType, b.id))).ToList();
+                List<string> localizeableModificationTypes = CommonParameters.ListOfModTypesLocalize == null ? new List<string>() : CommonParameters.ListOfModTypesLocalize.ToList();
+                if (CommonParameters.LocalizeAll)
+                    localizeableModificationTypes = GlobalVariables.AllModTypesKnown.ToList();
+                else
+                    localizeableModificationTypes = GlobalVariables.AllModTypesKnown.Where(b => localizeableModificationTypes.Contains(b)).ToList();
+
+                #endregion Load modifications
+
+                NeoFindAmbiguity.theoreticalProteins = dbFilenameList.SelectMany(b => LoadProteinDb(b.FilePath, true, DecoyType.None, localizeableModificationTypes, b.IsContaminant, out Dictionary<string, Modification> unknownModifications)).ToList();
+
+                List<string> dbPathList = dbFilenameList.Select(x => x.FilePath).OrderBy(x => x).ToList();
+                string concatonatedDatabaseString = dbPathList[0];
+                dbPathList.RemoveAt(0);
+                foreach(string path in dbPathList)
+                {
+                    concatonatedDatabaseString += "_" + Path.GetFileNameWithoutExtension(path);
+                }
+                    NeoFindAmbiguity.PopulateSequenceLookUpDictionaries(concatonatedDatabaseString);
+
                 //Import Spectra
-                Parallel.For(0, currentRawFileList.Count, parallelOptions, spectraFileIndex =>
+                for (int spectraFileIndex = 0; spectraFileIndex < currentRawFileList.Count; spectraFileIndex++)
                 {
                     var origDataFile = currentRawFileList[spectraFileIndex];
                     ICommonParameters combinedParams = SetAllFileSpecificCommonParams(CommonParameters, fileSettingsList[spectraFileIndex]);
@@ -184,22 +210,6 @@ namespace TaskLayer
                     Ms2ScanWithSpecificMass[] indexedSpectra = new Ms2ScanWithSpecificMass[arrayOfMs2ScansSortedByMass.Max(x => x.OneBasedScanNumber) + 1];
                     foreach (Ms2ScanWithSpecificMass scan in arrayOfMs2ScansSortedByMass)
                         indexedSpectra[scan.OneBasedScanNumber] = scan;
-                    //Import Database
-                    Status("Loading modifications...", taskId);
-
-                    #region Load modifications
-
-                    List<ModificationWithMass> variableModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsVariable.Contains((b.modificationType, b.id))).ToList();
-                    List<ModificationWithMass> fixedModifications = GlobalVariables.AllModsKnown.OfType<ModificationWithMass>().Where(b => CommonParameters.ListOfModsFixed.Contains((b.modificationType, b.id))).ToList();
-                    List<string> localizeableModificationTypes = CommonParameters.ListOfModTypesLocalize == null ? new List<string>() : CommonParameters.ListOfModTypesLocalize.ToList();
-                    if (CommonParameters.LocalizeAll)
-                        localizeableModificationTypes = GlobalVariables.AllModTypesKnown.ToList();
-                    else
-                        localizeableModificationTypes = GlobalVariables.AllModTypesKnown.Where(b => localizeableModificationTypes.Contains(b)).ToList();
-
-                    #endregion Load modifications
-
-                    var proteinList = dbFilenameList.SelectMany(b => LoadProteinDb(b.FilePath, true, DecoyType.None, localizeableModificationTypes, b.IsContaminant, out Dictionary<string, Modification> unknownModifications)).ToList();
 
                     //if termini input
 
@@ -237,16 +247,16 @@ namespace TaskLayer
                         cPath += "\\" + fileName;
 
                         //Read N and C files
-                        lock(NeoParameters.NFilePath)
+                        lock (NeoParameters.NFilePath)
                         {
-                            while(NeoParameters.NFilePath.Count<=spectraFileIndex)
+                            while (NeoParameters.NFilePath.Count <= spectraFileIndex)
                             {
                                 NeoParameters.NFilePath.Add("");
                                 NeoParameters.CFilePath.Add("");
                             }
                             NeoParameters.NFilePath[spectraFileIndex] = nPath;
                             NeoParameters.CFilePath[spectraFileIndex] = cPath;
-                        } 
+                        }
                     }
 
                     Status("Importing Search Results...", taskId);
@@ -258,19 +268,17 @@ namespace TaskLayer
 
                     //Find Ambiguity
                     Status("Identifying Ambiguity...", taskId);
-                    NeoFindAmbiguity.FindAmbiguity(candidates, proteinList, indexedSpectra, dbFilenameList.Select(x => x.FilePath).ToList());
+                    NeoFindAmbiguity.FindAmbiguity(candidates, indexedSpectra);
 
                     //Export Results
                     Status("Exporting Results...", taskId);
                     NeoExport.ExportAll(candidates, indexedSpectra, OutputFolder, Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]));
 
                     //Switch databases
-                    lock (myTaskResults.newDatabases)
-                    {
-                        string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "_" + Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixNC.fasta";
-                        myTaskResults.newDatabases.Add(new DbForTask(outputFolder, false));
-                    }
-                });
+
+                    string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "_" + Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixNC.fasta";
+                    myTaskResults.newDatabases.Add(new DbForTask(outputFolder, false));
+                }
                 StoredDatabases = dbFilenameList;
             }
             else if (NeoType.Equals(NeoTaskType.SearchTransDb))
