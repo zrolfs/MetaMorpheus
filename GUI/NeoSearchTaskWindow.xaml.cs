@@ -138,13 +138,13 @@ namespace MetaMorpheusGUI
             calibrate.IsChecked = task.NeoParameters.Calibrate;
             gptmd.IsChecked = task.NeoParameters.GPTMD;
             searchTarget.IsChecked = task.NeoParameters.TargetSearch;
-            targetPath.Text = task.NeoParameters.TargetFilePath != null && task.NeoParameters.TargetFilePath.Count!=0 ? task.NeoParameters.TargetFilePath[0] : "";
+            targetPath.Text = task.NeoParameters.TargetFilePath != null && task.NeoParameters.TargetFilePath.Count!=0 ? string.Join(";",task.NeoParameters.TargetFilePath) : "";
             searchDecoy.IsChecked = task.NeoParameters.DecoySearch;
-            decoyPath.Text = task.NeoParameters.DecoyFilePath != null && task.NeoParameters.DecoyFilePath.Count != 0 ? task.NeoParameters.DecoyFilePath[0] : "";
+            decoyPath.Text = task.NeoParameters.DecoyFilePath != null && task.NeoParameters.DecoyFilePath.Count != 0 ? string.Join(";", task.NeoParameters.DecoyFilePath) : "";
             searchN.IsChecked = task.NeoParameters.SearchNTerminus;
-            NPath.Text = task.NeoParameters.NFilePath != null && task.NeoParameters.NFilePath.Count != 0 ? task.NeoParameters.NFilePath[0] : "";
+            NPath.Text = task.NeoParameters.NFilePath != null && task.NeoParameters.NFilePath.Count != 0 ? string.Join(";", task.NeoParameters.NFilePath) : "";
             searchC.IsChecked = task.NeoParameters.SearchCTerminus;
-            CPath.Text = task.NeoParameters.CFilePath != null && task.NeoParameters.CFilePath.Count != 0 ? task.NeoParameters.CFilePath[0] : "";
+            CPath.Text = task.NeoParameters.CFilePath != null && task.NeoParameters.CFilePath.Count != 0 ? string.Join(";", task.NeoParameters.CFilePath) : "";
             maxMissedConsecutiveTextBox.Text = task.NeoParameters.MaxMissedConsecutiveFragments.ToString();
             maxCandidatesPerSpectrumTextBox.Text = task.NeoParameters.MaxCandidatesPerSpectrum.ToString();
             maxCisLengthTextBox.Text = task.NeoParameters.MaxDistanceAllowed.ToString();
@@ -297,13 +297,13 @@ namespace MetaMorpheusGUI
             neoParameters.NormalCis = searchNormalCis.IsChecked.Value;
             neoParameters.ReverseCis = searchReverseCis.IsChecked.Value;
             if (!searchTarget.IsChecked.Value)
-                neoParameters.TargetFilePath.Add(targetPath.Text);
+                neoParameters.TargetFilePath.AddRange(targetPath.Text.Split(';'));
             if (!searchDecoy.IsChecked.Value)
-                neoParameters.DecoyFilePath.Add(decoyPath.Text);
+                neoParameters.DecoyFilePath.AddRange(decoyPath.Text.Split(';'));
             if (!searchN.IsChecked.Value)
-                neoParameters.NFilePath.Add(NPath.Text);
+                neoParameters.NFilePath.AddRange(NPath.Text.Split(';'));
             if (!searchC.IsChecked.Value)
-                neoParameters.CFilePath.Add(CPath.Text);
+                neoParameters.CFilePath.AddRange(CPath.Text.Split(';'));
 
             DigestionParams digestionParamsToSave = new DigestionParams();
             digestionParamsToSave.MaxMissedCleavages = int.Parse(missedCleavagesTextBox.Text, CultureInfo.InvariantCulture);
@@ -370,14 +370,19 @@ namespace MetaMorpheusGUI
         {
             Microsoft.Win32.OpenFileDialog openPicker = new Microsoft.Win32.OpenFileDialog()
             {
-                Filter = "Database Files|*.psmtsv",
+                Filter = "PSM Result Files|*.psmtsv",
                 FilterIndex = 1,
                 RestoreDirectory = true,
-                Multiselect = false
+                Multiselect = true
             };
             if (openPicker.ShowDialog() == true)
             {
-                targetPath.Text = openPicker.FileName;
+                targetPath.Text = "";
+                foreach (var filepath in openPicker.FileNames)
+                {
+                    targetPath.Text += (filepath)+";";
+                }
+                targetPath.Text = targetPath.Text.Substring(0, targetPath.Text.Length - 1);
                 searchTarget.IsChecked = false;
             }
         }
@@ -386,14 +391,19 @@ namespace MetaMorpheusGUI
         {
             Microsoft.Win32.OpenFileDialog openPicker = new Microsoft.Win32.OpenFileDialog()
             {
-                Filter = "Database Files|*.psmtsv",
+                Filter = "PSM Result Files|*.psmtsv",
                 FilterIndex = 1,
                 RestoreDirectory = true,
-                Multiselect = false
+                Multiselect = true
             };
             if (openPicker.ShowDialog() == true)
             {
-                decoyPath.Text = openPicker.FileName;
+                decoyPath.Text = "";
+                foreach (var filepath in openPicker.FileNames)
+                {
+                    decoyPath.Text+=(filepath)+";";
+                }
+                decoyPath.Text = decoyPath.Text.Substring(0, decoyPath.Text.Length - 1); 
                 searchDecoy.IsChecked = false;
             }
         }
@@ -402,14 +412,19 @@ namespace MetaMorpheusGUI
         {
             Microsoft.Win32.OpenFileDialog openPicker = new Microsoft.Win32.OpenFileDialog()
             {
-                Filter = "Database Files|*.psmtsv",
+                Filter = "PSM Result Files|*.psmtsv",
                 FilterIndex = 1,
                 RestoreDirectory = true,
-                Multiselect = false
+                Multiselect = true
             };
             if (openPicker.ShowDialog() == true)
             {
-                NPath.Text = openPicker.FileName;
+                NPath.Text = "";
+                foreach (var filepath in openPicker.FileNames)
+                {
+                    NPath.Text += (filepath)+";";
+                }
+                NPath.Text = NPath.Text.Substring(0, NPath.Text.Length - 1); 
                 searchN.IsChecked = false;
             }
         }
@@ -418,14 +433,19 @@ namespace MetaMorpheusGUI
         {
             Microsoft.Win32.OpenFileDialog openPicker = new Microsoft.Win32.OpenFileDialog()
             {
-                Filter = "Database Files|*.psmtsv",
+                Filter = "PSM Result Files|*.psmtsv",
                 FilterIndex = 1,
                 RestoreDirectory = true,
-                Multiselect = false
+                Multiselect = true
             };
             if (openPicker.ShowDialog() == true)
             {
-                CPath.Text = openPicker.FileName;
+                CPath.Text = "";
+                foreach (var filepath in openPicker.FileNames)
+                {
+                    CPath.Text += (filepath)+";";
+                }
+                CPath.Text = CPath.Text.Substring(0, CPath.Text.Length - 1);
                 searchC.IsChecked = false;
             }
         }
