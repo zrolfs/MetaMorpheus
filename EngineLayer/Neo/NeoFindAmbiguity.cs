@@ -1,6 +1,7 @@
 ﻿using Chemistry;
 using Proteomics;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -50,25 +51,29 @@ namespace EngineLayer.Neo
 
         public static void FindAmbiguity(List<NeoPsm> candidates, Ms2ScanWithSpecificMass[] spectra)
         {
-            for (int i = 0; i < candidates.Count(); i++) //must be mutable while iterating
+            List<int> indexesToRemove = new List<int>();
+            Parallel.ForEach(Partitioner.Create(0, candidates.Count), partitionRange =>
             {
-                NeoPsm psm = candidates[i];
-                Ms2ScanWithSpecificMass spectrum = spectra[psm.scanNumber];
-                psm.fusionType = FusionCandidate.FusionType.TS; //for some maddening reason, this is not arriving here as trans, but instead translated
-                if (IsTooMessy(psm, spectrum)) //having explosion of combinations when greater than 3 consequtive peaks producing tens of thousands of sequences ids, causes hanging
+                for (int i = partitionRange.Item1; i < partitionRange.Item2; i++)
                 {
-                    candidates.RemoveAt(i);
-                    i--;
-                }
-                else
-                {
-                    if (!GeneratePossibleSequences(psm, spectrum)) //return true if fewer than specified number of ambiguities
+                    NeoPsm psm = candidates[i];
+                    Ms2ScanWithSpecificMass spectrum = spectra[psm.scanNumber];
+                    psm.fusionType = FusionCandidate.FusionType.TS; //for some maddening reason, this is not arriving here as trans, but instead translated
+                    if (IsTooMessy(psm, spectrum) //having explosion of combinations when greater than 3 consequtive peaks producing tens of thousands of sequences ids, causes hanging
+                    || (!GeneratePossibleSequences(psm))) //return true if fewer than specified number of ambiguities
                     {
-                        candidates.RemoveAt(i);
-                        i--;
+                        lock(indexesToRemove)
+                        {
+                            indexesToRemove.Add(i);
+                        }
                     }
                 }
+            });
+            foreach(int index in indexesToRemove.OrderByDescending(x=>x))
+            {
+                candidates.RemoveAt(index);
             }
+
             //clear entries for subsequent runs
             nTermDictionary.Clear();
             cTermDictionary.Clear();
@@ -260,7 +265,7 @@ namespace EngineLayer.Neo
             maxDifference = singleAminoAcidMasses[singleAminoAcidMasses.Count - 1];
         }
 
-        private static bool GeneratePossibleSequences(NeoPsm psm, Ms2ScanWithSpecificMass spectrum) //returns false if over the specified number of sequences are generated
+        private static bool GeneratePossibleSequences(NeoPsm psm) //returns false if over the specified number of sequences are generated
         {
             List<string> ambiguousCandidates = new List<string>();
             foreach (FusionCandidate fusionCandidate in psm.candidates)
@@ -319,7 +324,7 @@ namespace EngineLayer.Neo
                                     {
                                         string currentSeq = partialSeq.Substring(partialSeq.Length - n, n);
                                         if (!cMatchedSequences.Any(x => x.Length >= n && x.Substring(x.Length - n, n).Equals(currentSeq)))
-                                            cEntry = cEntry.AsParallel().Where(seq => seq.Length >= n && seq.Substring(seq.Length - n, n).Equals(currentSeq)).ToList();
+                                            cEntry = cEntry.Where(seq => seq.Length >= n && seq.Substring(seq.Length - n, n).Equals(currentSeq)).ToList();
                                         n++;
                                     }
                                     if (cEntry.Count == 0)
@@ -394,7 +399,7 @@ namespace EngineLayer.Neo
                                     {
                                         string currentSeq = partialSeq.Substring(0, n);
                                         if (!nMatchedSequences.Any(x => x.Length >= n && x.Substring(0, n).Equals(currentSeq)))
-                                            nEntry = nEntry.AsParallel().Where(seq => seq.Length >= n && seq.Substring(0, n).Equals(currentSeq)).ToList();
+                                            nEntry = nEntry.Where(seq => seq.Length >= n && seq.Substring(0, n).Equals(currentSeq)).ToList();
                                         n++;
                                     }
                                     if (nEntry.Count == 0)
@@ -405,7 +410,7 @@ namespace EngineLayer.Neo
                                             for (int j = nMatchedSequences.Count - 1; j >= 0; j--)
                                                 if (strToAdd.Contains(nMatchedSequences[j]))
                                                     nMatchedSequences.RemoveAt(j);
-                                            if (!nMatchedSequences.AsParallel().Any(x => x.Contains(strToAdd)))
+                                            if (!nMatchedSequences.Any(x => x.Contains(strToAdd)))
                                                 nMatchedSequences.Add(strToAdd);
                                         }
                                     }
@@ -424,27 +429,22 @@ namespace EngineLayer.Neo
                     nMatchedSequences.Add(seq);
 
                 //Splice surviving fragments
-                Parallel.ForEach(nMatchedSequences, n =>
+                foreach(string n in nMatchedSequences)
                 {
                     double nMass = NeoMassCalculator.MonoIsoptopicMass(n);
                     foreach (string c in cMatchedSequences)
                     {
-                        lock (ambiguousCandidates)
-                        {
                             if (ambiguousCandidates.Count > maxNumPossibleSequences)
                                 break;
-                        }
+
                         double cMass = NeoMassCalculator.MonoIsoptopicMass(c);
                         double totalMass = nMass + cMass - NeoConstants.WATER_MONOISOTOPIC_MASS;
                         if (totalMass + 1 > psm.expMass)
                         {
                             if (NeoMassCalculator.IdenticalMasses(psm.expMass, totalMass, precursorMassTolerancePpm))
                             {
-                                lock (ambiguousCandidates)
-                                {
                                     if (!ambiguousCandidates.Contains(n + c))
                                         ambiguousCandidates.Add(n + c);
-                                }
                             }
                             else
                             {
@@ -493,7 +493,7 @@ namespace EngineLayer.Neo
                             }
                         }
                     }
-                });
+                }
             }
 
             psm.candidates.Clear();
@@ -507,9 +507,9 @@ namespace EngineLayer.Neo
 
                     string substring = fc.Substring(0, 4);
                     nTermDictionary.TryGetValue(fc.Substring(0, 4), out List<string> nFrag);
-                    if (nFrag != null && nFrag.AsParallel().Any(seq => seq.Length >= fc.Length && seq.Substring(0, fc.Length).Equals(fc)))
+                    if (nFrag != null && nFrag.Any(seq => seq.Length >= fc.Length && seq.Substring(0, fc.Length).Equals(fc)))
                     {
-                        Protein match = theoreticalProteins.AsParallel().Where(x => x.BaseSequence.Contains(fc)).ToArray()[0];
+                        Protein match = theoreticalProteins.Where(x => x.BaseSequence.Contains(fc)).ToArray()[0];
                         int startIndex = match.BaseSequence.IndexOf(fc);
                         int endIndex = startIndex + fc.Length;
                         psm.fusionType = FusionCandidate.FusionType.TL;
@@ -536,7 +536,7 @@ namespace EngineLayer.Neo
                             {
                                 string otherSubstring = fc.Substring(i - 1, fc.Length - i + 1);
                                 //get proteins containing both halves
-                                otherPossibleProteins = possibleProteins.AsParallel().Where(prot => prot.BaseSequence.Contains(otherSubstring)).ToList();
+                                otherPossibleProteins = possibleProteins.Where(prot => prot.BaseSequence.Contains(otherSubstring)).ToList();
 
                                 //check if both halves are the correct distance apart and are not overlapping
                                 foreach (Protein prot in otherPossibleProteins)
@@ -619,7 +619,7 @@ namespace EngineLayer.Neo
                                     break;
 
                                 substring = fc.Substring(0, i);
-                                possibleProteins = possibleProteins.AsParallel().Where(prot => prot.BaseSequence.Contains(substring)).ToList();
+                                possibleProteins = possibleProteins.Where(prot => prot.BaseSequence.Contains(substring)).ToList();
                                 if (possibleProteins.Count == 0)
                                     break;
                             }
