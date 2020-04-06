@@ -77,6 +77,13 @@ namespace TaskLayer
             NeoFindAmbiguity.maxMissingConsecutivePeaks = NeoParameters.MaxMissedConsecutiveFragments;
             NeoFindAmbiguity.maxNumPossibleSequences = NeoParameters.MaxCandidatesPerSpectrum;
 
+            //order list of files so we don't look for the products of one raw file in a different raw file (will lead to inconsistent and frustrating crashes)
+            currentRawFileList.Sort();
+            NeoParameters.TargetFilePath.Sort();
+            NeoParameters.DecoyFilePath.Sort();
+            NeoParameters.NFilePath.Sort();
+            NeoParameters.CFilePath.Sort();
+
             List<ProductType> ionTypes = new List<ProductType>();
             if (CommonParameters.BIons)
                 ionTypes.Add(ProductType.B);
