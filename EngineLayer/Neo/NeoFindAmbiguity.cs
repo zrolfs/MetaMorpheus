@@ -1095,8 +1095,11 @@ namespace EngineLayer.Neo
             nTermDictionary = new Dictionary<string, List<string>>();
             cTermDictionary = new Dictionary<string, List<string>>();
 
-            string[] array = databaseFileName.Split('\\');
-            string filename = databaseFileName + "_NeoIndex\\NeoIndex_" + array[array.Length - 1] + ".txt";
+            //string[] array = databaseFileName.Split('\\');
+            string pathWithoutFileName = Path.GetDirectoryName(databaseFileName);
+            string fileNameWithoutPath = Path.GetFileName(databaseFileName);
+            string filename = pathWithoutFileName + "\\NeoIndex\\" + fileNameWithoutPath + ".txt";
+
             //index is ; separated with subsequence;Nsequence;Csequence;protaccession with internal delimited by _
             //the subsequence is removed from Nsequence and Csequence to preserve memory
             if (File.Exists(filename))
@@ -1151,7 +1154,7 @@ namespace EngineLayer.Neo
             }
             else
             {
-                Directory.CreateDirectory(databaseFileName + "_NeoIndex");
+                Directory.CreateDirectory(pathWithoutFileName + "\\NeoIndex");
                 //make a new index
                 using (StreamWriter file = new StreamWriter(filename))
                 {
