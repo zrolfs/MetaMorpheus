@@ -380,7 +380,13 @@ namespace MetaMorpheusGUI
 
                 case ".toml":
                     var uhum = Toml.ReadFile(draggedFilePath, MetaMorpheusTask.tomlConfig);
-                    switch (uhum.Get<string>("TaskType"))
+                    string taskType = "NotATask";
+                    try
+                    {
+                        taskType = uhum.Get<string>("TaskType");
+                    }
+                    catch { } //don't do anything, it's not a task toml;
+                    switch (taskType)
                     {
                         case "Search":
                             var ye1 = Toml.ReadFile<SearchTask>(draggedFilePath, MetaMorpheusTask.tomlConfig);
@@ -406,6 +412,8 @@ namespace MetaMorpheusGUI
                             var ye5 = Toml.ReadFile<NeoSearchTask>(draggedFilePath, MetaMorpheusTask.tomlConfig);
                             foreach (MetaMorpheusTask task in NeoLoadTomls.LoadTomls(ye5))
                                 AddTaskToCollection(task);
+                            break;
+                        default:
                             break;
                     }
                     break;
