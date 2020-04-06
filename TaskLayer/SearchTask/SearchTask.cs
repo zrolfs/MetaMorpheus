@@ -939,11 +939,10 @@ namespace TaskLayer
                         {
                             List<CompactPeptide> peptideIndex = null;
                             List<Protein> proteinListSubset = proteinList.GetRange(currentPartition * proteinList.Count() / numberOfPartitions, ((currentPartition + 1) * proteinList.Count() / numberOfPartitions) - (currentPartition * proteinList.Count() / numberOfPartitions));
-                            if(proteinListSubset.Count==0)
-                            { }
+
                             List<int>[] fragmentIndex = new List<int>[1];
 
-                            #region Generate indices for nonspecifc search
+                            #region Generate indices for nonspecific search
 
                             Status("Getting fragment dictionary...", new List<string> { taskId });
                             var indexEngine = new IndexingEngine(proteinListSubset, variableModifications, fixedModifications, terminusSpecificIons, currentPartition, SearchParameters.DecoyType, ListOfDigestionParams, combinedParams, SearchParameters.MaxFragmentSize, new List<string> { taskId });
