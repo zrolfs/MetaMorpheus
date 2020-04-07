@@ -73,11 +73,6 @@ namespace EngineLayer.Neo
             {
                 candidates.RemoveAt(index);
             }
-
-            //clear entries for subsequent runs
-            nTermDictionary.Clear();
-            cTermDictionary.Clear();
-            protDictionary.Clear();
         }
 
         //use ion hits to know where peaks have been found by morpheus and where there is ambiguity

@@ -134,8 +134,8 @@ namespace Test
             // Generate data for files
             Protein ParentProtein = new Protein("MPEPTIDEKANTHE", "accession1");
             Protein DecoyProtein = new Protein("MEHTNAK", "accessiond");
-            Protein CisSpliceProtein = new Protein("PEPTIANTHE", "spliced");
-            Protein TransSpliceProtein = new Protein("AACNNPEPTIDE", "spliced");
+            Protein CisSpliceProtein = new Protein("PEPTIANTHE", "cisspliced");
+            Protein TransSpliceProtein = new Protein("AACNNPEPTIDE", "transspliced");
             var digestedList = ParentProtein.Digest(taskList[0].CommonParameters.DigestionParams, fixedModifications, variableModifications).ToList();
             PeptideWithSetModifications decoyPep = DecoyProtein.Digest(taskList[0].CommonParameters.DigestionParams, fixedModifications, variableModifications).ToList()[0];
             PeptideWithSetModifications cissplicePep = CisSpliceProtein.Digest(taskList[0].CommonParameters.DigestionParams, fixedModifications, variableModifications).ToList()[0];
@@ -150,6 +150,11 @@ namespace Test
 
             IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> myMsDataFile = new TestDataFile(new List<PeptideWithSetModifications> { digestedList[0], digestedList[1], digestedList[2], digestedList[3], decoyPep, cissplicePep, transsplicePep });
 
+            Protein CisSpliceProtein2 = new Protein("ANTHEPEPTID", "rcisspliced");
+            PeptideWithSetModifications rcissplicePep = new PeptideWithSetModifications(0, CisSpliceProtein2, 1, CisSpliceProtein2.Length);
+
+            IMsDataFile<IMsDataScan<IMzSpectrum<IMzPeak>>> myMsDataFile2 = new TestDataFile(new List<PeptideWithSetModifications> { digestedList[0], digestedList[1], digestedList[2], digestedList[3], decoyPep, rcissplicePep, transsplicePep });
+
             Protein proteinWithChain = new Protein("MAACNNNCAA", "accession3", "organism", new List<Tuple<string, string>>(), new Dictionary<int, List<Modification>>(), new List<ProteolysisProduct> { new ProteolysisProduct(4, 8, "chain") }, "name2", "fullname2");
 
             #region Write the files
@@ -157,7 +162,7 @@ namespace Test
             string mzmlName = @"ok.mzML"; 
             string mzmlName2 = @"ok2.mzML";
             IO.MzML.MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(myMsDataFile, mzmlName, false);
-            IO.MzML.MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(myMsDataFile, mzmlName2, false);
+            IO.MzML.MzmlMethods.CreateAndWriteMyMzmlWithCalibratedSpectra(myMsDataFile2, mzmlName2, false);
             string xmlName = "okk.xml";
             ProteinDbWriter.WriteXmlDatabase(new Dictionary<string, HashSet<Tuple<int, Modification>>>(), new List<Protein> { ParentProtein, proteinWithChain }, xmlName);
             DbForTask db = new DbForTask(xmlName, false);

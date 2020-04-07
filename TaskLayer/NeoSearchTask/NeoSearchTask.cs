@@ -199,6 +199,8 @@ namespace TaskLayer
                 }
                     NeoFindAmbiguity.PopulateSequenceLookUpDictionaries(concatonatedDatabaseString);
 
+                NeoExport.folder = DateTime.Now.ToString("yyyy-MM-dd_hh-mm-ss");
+
                 //Import Spectra
                 for (int spectraFileIndex = 0; spectraFileIndex < currentRawFileList.Count; spectraFileIndex++)
                 {
@@ -283,7 +285,7 @@ namespace TaskLayer
 
                     //Switch databases
 
-                    string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "_" + Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixNC.fasta";
+                    string outputFolder = NeoExport.DatabaseFileName + @"\" + Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixNC.fasta";
                     myTaskResults.newDatabases.Add(new DbForTask(outputFolder, false));
                 }
                 StoredDatabases = dbFilenameList;
@@ -293,7 +295,7 @@ namespace TaskLayer
                 myTaskResults.newDatabases = new List<DbForTask>();
                 for (int spectraFileIndex = 0; spectraFileIndex < currentRawFileList.Count; spectraFileIndex++)
                 {
-                    string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "_" + Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixTS.fasta";
+                    string outputFolder = NeoExport.DatabaseFileName + @"\" +  Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixTS.fasta";
                     myTaskResults.newDatabases.Add(new DbForTask(outputFolder, false));
                 }
             }
@@ -302,7 +304,7 @@ namespace TaskLayer
                 myTaskResults.newDatabases = new List<DbForTask>();
                 for (int spectraFileIndex = 0; spectraFileIndex < currentRawFileList.Count; spectraFileIndex++)
                 {
-                    string outputFolder = NeoExport.path + NeoExport.folder + @"\" + NeoExport.folder + "_" + Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixTL.fasta";
+                    string outputFolder = NeoExport.DatabaseFileName + @"\" + Path.GetFileNameWithoutExtension(currentRawFileList[spectraFileIndex]) + "_FusionDatabaseAppendixTL.fasta";
                     myTaskResults.newDatabases.Add(new DbForTask(outputFolder, false));
                 }
             }

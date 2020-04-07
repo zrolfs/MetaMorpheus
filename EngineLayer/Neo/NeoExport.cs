@@ -12,6 +12,7 @@ namespace EngineLayer.Neo
 
         public static string path;
         public static string folder;
+        public static string DatabaseFileName; //location of TS, NC, etc, databases
 
         #endregion Public Fields
 
@@ -19,23 +20,23 @@ namespace EngineLayer.Neo
 
         public static void ExportAll(List<NeoPsm> psms, Ms2ScanWithSpecificMass[] spectra, string databaseFileName, string rawFileName)
         {
-            folder = DateTime.Now.ToString("yyyy-MM-dd_hh-mm-ss");
+            DatabaseFileName = databaseFileName;
             path = "";
             string[] temp = databaseFileName.Split('\\').ToArray();
             for (int i = 0; i < temp.Count() - 1; i++)
                 path += temp[i] + '\\';
 
-            Directory.CreateDirectory(path + folder);
+            Directory.CreateDirectory(path + folder); //location of candidates for manual review. Goes in a separate folder
             ExportCandidates(psms, spectra, path, rawFileName);
             // ExportFullFASTA(psms, databaseFileName, path);
-            ExportFASTAAppendix(psms, databaseFileName, path, rawFileName);
+            ExportFASTAAppendix(psms, databaseFileName, rawFileName);
 
             //  ExportFilteredFusionPeptideAppendix(psms, databaseFileName, path);
         }
 
         public static void ExportCandidates(List<NeoPsm> psms, Ms2ScanWithSpecificMass[] spectra, string path, string rawFileName)
         {
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder +"_"+ rawFileName+ "_ExportedFusionCandidatesAll.txt"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + rawFileName+ "_ExportedFusionCandidatesAll.txt"))
             {
                 file.WriteLine("Scan" + '\t' + "ExperimentalMass" + '\t' + "OriginalNSequence" + '\t' + "OriginalNScore" + '\t' + "OriginalCSequence" + '\t' + "OriginalCScore" + '\t' + "SampleSequence" + '\t' + "Ambiguity" + '\t' + "ProbableType" + '\t' + "MostProbableSequenceJunctions" + '\t' + "MostProbableSequence(s)" + '\t' + "MostProbableParents" + '\t' + "AllPossibleSequenceJunctions" + '\t' + "AllPossibleSequence(s)" + '\t' + "AllPossibleParent(s)" + '\t' + "NumberOfPossibleSequences" + '\t' + "PotentialFalsePositives" + '\t' + "TotalScore");
 
@@ -193,7 +194,7 @@ namespace EngineLayer.Neo
                 });
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_"+ rawFileName+ "_ExportedFusionCandidatesTL.txt"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + rawFileName+ "_ExportedFusionCandidatesTL.txt"))
             {
                 file.WriteLine("Scan" + '\t' + "ExperimentalMass" + '\t' + "OriginalNSequence" + '\t' + "OriginalNScore" + '\t' + "OriginalCSequence" + '\t' + "OriginalCScore" + '\t' + "SampleSequence" + '\t' + "Ambiguity" + '\t' + "ProbableType" + '\t' + "MostProbableSequenceJunctions" + '\t' + "MostProbableSequence(s)" + '\t' + "MostProbableParents" + '\t' + "AllPossibleSequenceJunctions" + '\t' + "AllPossibleSequence(s)" + '\t' + "AllPossibleParent(s)" + '\t' + "NumberOfPossibleSequences" + '\t' + "PotentialFalsePositives" + '\t' + "TotalScore");
 
@@ -310,7 +311,7 @@ namespace EngineLayer.Neo
                 });
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "ExportedFusionCandidatesNC.txt"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + rawFileName + "_ExportedFusionCandidatesNC.txt"))
             {
                 file.WriteLine("Scan" + '\t' + "ExperimentalMass" + '\t' + "OriginalNSequence" + '\t' + "OriginalNScore" + '\t' + "OriginalCSequence" + '\t' + "OriginalCScore" + '\t' + "SampleSequence" + '\t' + "Ambiguity" + '\t' + "ProbableType" + '\t' + "MostProbableSequenceJunctions" + '\t' + "MostProbableSequence(s)" + '\t' + "MostProbableParents" + '\t' + "AllPossibleSequenceJunctions" + '\t' + "AllPossibleSequence(s)" + '\t' + "AllPossibleParent(s)" + '\t' + "NumberOfPossibleSequences" + '\t' + "PotentialFalsePositives" + '\t' + "TotalScore");
 
@@ -427,7 +428,7 @@ namespace EngineLayer.Neo
                 });
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "ExportedFusionCandidatesTS.txt"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + rawFileName + "_ExportedFusionCandidatesTS.txt"))
             {
                 file.WriteLine("Scan" + '\t' + "ExperimentalMass" + '\t' + "OriginalNSequence" + '\t' + "OriginalNScore" + '\t' + "OriginalCSequence" + '\t' + "OriginalCScore" + '\t' + "SampleSequence" + '\t' + "Ambiguity" + '\t' + "ProbableType" + '\t' + "MostProbableSequenceJunctions" + '\t' + "MostProbableSequence(s)" + '\t' + "MostProbableParents" + '\t' + "AllPossibleSequenceJunctions" + '\t' + "AllPossibleSequence(s)" + '\t' + "AllPossibleParent(s)" + '\t' + "NumberOfPossibleSequences" + '\t' + "PotentialFalsePositives" + '\t' + "TotalScore");
 
@@ -587,9 +588,9 @@ namespace EngineLayer.Neo
             }
         }
 
-        private static void ExportFASTAAppendix(List<NeoPsm> psms, string databaseFileName, string path, string rawFileName)
+        private static void ExportFASTAAppendix(List<NeoPsm> psms, string path, string rawFileName)
         {
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_"+rawFileName+"_FusionDatabaseAppendixAll.fasta"))
+            using (StreamWriter file = new StreamWriter(path + @"\" + rawFileName + "_FusionDatabaseAppendixAll.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -613,7 +614,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixTL.fasta"))
+            using (StreamWriter file = new StreamWriter(path + @"\" + rawFileName + "_FusionDatabaseAppendixTL.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -641,7 +642,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixNC.fasta"))
+            using (StreamWriter file = new StreamWriter(path + @"\" + rawFileName + "_FusionDatabaseAppendixNC.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -667,7 +668,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixTS.fasta"))
+            using (StreamWriter file = new StreamWriter(path + @"\" + rawFileName + "_FusionDatabaseAppendixTS.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -693,7 +694,7 @@ namespace EngineLayer.Neo
                 }
             }
 
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "_" + rawFileName + "_FusionDatabaseAppendixTop.fasta"))
+            using (StreamWriter file = new StreamWriter(path + @"\" + rawFileName + "_FusionDatabaseAppendixTop.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
@@ -731,7 +732,7 @@ namespace EngineLayer.Neo
 
         private static void ExportFilteredFusionPeptideAppendix(List<NeoPsm> psms, string databaseFileName, string path)
         {
-            using (StreamWriter file = new StreamWriter(path + folder + @"\" + folder + "FilteredFusionDatabaseAppendix.fasta"))
+            using (StreamWriter file = new StreamWriter(path + folder + @"\" + "FilteredFusionDatabaseAppendix.fasta"))
             {
                 foreach (NeoPsm psm in psms)
                 {
