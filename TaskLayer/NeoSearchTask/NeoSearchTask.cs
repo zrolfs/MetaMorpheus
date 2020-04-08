@@ -261,6 +261,9 @@ namespace TaskLayer
                             while (NeoParameters.NFilePath.Count <= spectraFileIndex)
                             {
                                 NeoParameters.NFilePath.Add("");
+                            }
+                            while(NeoParameters.CFilePath.Count <= spectraFileIndex)
+                            {
                                 NeoParameters.CFilePath.Add("");
                             }
                             NeoParameters.NFilePath[spectraFileIndex] = nPath;
