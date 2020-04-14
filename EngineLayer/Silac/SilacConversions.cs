@@ -648,10 +648,10 @@ namespace EngineLayer
                     if (peaksOfInterest.Count > 1)
                     {
                         //get isotopic envelopes that are shared by all
-                        List<int> scanIndex = peaksOfInterest.First().IsotopicEnvelopes.Select(x => x.IndexedPeak).Select(x => x.ZeroBasedMs1ScanIndex).ToList();
+                        List<string> scanIndex = peaksOfInterest.First().IsotopicEnvelopes.Select(x => x.ChargeState.ToString()+"_"+ x.IndexedPeak.ZeroBasedMs1ScanIndex.ToString()).ToList(); //need both charge and scan to ensure correct comparison
                         for (int i = 1; i < peaksOfInterest.Count; i++)
                         {
-                            List<int> currentScanIndexes = peaksOfInterest[i].IsotopicEnvelopes.Select(x => x.IndexedPeak).Select(x => x.ZeroBasedMs1ScanIndex).ToList();
+                            List<string> currentScanIndexes = peaksOfInterest[i].IsotopicEnvelopes.Select(x => x.ChargeState.ToString() + "_" + x.IndexedPeak.ZeroBasedMs1ScanIndex.ToString()).ToList();
                             scanIndex = scanIndex.Intersect(currentScanIndexes).ToList();
                             if (scanIndex.Count == 0) //if there's no overlap, then we're done!
                             {
@@ -667,7 +667,7 @@ namespace EngineLayer
                                 ChromatographicPeak peakForThisPeptide = peaksOfInterest.Where(x => peptide.Sequence.Equals(x.Identifications.First().ModifiedSequence)).FirstOrDefault();
                                 if (peakForThisPeptide != null)
                                 {
-                                    double summedIntensity = peakForThisPeptide.IsotopicEnvelopes.Where(x => scanIndex.Contains(x.IndexedPeak.ZeroBasedMs1ScanIndex)).Select(x => x.Intensity).Sum();
+                                    double summedIntensity = peakForThisPeptide.IsotopicEnvelopes.Where(x => scanIndex.Contains(x.ChargeState.ToString()+"_"+x.IndexedPeak.ZeroBasedMs1ScanIndex.ToString())).Select(x => x.Intensity).Sum();
                                     peptide.SetIntensity(kvp.Key, summedIntensity);
                                 }
                                 else //rare instance, cause unknown. Crash identified using 180524_LMuscle_30d_bio3.raw, Mus_Canonical_180122.xml, 1 missed cleavage
