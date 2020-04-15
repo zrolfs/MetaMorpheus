@@ -456,7 +456,7 @@ namespace TaskLayer
             var FlashLfqEngine = new FlashLfqEngine(
                 allIdentifications: flashLFQIdentifications,
                 normalize: Parameters.SearchParameters.Normalize,
-                allowOverlappingEnvelopes: Parameters.SearchParameters.SilacLabels != null, //if silac
+                //allowOverlappingEnvelopes: Parameters.SearchParameters.SilacLabels != null, //if silac
                 ppmTolerance: Parameters.SearchParameters.QuantifyPpmTol,
                 matchBetweenRuns: Parameters.SearchParameters.MatchBetweenRuns,
                 silent: true,
