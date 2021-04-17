@@ -444,7 +444,7 @@ namespace EngineLayer
                 }
 
                 //Do protein quant
-                flashLfqResults.CalculateProteinResultsMedianPolish(true);
+                flashLfqResults.CalculateProteinResultsTop3(true);
 
                 //update proteingroups to have all files for quantification
                 if (proteinGroups != null)

@@ -460,7 +460,8 @@ namespace TaskLayer
                 ppmTolerance: Parameters.SearchParameters.QuantifyPpmTol,
                 matchBetweenRuns: Parameters.SearchParameters.MatchBetweenRuns,
                 silent: true,
-                maxThreads: CommonParameters.MaxThreadsToUsePerFile);
+                maxThreads: CommonParameters.MaxThreadsToUsePerFile, 
+                allowOverlappingEnvelopes:true, measureStableIsotopeAbundance:true);
 
             if (flashLFQIdentifications.Any())
             {
